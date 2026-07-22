@@ -4,7 +4,6 @@ import { useCallback, useEffect, useRef } from "react";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Sidebar } from "@/components/layout/sidebar";
-import { Button } from "@/components/ui/button";
 
 // ─── Types ─────────────────────────────────────────────────────
 
@@ -64,7 +63,7 @@ export function MobileRightDrawer({ open, onClose }: MobileRightDrawerProps) {
         aria-hidden="true"
       />
 
-      {/* Drawer panel */}
+      {/* Drawer panel — uses 100dvh and respects safe-area insets */}
       <div
         id="mobile-right-drawer"
         ref={drawerRef}
@@ -76,30 +75,32 @@ export function MobileRightDrawer({ open, onClose }: MobileRightDrawerProps) {
           "border-l border-border/50",
           "shadow-2xl shadow-black/20",
         )}
+        style={{
+          height: "100dvh",
+          paddingTop: "env(safe-area-inset-top, 0px)",
+          paddingBottom: "env(safe-area-inset-bottom, 0px)",
+        }}
         role="dialog"
         aria-modal="true"
         aria-label="Navigation menu"
       >
-        {/* Close button */}
-        <div className="flex items-center justify-end px-3 pt-3">
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            onClick={onClose}
-            aria-label="Close navigation menu"
-            className="shrink-0"
-          >
-            <X className="size-4" />
-          </Button>
-        </div>
+        {/* Close button — positioned absolutely to avoid taking flow space */}
+        <button
+          type="button"
+          onClick={onClose}
+          className={cn(
+            "absolute top-3 right-3 z-10",
+            "flex size-8 items-center justify-center rounded-xl",
+            "text-muted-foreground/60 hover:text-foreground hover:bg-muted/60",
+            "transition-all duration-150 active:scale-90",
+          )}
+          aria-label="Close navigation menu"
+        >
+          <X className="size-4" />
+        </button>
 
-        {/* Sidebar content */}
-        <div className="flex-1 overflow-hidden">
-          <Sidebar
-            mobile
-            onItemClick={onClose}
-          />
-        </div>
+        {/* Sidebar content — fills the entire drawer */}
+        <Sidebar mobile onItemClick={onClose} />
       </div>
     </>
   );

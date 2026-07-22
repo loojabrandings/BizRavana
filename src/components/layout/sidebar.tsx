@@ -87,7 +87,7 @@ const systemLinks = systemNav.filter((item): item is NavItem => !isGroup(item));
 
 // ─── SidebarBrand ────────────────────────────────────────────
 
-function SidebarBrand({ collapsed }: { collapsed: boolean }) {
+function SidebarBrand({ collapsed, mobile }: { collapsed: boolean; mobile?: boolean }) {
   const [businessName, setBusinessName] = useState("BizRavana");
   const [businessTagline, setBusinessTagline] = useState("Business OS");
   const [businessLogo, setBusinessLogo] = useState<string | null>(null);
@@ -156,6 +156,55 @@ function SidebarBrand({ collapsed }: { collapsed: boolean }) {
     </div>
   );
 
+  // ─── Mobile: compact branding ─────────────────────────────
+  if (mobile) {
+    return (
+      <div className="flex flex-col items-center px-4 pt-2 pb-2">
+        <Link
+          href="/dashboard"
+          className="flex flex-col items-center gap-1.5"
+          aria-label={`${businessName} — Back to Dashboard`}
+        >
+          {/* Logo (smaller) */}
+          <div
+            style={{ width: 110, height: 110 }}
+            className="flex shrink-0 items-center justify-center"
+          >
+            {businessLogo ? (
+              <img
+                src={businessLogo}
+                alt={businessName}
+                style={{ width: 110, height: 110 }}
+                className="object-contain"
+              />
+            ) : (
+              <Store className="shrink-0 text-sidebar-primary size-10" />
+            )}
+          </div>
+
+          {/* Business Name (larger, visual focus) + Tagline */}
+          <div className="flex flex-col items-center gap-0.5">
+            <p className="text-lg font-bold tracking-tight text-sidebar-foreground">
+              {businessName}
+            </p>
+            {businessTagline && (
+              <p className="text-[10px] font-medium uppercase tracking-[0.15em] text-sidebar-foreground/40">
+                {businessTagline}
+              </p>
+            )}
+          </div>
+        </Link>
+
+        {/* Powered by (compact) */}
+        <p className="mt-1.5 text-xs tracking-wide text-sidebar-primary/70">
+          Powered by{" "}
+          <span className="font-semibold text-sidebar-primary">BizRavana</span>
+        </p>
+      </div>
+    );
+  }
+
+  // ─── Desktop / collapsed ──────────────────────────────────
   return (
     <div className="flex flex-col items-center px-4 pt-6 pb-5">
       <Link
@@ -448,10 +497,14 @@ function SidebarNavigation({
 function SidebarQuickActions({
   collapsed,
   onItemClick,
+  mobile,
 }: {
   collapsed: boolean;
   onItemClick?: () => void;
+  mobile?: boolean;
 }) {
+  // Duplicate quick actions already in bottom nav — skip on mobile drawer
+  if (mobile) return null;
   const actions = [
     {
       label: "+ New Order",
@@ -608,24 +661,38 @@ export function Sidebar({
       >
         {/* Inner wrapper with overflow hidden to keep scroll areas contained */}
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-          {/* ═══ Brand Header ════════════════════════════════════ */}
-          <SidebarBrand collapsed={effectiveCollapsed} />
-          <SidebarDivider />
+          {/* ═══ Mobile layout: fixed brand + scrollable nav + sticky settings ═══ */}
+          {mobile ? (
+            <>
+              <SidebarBrand collapsed={false} mobile />
+              <SidebarDivider />
+              <div className="flex-1 overflow-y-auto min-h-0">
+                <SidebarNavigation collapsed={false} onItemClick={onItemClick} />
+              </div>
+              <SidebarSystemSection collapsed={false} onItemClick={onItemClick} />
+            </>
+          ) : (
+            <>
+              {/* ═══ Desktop / collapsed Brand Header ═════════════════ */}
+              <SidebarBrand collapsed={effectiveCollapsed} />
+              <SidebarDivider />
 
-          {/* ═══ Navigation (flex:1 scrollable) ═════════════════ */}
-          <SidebarNavigation
-            collapsed={effectiveCollapsed}
-            onItemClick={onItemClick}
-          />
+              {/* ═══ Navigation (flex:1 scrollable) ═════════════════ */}
+              <SidebarNavigation
+                collapsed={effectiveCollapsed}
+                onItemClick={onItemClick}
+              />
 
-          {/* ═══ Quick Actions ══════════════════════════════════ */}
-          <SidebarQuickActions collapsed={effectiveCollapsed} onItemClick={onItemClick} />
+              {/* ═══ Quick Actions ══════════════════════════════════ */}
+              <SidebarQuickActions collapsed={effectiveCollapsed} onItemClick={onItemClick} />
 
-          {/* ═══ System Section ═════════════════════════════════ */}
-          <SidebarSystemSection
-            collapsed={effectiveCollapsed}
-            onItemClick={onItemClick}
-          />
+              {/* ═══ System Section ═════════════════════════════════ */}
+              <SidebarSystemSection
+                collapsed={effectiveCollapsed}
+                onItemClick={onItemClick}
+              />
+            </>
+          )}
         </div>
 
         {/* ═══ Collapse Toggle (desktop only) ═════════════════ */}
