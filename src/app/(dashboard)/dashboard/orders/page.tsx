@@ -56,6 +56,7 @@ import {
 import { validateLabelData } from "@/lib/shipping-label/validate";
 import type { ShippingLabelData } from "@/lib/shipping-label/types";
 import { HoverPopover } from "@/components/shared/hover-popover";
+import { useIsMobile } from "@/hooks/use-media-query";
 import { useWhatsAppAction } from "@/components/whatsapp/use-whatsapp-action";
 import { orderRowToTemplateData } from "@/components/whatsapp/whatsapp-actions";
 import { fetchManualWaybills, getWaybillMethod, assignWaybillToOrder, markWaybillAsUsed, type ManualWaybill } from "@/lib/delivery/waybill-utils";
@@ -300,7 +301,7 @@ function OrdersPageInner() {
   const [dateFilter, setDateFilter] = useState<string>("this_month");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
-  const [activeSort, setActiveSort] = useState<{ key: string; direction: "asc" | "desc" } | null>({ key: "order_number", direction: "asc" });
+  const [activeSort, setActiveSort] = useState<{ key: string; direction: "asc" | "desc" } | null>({ key: "order_number", direction: "desc" });
   const [activeStatusTab, setActiveStatusTab] = useState("all");
   const [paymentStatusTab, setPaymentStatusTab] = useState("all");
   const [multiPaymentFilter, setMultiPaymentFilter] = useState<string[] | null>(null);
@@ -368,7 +369,7 @@ function OrdersPageInner() {
         if (!businessId) throw new Error("No business found for your account.");
 
         const dateRange = getDateRange(dateFilter, dateFrom, dateTo);
-        let q = supabase.from("orders").select("id, order_number, customer_name, customer_phone, customer_address, customer_district, customer_city, customer_whatsapp, customer_email, advance_paid, total, delivery_charge, subtotal, discount, waybill_id, status, payment_status, payment_method, expected_delivery_date, dispatched_date, created_at, images").eq("business_id", businessId).order("created_at", { ascending: false }).limit(500);
+        let q = supabase.from("orders").select("id, order_number, customer_name, customer_phone, customer_address, customer_district, customer_city, customer_whatsapp, customer_email, advance_paid, total, delivery_charge, subtotal, discount, waybill_id, status, payment_status, payment_method, expected_delivery_date, dispatched_date, created_at, images").eq("business_id", businessId).order("order_number", { ascending: false }).limit(500);
         if (dateRange) q = q.gte("created_at", dateRange.start.toISOString()).lte("created_at", dateRange.end.toISOString());
 
         const [ordersRes, itemsRes] = await Promise.all([
@@ -429,6 +430,9 @@ function OrdersPageInner() {
   const [shippingLabelDialogOpen, setShippingLabelDialogOpen] = useState(false);
   const [shippingLabelData, setShippingLabelData] = useState<ShippingLabelData | null>(null);
   const [shippingLabelDataUrl, setShippingLabelDataUrl] = useState<string | null>(null);
+
+  // ─── Mobile detection ────────────────────────────────────────
+  const isMobile = useIsMobile();
 
   // ─── WhatsApp template action hook ──────────────────────
   const { handleAction: handleWhatsAppAction, renderDialogs: renderWhatsAppDialogs } = useWhatsAppAction();
@@ -1373,7 +1377,7 @@ const handleStatusChange = useCallback(async (orderId: string, newStatus: string
       return (
         <motion.div
           variants={itemVariants}
-          className="rounded-2xl border border-border/80 bg-muted/50 p-4 shadow-sm"
+          className="rounded-2xl glass-card p-4"
         >
           {/* ── Section 1: Header ──────────────────────────────── */}
           <div className="flex items-start justify-between gap-4">
@@ -2135,6 +2139,70 @@ const handleStatusChange = useCallback(async (orderId: string, newStatus: string
   return (
     <>
       {renderWhatsAppDialogs()}
+
+      {/* ─── Mobile: full-screen overlay for form/preview ── */}
+      {isMobile && (showForm || previewData) && (
+        <div
+          className="fixed inset-0 z-[70] overflow-y-auto"
+          style={{
+            height: "100dvh",
+            paddingTop: "env(safe-area-inset-top, 0px)",
+            paddingBottom: "env(safe-area-inset-bottom, 0px)",
+          }}
+        >
+          {previewData ? (
+            <OrderPreview
+              data={previewData}
+              onBack={() => {
+                setPreviewData(null);
+                setShowForm(false);
+                setSavedOrderId(null);
+                setEditOrderId(null);
+              }}
+              onEdit={() => {
+                setEditData(previewData);
+                setEditKey((k) => k + 1);
+                setPreviewData(null);
+                setShowForm(true);
+                if (savedOrderId) setEditOrderId(savedOrderId);
+              }}
+              onStatusChange={async (newStatus) => {
+                if (savedOrderId) {
+                  const supabase = createClient();
+                  await supabase
+                    .from("orders")
+                    .update({ status: newStatus, updated_at: new Date().toISOString() })
+                    .eq("id", savedOrderId);
+                }
+              }}
+              onPaymentStatusChange={async (newPayment: string) => {
+                if (savedOrderId) {
+                  const supabase = createClient();
+                  await supabase
+                    .from("orders")
+                    .update({ payment_status: newPayment, updated_at: new Date().toISOString() })
+                    .eq("id", savedOrderId);
+                }
+              }}
+            />
+          ) : (
+            <OrderForm
+              key={editData ? `edit_${editKey}` : "new"}
+              initialData={editData || undefined}
+              isEditing={!!editOrderId}
+              onSubmit={handleOrderSubmit}
+              onCancel={() => {
+                setShowForm(false);
+                setPreviewData(null);
+                setEditData(null);
+                setEditOrderId(null);
+                setSavedOrderId(null);
+              }}
+            />
+          )}
+        </div>
+      )}
+
       <motion.div className="space-y-6" variants={containerVariants} initial="hidden" animate="show">
       {!showForm && !previewData && (
         /* ─── Header ──────────────────────────────────────────── */
@@ -2260,7 +2328,7 @@ const handleStatusChange = useCallback(async (orderId: string, newStatus: string
               setFetchTrigger((n) => n + 1);
             }}
           />
-        ) : previewData ? (
+        ) : !isMobile && previewData ? (
           <OrderPreview
             data={previewData}
             onBack={() => {
@@ -2313,7 +2381,7 @@ const handleStatusChange = useCallback(async (orderId: string, newStatus: string
               }
             }}
           />
-        ) : showForm ? (
+        ) : !isMobile && showForm ? (
           <OrderForm
             key={editData ? `edit_${editKey}` : "new"}
             initialData={editData || undefined}

@@ -1029,9 +1029,9 @@ export function OrderPreview({
       {/* ═══════ Scrollable Content ═══════════════════════════════ */}
       <div
         className={isMobile ? "flex-1 overflow-y-auto px-4" : "flex-1 overflow-y-auto px-8"}
-        style={{ maxHeight: isMobile ? "calc(100dvh - 380px)" : "calc(100vh - 320px)" }}
+        style={isMobile ? undefined : { maxHeight: "calc(100vh - 320px)" }}
       >
-        <div className={isMobile ? "py-4 pb-[calc(88px+env(safe-area-inset-bottom))]" : "py-8"}>
+        <div className={isMobile ? "py-4" : "py-8"}>
           {/* ─── Responsive layout ────────────────────────── */}
           <div className={isMobile ? "space-y-6" : "grid grid-cols-[2fr_1fr] gap-8"}>
             {/* ═══ Left: Customer Info + Order Details ════════ */}
