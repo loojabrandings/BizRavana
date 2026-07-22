@@ -94,7 +94,6 @@ function HeaderAvatarDropdown({
       <DropdownMenuContent
         align="end"
         className="w-64 overflow-hidden rounded-xl border-border/40 p-0 shadow-lg"
-        onCloseAutoFocus={(e) => e.preventDefault()}
       >
         {/* ─── Premium Header ───────────────────────────── */}
         <div className="relative bg-gradient-to-br from-primary/[0.04] via-transparent to-primary/[0.02] px-4 pb-3 pt-4">

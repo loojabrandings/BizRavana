@@ -22,6 +22,7 @@ export interface Database {
           storage_limit_mb?: number; features?: Json; is_active?: boolean;
           sort_order?: number; created_at?: string; updated_at?: string;
         };
+        Relationships: [];
       };
       businesses: {
         Row: {
@@ -54,6 +55,7 @@ export interface Database {
           data_delete_after?: string | null;
           created_at?: string; updated_at?: string; deleted_at?: string | null;
         };
+        Relationships: [];
       };
       profiles: {
         Row: {
@@ -74,6 +76,7 @@ export interface Database {
           role?: "owner" | "admin" | "member";
           avatar_url?: string | null; created_at?: string; updated_at?: string;
         };
+        Relationships: [];
       };
       payment_proofs: {
         Row: {
@@ -97,6 +100,7 @@ export interface Database {
           admin_note?: string | null; approved_by?: string | null;
           approved_at?: string | null; created_at?: string;
         };
+        Relationships: [];
       };
       products: {
         Row: {
@@ -118,6 +122,7 @@ export interface Database {
           image_url?: string | null; inventory_item_id?: string | null; is_active?: boolean;
           created_by?: string | null; created_at?: string; updated_at?: string; deleted_at?: string | null;
         };
+        Relationships: [];
       };
       price_snapshots: {
         Row: {
@@ -135,6 +140,7 @@ export interface Database {
           selling_price?: number; cost_price?: number | null;
           effective_date?: string; created_at?: string;
         };
+        Relationships: [];
       };
       inventory_items: {
         Row: {
@@ -158,6 +164,7 @@ export interface Database {
           last_restocked_at?: string | null; created_by?: string | null;
           created_at?: string; updated_at?: string; deleted_at?: string | null;
         };
+        Relationships: [];
       };
       inventory_transactions: {
         Row: {
@@ -181,6 +188,7 @@ export interface Database {
           reference_type?: string | null; reference_id?: string | null;
           notes?: string | null; created_by?: string | null; created_at?: string;
         };
+        Relationships: [];
       };
       customers: {
         Row: {
@@ -204,6 +212,7 @@ export interface Database {
           lifetime_spend?: number; total_orders?: number; pending_balance?: number;
           created_at?: string; updated_at?: string; deleted_at?: string | null;
         };
+        Relationships: [];
       };
       orders: {
         Row: {
@@ -249,6 +258,7 @@ export interface Database {
           remarks?: string | null; images?: Json;
           created_by?: string | null; created_at?: string; updated_at?: string; deleted_at?: string | null;
         };
+        Relationships: [];
       };
       order_items: {
         Row: {
@@ -267,6 +277,7 @@ export interface Database {
           product_name?: string; category?: string | null; unit_price?: number;
           quantity?: number; notes?: string | null; sort_order?: number; created_at?: string;
         };
+        Relationships: [];
       };
       order_status_history: {
         Row: {
@@ -284,6 +295,7 @@ export interface Database {
           from_status?: string | null; to_status?: string;
           changed_by?: string | null; created_at?: string;
         };
+        Relationships: [];
       };
       quotations: {
         Row: {
@@ -319,6 +331,7 @@ export interface Database {
           remarks?: string | null; converted_order_id?: string | null;
           created_by?: string | null; created_at?: string; updated_at?: string; deleted_at?: string | null;
         };
+        Relationships: [];
       };
       quotation_items: {
         Row: {
@@ -337,6 +350,7 @@ export interface Database {
           product_name?: string; category?: string | null; unit_price?: number;
           quantity?: number; notes?: string | null; sort_order?: number; created_at?: string;
         };
+        Relationships: [];
       };
       expenses: {
         Row: {
@@ -372,6 +386,7 @@ export interface Database {
           remarks?: string | null; created_by?: string | null;
           created_at?: string; updated_at?: string; deleted_at?: string | null;
         };
+        Relationships: [];
       };
       deliveries: {
         Row: {
@@ -392,6 +407,7 @@ export interface Database {
           status?: "confirmed" | "to_dispatch" | "in_branch" | "assigned_to_rider" | "delivered" | "cancelled" | "returned";
           tracking_url?: string | null; created_at?: string; updated_at?: string;
         };
+        Relationships: [];
       };
       notifications: {
         Row: {
@@ -409,6 +425,7 @@ export interface Database {
           type?: string; title?: string; message?: string | null;
           data?: Json; is_read?: boolean; created_at?: string;
         };
+        Relationships: [];
       };
       business_settings: {
         Row: {
@@ -423,6 +440,37 @@ export interface Database {
           id?: string; business_id?: string; key?: string; value?: Json;
           created_at?: string; updated_at?: string;
         };
+        Relationships: [];
+      };
+      message_templates: {
+        Row: {
+          id: string; business_id: string;
+          template_context: "order_table_whatsapp" | "order_preview_whatsapp" | "quotation_preview_whatsapp";
+          title: string; channel: "whatsapp"; content: string;
+          is_default: boolean; is_active: boolean; sort_order: number;
+          created_by: string | null; created_at: string;
+          updated_by: string | null; updated_at: string;
+          deleted_at: string | null; deleted_by: string | null;
+        };
+        Insert: {
+          id?: string; business_id: string;
+          template_context: "order_table_whatsapp" | "order_preview_whatsapp" | "quotation_preview_whatsapp";
+          title: string; channel?: "whatsapp"; content: string;
+          is_default?: boolean; is_active?: boolean; sort_order?: number;
+          created_by?: string | null; created_at?: string;
+          updated_by?: string | null; updated_at?: string;
+          deleted_at?: string | null; deleted_by?: string | null;
+        };
+        Update: {
+          id?: string; business_id?: string;
+          template_context?: "order_table_whatsapp" | "order_preview_whatsapp" | "quotation_preview_whatsapp";
+          title?: string; channel?: "whatsapp"; content?: string;
+          is_default?: boolean; is_active?: boolean; sort_order?: number;
+          created_by?: string | null; created_at?: string;
+          updated_by?: string | null; updated_at?: string;
+          deleted_at?: string | null; deleted_by?: string | null;
+        };
+        Relationships: [];
       };
       tasks: {
         Row: {
@@ -446,6 +494,7 @@ export interface Database {
           assigned_to?: string | null; is_completed?: boolean; due_date?: string | null;
           created_by?: string | null; created_at?: string; updated_at?: string; deleted_at?: string | null;
         };
+        Relationships: [];
       };
       admin_activity_log: {
         Row: {
@@ -463,7 +512,9 @@ export interface Database {
           target_type?: string | null; target_id?: string | null;
           details?: Json; created_at?: string;
         };
+        Relationships: [];
       };
+        Relationships: [];
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;

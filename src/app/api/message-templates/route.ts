@@ -29,7 +29,8 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const context = searchParams.get("context");
 
-  const admin = getAdminClient();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const admin: any = getAdminClient();
   let query = admin
     .from("message_templates")
     .select("*")
@@ -70,7 +71,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
   }
 
-  const admin = getAdminClient();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const admin: any = getAdminClient();
 
   // Check if this is the first template (auto-set as default)
   const { count } = await admin
@@ -121,7 +123,8 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: "Missing template id" }, { status: 400 });
   }
 
-  const admin = getAdminClient();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const admin: any = getAdminClient();
   const { data, error } = await admin
     .from("message_templates")
     .update({
@@ -162,7 +165,8 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({ error: "Missing template id" }, { status: 400 });
   }
 
-  const admin = getAdminClient();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const admin: any = getAdminClient();
   const { error } = await admin
     .from("message_templates")
     .update({
@@ -200,7 +204,8 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
   }
 
-  const admin = getAdminClient();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const admin: any = getAdminClient();
 
   // Clear current default
   const { error: clearError } = await admin
