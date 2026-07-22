@@ -27,7 +27,7 @@ function SectionCard({
   children: React.ReactNode;
 }) {
   return (
-    <div className="rounded-xl glass-card">
+    <div className="rounded-xl border border-border/40 bg-card">
       <div className="flex items-center justify-between px-4 pt-3 pb-2">
         <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/70">
           {title}

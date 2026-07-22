@@ -196,7 +196,7 @@
   --shadow-color: oklch(0 0 0 / 0.4);
 
   --glass-bg: oklch(0 0 0 / 0.25);
-  --glass-border: oklch(1 0 0 / 0.08);
+  --glass-border: oklch(1 0 0 / 0.25);
   --glass-shadow: 0 1px 3px oklch(0 0 0 / 0.3), 0 1px 1px oklch(0 0 0 / 0.2);
 
   --border: oklch(1 0 0 / 10%);

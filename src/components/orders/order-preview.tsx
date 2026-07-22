@@ -402,7 +402,7 @@ function CustomerInformationCard({
 
   if (isMobile) {
     return (
-      <div className="rounded-xl glass-card">
+      <div className="rounded-xl border border-border/40 bg-card">
         <div className="flex items-center justify-between px-4 pt-3 pb-2">
           <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/70">
             Customer Details
@@ -1017,7 +1017,12 @@ export function OrderPreview({
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.25, ease: "easeOut" }}
-        className="flex flex-col rounded-2xl glass-card"
+        className={cn(
+          "flex flex-col rounded-2xl",
+          isMobile
+            ? "bg-card border border-border/40"
+            : "glass-card",
+        )}
       >
         {/* ═══════ Header ════════════════════════════════════════════ */}
         <div className={isMobile ? "px-4 pt-4 pb-3" : "px-8 pt-7 pb-6"}>

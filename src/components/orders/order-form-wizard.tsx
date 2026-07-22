@@ -453,7 +453,7 @@ export function OrderFormWizard({
 
   return (
     <>
-      <div className="flex min-h-dvh flex-col glass-card rounded-2xl border-0" ref={topRef}>
+      <div className="flex min-h-dvh flex-col bg-card border border-border/40 rounded-2xl" ref={topRef}>
         {/* ═══════ Header ════════════════════════════════════════ */}
         <div className="flex items-start justify-between px-4 pt-4 pb-2">
           <div className="min-w-0 flex-1">
