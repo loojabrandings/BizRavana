@@ -50,7 +50,7 @@ function DropdownMenuContent({
   return (
     <MenuPrimitive.Portal>
       <MenuPrimitive.Positioner
-        className="isolate z-50 outline-none"
+        className="isolate z-[80] outline-none"
         align={align}
         alignOffset={alignOffset}
         side={side}
@@ -60,7 +60,7 @@ function DropdownMenuContent({
         <MenuPrimitive.Popup
           data-slot="dropdown-menu-content"
           className={cn(
-            "z-50 w-[--anchor-width] overflow-hidden rounded-xl border border-border/50 bg-[var(--glass-bg)] backdrop-blur-xl p-1.5 shadow-lg outline-none",
+            "z-50 w-[--anchor-width] overflow-hidden rounded-xl border border-border/50 bg-popover backdrop-blur-xl p-1.5 shadow-lg outline-none",
             "max-h-80 overflow-y-auto",
             "[&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border/50 [&::-webkit-scrollbar-track]:bg-transparent",
             "transition-all duration-150 ease-out",

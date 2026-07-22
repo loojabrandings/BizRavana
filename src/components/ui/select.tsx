@@ -91,13 +91,14 @@ function SelectContent({
         align={align}
         alignOffset={alignOffset}
         alignItemWithTrigger={alignItemWithTrigger}
-        className="isolate z-50"
+        className="isolate z-[80]"
+        collisionPadding={8}
       >
         <SelectPrimitive.Popup
           data-slot="select-content"
           data-align-trigger={alignItemWithTrigger}
           className={cn(
-            "w-[--anchor-width] overflow-hidden rounded-xl border border-border/50 bg-[var(--glass-bg)] backdrop-blur-xl p-1.5 shadow-lg",
+            "w-[--anchor-width] overflow-hidden rounded-xl border border-border/50 bg-popover backdrop-blur-xl p-1.5 shadow-lg",
             "transition-all duration-150 ease-out",
             "data-starting-style:opacity-0 data-starting-style:translate-y-1 data-starting-style:scale-[0.98]",
             "data-ending-style:opacity-0 data-ending-style:translate-y-1 data-ending-style:scale-[0.98]",

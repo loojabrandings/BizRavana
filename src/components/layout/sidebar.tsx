@@ -615,7 +615,7 @@ function SidebarCollapseButton({
             title={label}
             aria-label={label}
             className={cn(
-              "absolute top-6 -right-3 z-40 flex size-6 items-center justify-center rounded-full border border-sidebar-border bg-sidebar text-sidebar-foreground/70 shadow-xs transition-all duration-200 hover:bg-sidebar-accent hover:text-sidebar-foreground hover:shadow-md hover:border-sidebar-primary/30 hover:scale-110 active:scale-95",
+              "absolute top-6 -right-3 z-100 flex size-6 items-center justify-center rounded-full border border-sidebar-border bg-sidebar text-sidebar-foreground/70 shadow-xs transition-all duration-200 hover:bg-sidebar-accent hover:text-sidebar-foreground hover:shadow-md hover:border-sidebar-primary/30 hover:scale-110 active:scale-95",
               collapsed && "rotate-180",
             )}
           />
@@ -652,7 +652,7 @@ export function Sidebar({
           mobile
             ? "h-full w-full"
             : [
-                "hidden lg:sticky lg:top-0 lg:z-40 lg:h-screen lg:flex",
+                "hidden lg:sticky lg:top-0 lg:z-100 lg:h-screen lg:flex",
                 "transition-all duration-200 ease-in-out",
                 effectiveCollapsed ? "w-[76px]" : "w-[268px]",
               ],

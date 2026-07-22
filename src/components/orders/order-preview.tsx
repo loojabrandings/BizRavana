@@ -408,16 +408,16 @@ function CustomerInformationCard({
             Customer Details
           </h3>
         </div>
-        <div className="px-4 pb-4 space-y-2">
+        <div className="px-4 pb-5 space-y-5">
           {/* Name */}
           <div>
-            <span className="block text-sm text-muted-foreground mb-0.5">Name</span>
-            <span className="text-sm text-foreground">{data.customer_name || "—"}</span>
+            <span className="block text-xs font-medium text-muted-foreground mb-1">Name</span>
+            <span className="text-lg font-semibold text-foreground">{data.customer_name || "—"}</span>
           </div>
 
           {/* Address */}
           <div>
-            <span className="block text-sm text-muted-foreground mb-0.5">Address</span>
+            <span className="block text-xs font-medium text-muted-foreground mb-1">Address</span>
             <span className="text-sm text-foreground">{data.address || "—"}</span>
           </div>
 
@@ -456,27 +456,30 @@ function CustomerInformationCard({
           {/* District & City inline */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <span className="block text-sm text-muted-foreground mb-0.5">District</span>
+              <span className="block text-xs font-medium text-muted-foreground mb-1">District</span>
               <span className="text-sm text-foreground">{data.district || "—"}</span>
             </div>
             <div>
-              <span className="block text-sm text-muted-foreground mb-0.5">Nearest City</span>
+              <span className="block text-xs font-medium text-muted-foreground mb-1">Nearest City</span>
               <span className="text-sm text-foreground">{data.nearest_city || "—"}</span>
             </div>
           </div>
 
           {/* Tracking */}
           {hasWaybill && (
-            <div className="flex items-center gap-2 pt-1">
+            <div className="flex items-center gap-2">
               <Truck className="size-3.5 shrink-0 text-primary/60" />
               <span className="text-sm font-medium text-foreground">{data.waybill_id}</span>
             </div>
           )}
 
+          {/* Divider before status */}
+          <div className="border-t border-border/30" />
+
           {/* Status dropdowns */}
-          <div className="flex gap-3 pt-1">
+          <div className="flex gap-3">
             <div className="flex-1">
-              <label className="block text-sm text-muted-foreground mb-0.5">Order</label>
+              <label className="block text-xs font-medium text-muted-foreground mb-1">Order Status</label>
               <Select
                 value={data.status}
                 onValueChange={(v) => v && onStatusChange?.(v)}
@@ -492,7 +495,7 @@ function CustomerInformationCard({
               </Select>
             </div>
             <div className="flex-1">
-              <label className="block text-sm text-muted-foreground mb-0.5">Payment</label>
+              <label className="block text-xs font-medium text-muted-foreground mb-1">Payment Status</label>
               <Select
                 value={data.payment_status}
                 onValueChange={(v) => v && onPaymentStatusChange?.(v)}
@@ -688,16 +691,16 @@ function ItemThumbnail({ url }: { url: string }) {
 
 function OrderItemsMobileCard({ items, itemImagesMap }: { items: OrderFormData["items"]; itemImagesMap: Record<string, string[]> }) {
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       {items.map((item, i) => {
         const itemImgUrls = itemImagesMap[item.id] || [];
         return (
           <div
             key={item.id}
-            className="rounded-lg border border-border/40 bg-muted/10 p-3"
+            className="rounded-2xl glass-card p-4"
           >
             <div className="flex items-start gap-3">
-              {/* Thumbnail (keep as-is) */}
+              {/* Thumbnail */}
               {itemImgUrls.length > 0 ? (
                 <div className="shrink-0">
                   <ItemThumbnail url={itemImgUrls[0]} />
@@ -707,34 +710,43 @@ function OrderItemsMobileCard({ items, itemImagesMap }: { items: OrderFormData["
                   <ImageIcon className="size-4 text-muted-foreground/20" />
                 </div>
               )}
-              {/* Details & Price */}
-              <div className="min-w-0 flex-1">
+              {/* Details & Pricing */}
+              <div className="min-w-0 flex-1 space-y-1.5">
+                {/* Row 1: Item name | Category */}
                 <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium text-foreground truncate">
-                      {item.product_name || `Item #${i + 1}`}
-                    </p>
-                    {item.category && (
-                      <p className="text-xs text-muted-foreground/60 mt-0.5">
-                        {item.category}
-                      </p>
-                    )}
-                  </div>
-                  <span className="text-sm font-semibold tabular-nums text-foreground shrink-0">
-                    {formatCurrency(item.quantity * item.unit_price)}
-                  </span>
+                  <p className="text-sm font-medium text-foreground truncate">
+                    {item.product_name || `Item #${i + 1}`}
+                  </p>
+                  {item.category && (
+                    <span className="shrink-0 text-xs text-muted-foreground/60">
+                      {item.category}
+                    </span>
+                  )}
                 </div>
-                {/* Qty breakdown */}
-                <div className="mt-1.5 flex items-center gap-3 text-xs text-muted-foreground">
-                  <span>Qty: <strong>{item.quantity}</strong></span>
-                  <span>×</span>
-                  <span>{formatCurrency(item.unit_price)} ea.</span>
+
+                <div className="border-t border-border/20" />
+
+                {/* Row 2: Qty */}
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs text-muted-foreground">Qty</span>
+                  <span className="text-sm font-medium tabular-nums text-foreground">{item.quantity}</span>
                 </div>
+
+                {/* Row 3: Unit Price */}
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs text-muted-foreground">Unit Price</span>
+                  <span className="text-sm font-medium tabular-nums text-foreground">{formatCurrency(item.unit_price)}</span>
+                </div>
+
+                {/* Row 4: Total */}
+                <div className="flex items-center justify-between gap-2 border-t border-border/20 pt-2">
+                  <span className="text-xs font-semibold text-foreground">Total</span>
+                  <span className="text-sm font-bold tabular-nums text-primary">{formatCurrency(item.quantity * item.unit_price)}</span>
+                </div>
+
                 {/* Notes */}
                 {item.notes && (
-                  <p className="mt-1 text-xs italic text-muted-foreground/50">
-                    {item.notes}
-                  </p>
+                  <p className="text-xs italic text-muted-foreground/50 pt-1">{item.notes}</p>
                 )}
               </div>
             </div>
@@ -1014,18 +1026,18 @@ export function OrderPreview({
         initialDataUrl={labelDataUrl || undefined}
       />
       <motion.div
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
         transition={{ duration: 0.25, ease: "easeOut" }}
         className={cn(
           "flex flex-col rounded-2xl",
           isMobile
-            ? "bg-card border border-border/40"
+            ? "min-h-full bg-card border border-border/40"
             : "glass-card",
         )}
       >
-        {/* ═══════ Header ════════════════════════════════════════════ */}
-        <div className={isMobile ? "px-4 pt-4 pb-3" : "px-8 pt-7 pb-6"}>
+        {/* ═══════ Header (sticky on mobile) ═════════════════════ */}
+        <div className={isMobile ? "sticky top-0 z-10 bg-card px-4 pt-4 pb-3" : "px-8 pt-7 pb-6"}>
           <OrderPreviewHeader data={data} onBack={onBack} onEdit={onEdit} onWhatsApp={handleWhatsApp} onPrintLabel={handlePrintLabel} isMobile={isMobile} />
         </div>
 
@@ -1076,24 +1088,24 @@ export function OrderPreview({
       </div>
 
       {/* ═══════ Footer ════════════════════════════════════════════ */}
-      <div className={isMobile ? "border-t border-border/40 px-4 py-3" : "border-t border-border/40 px-8 py-4"}>
-        <div className={isMobile ? "flex items-center justify-center" : "flex items-center justify-between"}>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onBack}
-            className="gap-1.5 text-sm font-medium"
-          >
-            <ArrowLeft className="size-3.5" />
-            Back to Orders
-          </Button>
-          {!isMobile && (
+      {!isMobile && (
+        <div className="border-t border-border/40 px-8 py-4">
+          <div className="flex items-center justify-between">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onBack}
+              className="gap-1.5 text-sm font-medium"
+            >
+              <ArrowLeft className="size-3.5" />
+              Back to Orders
+            </Button>
             <p className="text-sm text-muted-foreground/50">
               Order #{data.order_number} &middot; {formatEnumLabel(data.status)}
             </p>
-          )}
+          </div>
         </div>
-      </div>      </motion.div>
+      )}      </motion.div>
     </>
   );
   }
