@@ -386,7 +386,7 @@ export default function AdminSubscriptionsPage() {
         .select("id, name, owner_id, plan_id, account_status, subscription_started_at, subscription_ends_at, data_delete_after, created_at")
         .in("account_status", ["active", "expired", "pending_payment", "suspended"])
         .is("deleted_at", null)
-        .order("subscription_ends_at", { ascending: true, nullsLast: true })
+        .order("subscription_ends_at", { ascending: true, nullsFirst: false })
         .limit(100);
 
       if (error) throw error;

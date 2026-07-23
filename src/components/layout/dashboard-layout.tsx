@@ -37,6 +37,10 @@ import { usePreferences } from "@/stores/preferences-store";
 import { ReadOnlyModeProvider } from "@/providers/readonly-mode-provider";
 import { NotificationProvider } from "@/providers/notification-provider";
 import { ReadOnlyBanner } from "@/components/shared/readonly-banner";
+import {
+  hydrateStoresFromServer,
+  setupAutoSync,
+} from "@/lib/settings-sync";
 
 // ─── Shared Avatar Dropdown (used on both mobile and desktop) ─────
 
@@ -190,11 +194,14 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [businessName, setBusinessName] = useState("");
 
   useEffect(() => {
+    let cleanupSync: (() => void) | null = null;
+    let cancelled = false;
+
     const fetchUserInfo = async () => {
       try {
         const supabase = createClient();
         const { data: { session } } = await supabase.auth.getSession();
-        if (!session?.user) return;
+        if (!session?.user || cancelled) return;
 
         const { data: profile } = await supabase
           .from("profiles")
@@ -207,14 +214,23 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
           setUserAvatar(profile.avatar_url);
 
           if (profile.business_id) {
+            // ── Load settings from server into Zustand stores ──
+            await hydrateStoresFromServer(supabase, profile.business_id);
+
+            // ── Fetch business name ──
             const { data: business } = await supabase
               .from("businesses")
               .select("name")
               .eq("id", profile.business_id)
               .single();
 
-            if (business) {
-              setBusinessName(business.name || "");
+            if (!cancelled) {
+              if (business) {
+                setBusinessName(business.name || "");
+              }
+
+              // ── Set up auto-sync for settings changes ──
+              cleanupSync = setupAutoSync(supabase, profile.business_id);
             }
           }
         }
@@ -224,6 +240,14 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
     };
 
     fetchUserInfo();
+
+    return () => {
+      cancelled = true;
+      if (cleanupSync) {
+        cleanupSync();
+        cleanupSync = null;
+      }
+    };
   }, []);
 
   const avatarInitials = userFullName

@@ -99,7 +99,7 @@ export function OrderForm({ onSubmit, onCancel, initialData, isEditing }: OrderF
     }
     const defaults = createDefaultForm();
     defaults.delivery_charge = ordersSettings.courierCharge;
-    defaults.payment_method = ordersSettings.defaultPaymentMethod;
+    defaults.payment_method = ordersSettings.defaultPaymentMethod as "cod" | "bank_transfer" | "cash" | "other";
     return defaults;
   });
   const [saving, setSaving] = useState(false);

@@ -32,6 +32,14 @@ import {
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
@@ -833,37 +841,48 @@ export default function BusinessDetailPage() {
       </SectionCard>
 
       {/* ═══ CHANGE PLAN DIALOG ══════════════════════════════ */}
-      <ConfirmDialog
-        open={showChangePlan}
-        onOpenChange={setShowChangePlan}
-        onConfirm={handleChangePlan}
-        title="Change Plan"
-        description="Select a new subscription plan for this business."
-        confirmLabel="Change Plan"
-        loading={processing}
-      >
-        <div className="space-y-2 mt-3">
-          {allPlans.map((p) => (
-            <button
-              key={p.id}
-              type="button"
-              onClick={() => setSelectedPlanId(p.id)}
-              className={cn(
-                "w-full flex items-center justify-between rounded-xl border px-4 py-3 text-left transition-all",
-                selectedPlanId === p.id
-                  ? "border-primary/50 bg-primary/5 ring-1 ring-primary/20"
-                  : "border-border/20 hover:border-border/40 hover:bg-muted/5",
-              )}
-            >
-              <div>
-                <p className="text-sm font-medium text-foreground">{p.name}</p>
-                <p className="text-xs text-muted-foreground/70">Rs. {p.monthly_price.toLocaleString()} / month</p>
-              </div>
-              {selectedPlanId === p.id && <CheckCircle2 className="size-4 text-primary" />}
-            </button>
-          ))}
-        </div>
-      </ConfirmDialog>
+      <Dialog open={showChangePlan} onOpenChange={setShowChangePlan}>
+        <DialogContent size="sm">
+          <DialogHeader>
+            <DialogTitle>Change Plan</DialogTitle>
+            <DialogDescription>
+              Select a new subscription plan for this business.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-2 py-2">
+            {allPlans.map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => setSelectedPlanId(p.id)}
+                className={cn(
+                  "w-full flex items-center justify-between rounded-xl border px-4 py-3 text-left transition-all",
+                  selectedPlanId === p.id
+                    ? "border-primary/50 bg-primary/5 ring-1 ring-primary/20"
+                    : "border-border/20 hover:border-border/40 hover:bg-muted/5",
+                )}
+              >
+                <div>
+                  <p className="text-sm font-medium text-foreground">{p.name}</p>
+                  <p className="text-xs text-muted-foreground/70">Rs. {p.monthly_price.toLocaleString()} / month</p>
+                </div>
+                {selectedPlanId === p.id && <CheckCircle2 className="size-4 text-primary" />}
+              </button>
+            ))}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowChangePlan(false)} disabled={processing}>
+              Cancel
+            </Button>
+            <Button onClick={handleChangePlan} disabled={processing || !selectedPlanId}>
+              {processing && <Loader2 className="size-4 animate-spin" />}
+              Change Plan
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* ═══ DANGER CONFIRM DIALOG ═══════════════════════════ */}
       <ConfirmDialog

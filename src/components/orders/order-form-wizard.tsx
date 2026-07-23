@@ -213,6 +213,7 @@ function StepContent({
   handleRemoveItem,
   handleProductSelect,
   onEditStep,
+  paymentMethods,
 }: {
   step: number;
   form: OrderFormData;
@@ -230,6 +231,7 @@ function StepContent({
   handleRemoveItem: (index: number) => void;
   handleProductSelect: (product: ProductResult) => void;
   onEditStep: (step: number) => void;
+  paymentMethods?: { value: string; label: string }[];
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -522,6 +524,7 @@ export function OrderFormWizard({
                   setCurrentStep(step);
                   window.scrollTo({ top: 0, behavior: "smooth" });
                 }}
+                paymentMethods={paymentMethods}
               />
             </motion.div>
           </AnimatePresence>
