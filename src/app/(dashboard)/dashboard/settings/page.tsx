@@ -1442,7 +1442,7 @@ interface DataEntity {
 
 const DATA_ENTITIES: DataEntity[] = [
   { key: "orders", label: "Orders", icon: ShoppingCart, color: "text-primary", tables: ["orders", "order_items", "order_status_history"] },
-  { key: "products", label: "Products", icon: Package, color: "text-warning", tables: ["products", "price_snapshots"] },
+  { key: "products", label: "Products", icon: Package, color: "text-warning", tables: ["products", "price_snapshots", "categories"] },
   { key: "inventory", label: "Inventory", icon: Boxes, color: "text-info", tables: ["inventory_items", "inventory_transactions"] },
   { key: "expenses", label: "Expenses", icon: ReceiptText, color: "text-destructive", tables: ["expenses"] },
   { key: "customers", label: "Customers", icon: Users, color: "text-success", tables: ["customers"] },
@@ -1509,6 +1509,10 @@ function DataSecuritySettings() {
   
   const [resetting, setResetting] = useState(false);
   const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
+  const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
+  const [resetPassword, setResetPassword] = useState("");
+  const [verifyingPassword, setVerifyingPassword] = useState(false);
+  const [passwordError, setPasswordError] = useState("");
 
   const allSelected = (set: Set<string>) => set.size === ALL_ENTITY_KEYS.length;
 
@@ -1729,12 +1733,15 @@ function DataSecuritySettings() {
   }, []);
 
   // Exclude business_settings — preserve user preferences, courier credentials, etc.
-  const RESET_TABLES = DATA_ENTITIES
-    .filter((e) => e.key !== "settings")
-    .flatMap((e) => e.tables)
-    .reverse(); // Delete child tables first to avoid FK constraint violations
+  const RESET_TABLES = [
+    ...DATA_ENTITIES
+      .filter((e) => e.key !== "settings")
+      .flatMap((e) => e.tables),
+    "profiles",
+  ].reverse(); // Delete child tables first to avoid FK constraint violations
 
-  const handleReset = useCallback(async () => {
+  // ── Actual delete logic (runs after password verification) ──
+  const executeReset = useCallback(async () => {
     setResetting(true);
     try {
       const supabase = createClient();
@@ -1747,13 +1754,22 @@ function DataSecuritySettings() {
         .single();
       if (!profile?.business_id) { toast.error("No business found"); return; }
 
+      const userId = session.user.id;
+
       let deleted = 0;
       for (const table of RESET_TABLES) {
-        const { data: deletedRows, error } = await supabase
+        let query = supabase
           .from(table)
           .delete()
-          .eq("business_id", profile.business_id)
-          .select("id");
+          .eq("business_id", profile.business_id);
+
+        // Always preserve the current user's own profile so they can
+        // continue using the app after the reset.
+        if (table === "profiles") {
+          query = query.neq("user_id", userId);
+        }
+
+        const { data: deletedRows, error } = await query.select("id");
         if (error) {
           console.error(`Failed to delete from ${table}:`, error);
         } else {
@@ -1771,23 +1787,147 @@ function DataSecuritySettings() {
     } finally {
       setResetting(false);
       setResetConfirmOpen(false);
+      setPasswordDialogOpen(false);
+      setResetPassword("");
+      setPasswordError("");
     }
   }, []);
 
+  // ── Step 1: ConfirmDialog confirmed → open password dialog ──
+  const handleResetConfirm = useCallback(() => {
+    setResetConfirmOpen(false);
+    setResetPassword("");
+    setPasswordError("");
+    setPasswordDialogOpen(true);
+  }, []);
+
+  // ── Step 2: Verify password, then execute reset ──
+  const handleVerifyPassword = useCallback(async () => {
+    if (!resetPassword.trim()) {
+      setPasswordError("Please enter your password.");
+      return;
+    }
+
+    setVerifyingPassword(true);
+    setPasswordError("");
+
+    try {
+      const supabase = createClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user?.email) {
+        setPasswordError("Could not verify identity. Please log in again.");
+        setVerifyingPassword(false);
+        return;
+      }
+
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: session.user.email,
+        password: resetPassword,
+      });
+
+      if (signInError) {
+        setPasswordError("Incorrect password. Please try again.");
+        setVerifyingPassword(false);
+        return;
+      }
+
+      // Password verified — proceed with reset (verifyingPassword stays true
+      // so the button remains disabled with "Verifying..." while executeReset runs)
+      await executeReset();
+    } catch {
+      setPasswordError("An error occurred. Please try again.");
+      setVerifyingPassword(false);
+    }
+  }, [resetPassword, executeReset]);
+
   return (
     <div className="space-y-4">
-      {/* Reset Confirmation Dialog */}
+      {/* Step 1: Reset Confirmation Dialog */}
       <ConfirmDialog
         open={resetConfirmOpen}
         onOpenChange={setResetConfirmOpen}
         title="Reset All System Data?"
-        description="This will permanently delete all orders, expenses, products, inventory items, customers, quotations, and delivery data for your business. Account and business profile information will be preserved. This action cannot be undone."
+        description="This will permanently delete all orders, expenses, products, inventory items, customers, quotations, delivery data, categories, and user profiles for your business. This action cannot be undone."
         confirmLabel="Yes, Reset Everything"
         cancelLabel="Cancel"
         variant="destructive"
-        onConfirm={handleReset}
-        loading={resetting}
+        onConfirm={handleResetConfirm}
+        loading={false}
       />
+
+      {/* Step 2: Password Verification Dialog */}
+      <Dialog open={passwordDialogOpen} onOpenChange={(open) => { if (!open) { setPasswordDialogOpen(false); setResetPassword(""); setPasswordError(""); } }}>
+        <DialogContent showCloseButton={false} className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Shield className="size-5 text-destructive" />
+              Confirm Your Password
+            </DialogTitle>
+            <DialogDescription>
+              For security, please enter your account password to confirm this irreversible action.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="reset-password" className="text-sm font-medium text-foreground/80">
+                Password
+              </Label>                <Input
+                id="reset-password"
+                type="password"
+                autoComplete="off"
+                placeholder="Enter your account password"
+                value={resetPassword}
+                onChange={(e) => {
+                  setResetPassword(e.target.value);
+                  setPasswordError("");
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleVerifyPassword();
+                }}
+                className="h-10"
+                disabled={verifyingPassword}
+              />
+              {passwordError && (
+                <p className="text-xs text-destructive mt-1">{passwordError}</p>
+              )}
+            </div>
+
+            <div className="flex items-start gap-2 rounded-lg bg-destructive/[0.04] border border-destructive/10 p-3">
+              <AlertTriangle className="size-4 text-destructive/60 shrink-0 mt-0.5" />
+              <p className="text-xs text-muted-foreground/70 leading-relaxed">
+                This will permanently delete all your business data. This action cannot be undone.
+              </p>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setPasswordDialogOpen(false);
+                setResetPassword("");
+                setPasswordError("");
+              }}
+              disabled={verifyingPassword}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleVerifyPassword}
+              disabled={verifyingPassword || !resetPassword.trim()}
+            >
+              {verifyingPassword ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <Trash2 className="size-4" />
+              )}
+              {verifyingPassword ? "Verifying..." : "Confirm & Reset"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Export Dialog */}
       <Dialog open={exportDialogOpen} onOpenChange={setExportDialogOpen}>
@@ -1944,8 +2084,8 @@ function DataSecuritySettings() {
             </p>
             <p className="text-xs text-muted-foreground/60 mt-1 leading-relaxed">
               Permanently delete all orders, expenses, products, inventory,
-              and customer data. Account and business profile data will be
-              preserved.
+              categories, profiles, and customer data for your business.
+              Account sign-in will be preserved.
             </p>
           </div>
           <Button
@@ -1966,7 +2106,7 @@ function DataSecuritySettings() {
         <div className="flex items-start gap-2 rounded-lg bg-destructive/[0.03] border border-destructive/10 px-3.5 py-2.5">
           <Shield className="size-3.5 text-muted-foreground/50 shrink-0 mt-0.5" />
           <p className="text-xs text-muted-foreground/60 leading-relaxed">
-            Account and Business profile data will be preserved.
+            Orders, products, inventory, expenses, customers, quotations, deliveries, categories, and user profiles will be deleted. Account sign-in will be preserved.
           </p>
         </div>
       </CollapsibleCard>

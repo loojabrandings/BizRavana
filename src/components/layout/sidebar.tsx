@@ -15,7 +15,6 @@ import {
   Plus,
   Settings,
   ShoppingCart,
-  Store,
   type LucideIcon,
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -91,7 +90,7 @@ const systemLinks = systemNav.filter((item): item is NavItem => !isGroup(item));
 
 function SidebarBrand({ collapsed, mobile }: { collapsed: boolean; mobile?: boolean }) {
   const [businessName, setBusinessName] = useState("BizRavana");
-  const [businessTagline, setBusinessTagline] = useState("Business OS");
+  const [businessTagline, setBusinessTagline] = useState("Manage Smarter. Grow Faster");
   const [businessLogo, setBusinessLogo] = useState<string | null>(null);
 
   useEffect(() => {
@@ -138,22 +137,20 @@ function SidebarBrand({ collapsed, mobile }: { collapsed: boolean; mobile?: bool
     fetchBranding();
   }, []);
 
-  const logoSize = collapsed ? 48 : 150;
-
   const logoEl = (
-    <div
-      style={{ width: logoSize, height: logoSize }}
-      className="flex shrink-0 items-center justify-center"
-    >
+    <div className="flex shrink-0 items-center justify-center">
       {businessLogo ? (
         <img
           src={businessLogo}
           alt={businessName}
-          style={{ width: logoSize, height: logoSize }}
-          className="object-contain"
+          className={cn("object-contain h-auto", collapsed ? "w-16" : "w-28")}
         />
       ) : (
-        <Store className={cn("shrink-0 text-sidebar-primary", collapsed ? "size-8" : "size-14")} />
+        <img
+          src="/darkmode-logo.png"
+          alt={businessName}
+          className={cn("object-contain h-auto", collapsed ? "w-16" : "w-28")}
+        />
       )}
     </div>
   );
@@ -168,29 +165,29 @@ function SidebarBrand({ collapsed, mobile }: { collapsed: boolean; mobile?: bool
           aria-label={`${businessName} — Back to Dashboard`}
         >
           {/* Logo (smaller) */}
-          <div
-            style={{ width: 110, height: 110 }}
-            className="flex shrink-0 items-center justify-center"
-          >
+          <div className="flex shrink-0 items-center justify-center">
             {businessLogo ? (
               <img
                 src={businessLogo}
                 alt={businessName}
-                style={{ width: 110, height: 110 }}
-                className="object-contain"
+                className="object-contain h-auto w-28"
               />
             ) : (
-              <Store className="shrink-0 text-sidebar-primary size-10" />
+              <img
+                src="/darkmode-logo.png"
+                alt={businessName}
+                className="object-contain h-auto w-28"
+              />
             )}
           </div>
 
           {/* Business Name (larger, visual focus) + Tagline */}
           <div className="flex flex-col items-center gap-0.5">
-            <p className="text-lg font-bold tracking-tight text-sidebar-foreground">
+            <p className="text-xl font-bold tracking-tight text-sidebar-foreground">
               {businessName}
             </p>
             {businessTagline && (
-              <p className="text-[10px] font-medium uppercase tracking-[0.15em] text-sidebar-foreground/40">
+              <p className="text-[11px] font-medium uppercase tracking-[0.15em] text-sidebar-foreground/40 text-center">
                 {businessTagline}
               </p>
             )}
@@ -220,11 +217,11 @@ function SidebarBrand({ collapsed, mobile }: { collapsed: boolean; mobile?: bool
         {/* Business Name + Tagline (hidden when collapsed) */}
         {!collapsed && (
           <div className="flex flex-col items-center gap-0.5">
-            <p className="text-base font-bold tracking-tight text-sidebar-foreground">
+            <p className="text-lg font-bold tracking-tight text-sidebar-foreground">
               {businessName}
             </p>
             {businessTagline && (
-              <p className="text-xs font-medium uppercase tracking-[0.15em] text-sidebar-foreground/40">
+              <p className="text-xs font-medium uppercase tracking-[0.15em] text-sidebar-foreground/40 text-center">
                 {businessTagline}
               </p>
             )}

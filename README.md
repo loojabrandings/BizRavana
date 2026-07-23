@@ -15,7 +15,7 @@ A modern, multi-tenant business management SaaS platform for Sri Lankan small an
 | **Forms** | React Hook Form + Zod |
 | **State** | Zustand + TanStack Query |
 | **Icons** | Lucide React |
-| **PDF** | jsPDF + JsBarcode + svg2pdf.js |
+| **PDF** | jsPDF + jsPDF-AutoTable |
 | **Hosting** | Vercel |
 
 ## Features
@@ -30,11 +30,11 @@ A modern, multi-tenant business management SaaS platform for Sri Lankan small an
 - **Reports** — Orders analytics, expense analytics, financial P&L with Recharts visualizations
 - **Delivery** — Courier settings, shipment status tracking, Royal Express API integration
 - **Subscription** — Pricing comparison table, usage meters, payment proof upload, payment history
-- **Settings** — Business profile, appearance (themes/accent/font), preferences, courier config, WhatsApp templates, shipping label defaults, data export/import/reset
-- **Shipping Labels** — A5 PDF generation with Code 128 barcode, handling instructions, combined multi-page bulk printing
+- **Settings** — Business profile, appearance (themes/accent/font), preferences, courier config, WhatsApp templates, data export/import/reset (deletes orders, products, categories, inventory, expenses, customers, quotations, deliveries, and user profiles)
 - **WhatsApp** — Message template management (3 contexts), template selection dialogs, one-click send via wa.me
 - **Global Search** — Cmd+K search with recent searches persistence
 - **Keyboard Shortcuts** — Navigation, actions, arrow key dialog navigation, Delete key bulk operations
+- **Cross-Device Settings Sync** — All operational settings (orders, quotations, expenses, preferences) are automatically synced to Supabase. Changes made on one device appear on another without any manual export/import. localStorage acts as fast local cache; Supabase is the cross-device source of truth.
 - **Notifications** — Shared NotificationProvider with Supabase Realtime WebSocket. Bell icon with live unread count, popover with notification list, mark-as-read. Powered by:
   - **Admin broadcasts** — Create/send/schedule/cancel platform-wide notifications
   - **Automated rules** — 14 seed rules for trial, subscription, payment, usage, storage events
@@ -110,12 +110,14 @@ src/
 └── constants/           # App constants (districts, etc.)
 
 supabase/
-└── migrations/          # 25 SQL migrations (001–025)
+└── migrations/          # 26 SQL migrations (001–026)
+
+> **Note:** 3 orphaned tables (`courier_cities`, `courier_districts`, `courier_waybills`) exist in Supabase with no migration coverage. See [DATABASE_SCHEMA.md](./DATABASE_SCHEMA.md).
 ```
 
 ## Database
 
-The project uses PostgreSQL via Supabase with 28 tables, Row Level Security, and 25 database migrations. See [DATABASE_SCHEMA.md](./DATABASE_SCHEMA.md) for full documentation.
+The project uses PostgreSQL via Supabase with 28 tables, Row Level Security, and 26 database migrations. See [DATABASE_SCHEMA.md](./DATABASE_SCHEMA.md) for full documentation.
 
 ## Development
 

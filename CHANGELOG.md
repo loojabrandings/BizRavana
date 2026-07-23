@@ -4,6 +4,96 @@ All user-visible changes to Bizravana are documented here.
 
 ---
 
+## Version 0.12.2 (2026-07-23)
+
+### Added
+
+- **BizRavana Default Branding** — When no user-submitted business name, tagline, or logo exists, the sidebar now shows:
+  - **Business Name**: "BizRavana" (was already the default)
+  - **Tagline**: "Manage Smarter. Grow Faster" (changed from "Business OS")
+  - **Logo**: `darkmode-logo.png` theme-aware PNG with proportional scaling (`w-28 h-auto`)
+- **Theme-Aware Logos** — Two PNG logo files at `/darkmode-logo.png` and `/lightmode-logo.png` replace the old SVG component
+- **Favicon** — Browser tab icon set to `/darkmode-logo.png` (consistent across all themes)
+- **Migration 026** — Added `DELETE` RLS policy for `profiles` table (required for data reset)
+
+### Changed
+
+- **Data Reset (Danger Zone)** — "Reset All Data" now also deletes:
+  - **Categories** — Product categories table (`categories`) added to the products entity in `DATA_ENTITIES` (also included in export/import)
+  - **Profiles** — `profiles` table added to `RESET_TABLES` (only on reset, not exported/imported). Current user's own profile is preserved (`neq("user_id", userId)` guard), preventing app breakage after reset
+- **Sidebar Logo** — Replaced the inline SVG logo component with theme-aware PNG images (`darkmode-logo.png` / `lightmode-logo.png`). Logo now uses `w-* h-auto` sizing for proportional scaling instead of fixed square dimensions
+- **Logo Color** — Removed theme-primary-colored SVG in favor of hardcoded black (light mode) / white (dark mode) via CSS class
+
+### Fixed
+
+- **Hydration Mismatch** — Removed `useTheme().resolvedTheme` conditional from sidebar logo rendering. The sidebar now always uses `/darkmode-logo.png`, eliminating the SSR-vs-client hydration error
+
+### Removed
+
+- **SVG Logo Component** — Deleted `src/components/shared/bizravana-logo.tsx` (replaced by theme-aware PNGs)
+- **Old Favicon** — Deleted `public/bizravana-favicon.svg` (replaced by `/darkmode-logo.png`)
+- **`logo-fill` CSS class** — Removed from `globals.css` (no longer needed)
+- **`ThemeFavicon` Component** — Deleted `src/components/shared/theme-favicon.tsx` (favicon now hardcoded to a single image)
+- **`useTheme` Import** — Removed from sidebar (no longer needed after removing theme-aware branching)
+
+### Other
+
+- **All Markdown docs updated** to reflect latest changes
+
+---
+
+## Version 0.12.1 (2026-07-23)
+
+### Fixed
+
+- **Royal Express waybill fix** — `shipViaRoyalExpress` now uses the order's pre-assigned `waybill_id` instead of generating a synthetic `"CM" + order_number` waybill. Fixes 422 error: "waybill number has already been taken."
+- **Auto waybill flow restored** — When `waybill_id` is null (auto mode), `waybill_number` is now omitted from the API payload, letting Royal Express auto-generate one. The previous validation threw an error blocking auto waybills entirely.
+
+### Removed
+
+- **Shipping Label Feature** — Complete removal of the A5 PDF shipping label system:
+  - Deleted `src/lib/shipping-label/` (types, validate, fetch-data, generate-pdf — 4 files)
+  - Deleted `src/components/orders/shipping-label-dialog.tsx`
+  - Removed Print Label buttons from orders page, order preview, and bulk actions
+  - Removed Shipping Label Defaults settings from courier-settings.tsx
+  - Removed `jsbarcode` and `svg2pdf.js` from package.json
+  - No other features affected
+
+### Other
+
+- **Identified 3 orphaned Supabase tables** with no migration coverage — `courier_cities`, `courier_districts`, `courier_waybills` — not referenced by any application code
+- **All Markdown docs updated** to reflect shipping label removal and latest changes
+
+---
+
+## Version 0.12.0 (2026-07-23)
+
+### Added
+
+- **Settings Sync to Supabase** — Operational settings now persist across devices via the `business_settings` table:
+  - **Orders Settings** — Prefix, numbering start, default statuses, payment methods list, default payment method, courier charge, default landing page, barcode scanner toggle, sorting, rows per page, inventory/deduct settings
+  - **Quotation Settings** — Prefix, numbering start, expiry days
+  - **Expense Settings** — Payment methods list, default payment method
+  - **Preferences** — Theme mode, accent color, font family/size, currency, date format, background style
+  - **Automatic sync** — On dashboard mount, settings are fetched from Supabase and merged into Zustand stores (server wins). All changes are auto-saved with a 1-second debounce. Cleanup on unmount.
+  - **Seamless cross-device** — Works transparently. No new buttons or UI changes. Zustand persist (localStorage) acts as the fast cache, Supabase as the cross-device source of truth.
+  - **Key design** — Uses `(business_id, key)` unique constraint with 4 well-known keys (`orders_settings`, `quotation_settings`, `expense_settings`, `preferences`). Dynamic `stripFunctions()` helper auto-adapts to store changes.
+- **Payment Method Selector (Dropdown)** — Replaced the 2×2 radio button grid with a proper Select dropdown in the Order Form. Dynamically lists all payment methods configured in Order Settings, with formatted labels (e.g., "Bank Transfer").
+
+### Changed
+
+- **Order Form Payment Section** — Removed unnecessary "COD Amount" read-only field (duplicated Remaining Balance)
+- **Order Form Wizard** — Fixed pre-existing bug: `paymentMethods` prop was not being passed to the `StepContent` component, causing the Payment Section to fall back to default methods on mobile
+
+### Fixed
+
+- **TypeScript build errors** (blocking Vercel deployment):
+  - `ConfirmDialog children` — The Change Plan dialog in `admin/businesses/[id]` passed children to `ConfirmDialog`, which doesn't support custom content. Replaced with raw `<Dialog>` component with proper body section and `DialogFooter`.
+  - `nullsLast` option — The `order()` call in `admin/subscriptions` used `nullsLast: true`, which doesn't exist on the Supabase postgrest-js client. Changed to `nullsFirst: false`.
+- **`order-form.tsx` type cast** — `defaultPaymentMethod` from the settings store is typed as `string`, but the form's `payment_method` field expects a union type (`"cod" | "bank_transfer" | "cash" | "other"`). Added explicit type assertion.
+
+---
+
 ## Version 0.11.0 (2026-07-22)
 
 ### Added

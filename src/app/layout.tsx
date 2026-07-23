@@ -6,6 +6,7 @@ import { PreferencesProvider } from "@/providers/preferences-provider";
 import { QueryProvider } from "@/providers/query-provider";
 import { Toaster } from "@/components/ui/sonner";
 
+
 const poppins = Poppins({
   subsets: ["latin"],
   weight: ["300", "400", "500", "600", "700"],
@@ -27,6 +28,9 @@ const caveat = Caveat({
 export const metadata: Metadata = {
   title: "BizRavana - Business Dashboard",
   description: "Multi-tenant SaaS dashboard for small and medium businesses",
+  icons: {
+    icon: "/darkmode-logo.png",
+  },
 };
 
 export default function RootLayout({
