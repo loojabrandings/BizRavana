@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useIsMobile } from "@/hooks/use-media-query";
+import { useReadOnlyMode } from "@/providers/readonly-mode-provider";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 import {
@@ -109,6 +110,8 @@ function getProfitAmount(sellingPrice: number, costPrice: number | null): number
 // ─── Main Page ─────────────────────────────────────────────────────
 
 export default function ProductsPage() {
+  const { guard } = useReadOnlyMode();
+
   // Data
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -920,6 +923,7 @@ export default function ProductsPage() {
                 e.stopPropagation();
                 fetchProductForForm(product.id).then((fd) => {
                   if (fd) {
+                    if (guard("editing products")) return;
                     setEditData(fd);
                     setEditKey((k) => k + 1);
                     setShowForm(true);
@@ -935,6 +939,7 @@ export default function ProductsPage() {
               size="icon-xs"
               onClick={(e) => {
                 e.stopPropagation();
+                if (guard("deleting products")) return;
                 setDeleteTargetId(product.id);
               }}
             >
@@ -1274,10 +1279,12 @@ export default function ProductsPage() {
       action: (!isStatusFiltered && !isCategoryFiltered) ? (
         <Button
           variant="gradient"
-          size="sm"
-          onClick={() => setShowForm(true)}
-        >
-          <Plus className="size-3.5" />
+          size="sm"              onClick={() => {
+                if (guard("creating products")) return;
+                setShowForm(true);
+              }}
+            >
+              <Plus className="size-3.5" />
           New Product
         </Button>
       ) : undefined,
@@ -1312,7 +1319,10 @@ export default function ProductsPage() {
             </Button>
             <Button
               variant="gradient"
-              onClick={() => setShowForm(true)}
+              onClick={() => {
+                if (guard("creating products")) return;
+                setShowForm(true);
+              }}
             >
               <Plus className="size-4" />
               Add New Product

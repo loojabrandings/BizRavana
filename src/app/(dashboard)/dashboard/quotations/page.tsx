@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { createClient } from "@/lib/supabase/client";
+import { useReadOnlyMode } from "@/providers/readonly-mode-provider";
 import { cn } from "@/lib/utils";
 import {
   DropdownMenu,
@@ -123,6 +124,8 @@ import { formatDate } from "@/lib/formatters";
 // ─── Main Page ─────────────────────────────────────────────────────
 
 export default function QuotationsPage() {
+  const { guard } = useReadOnlyMode();
+
   // Data
   const [quotations, setQuotations] = useState<Quotation[]>([]);
   const [loading, setLoading] = useState(true);
@@ -634,6 +637,7 @@ export default function QuotationsPage() {
   const handleEditQuotation = useCallback(async (quotation: Quotation) => {
     fetchQuotationForForm(quotation.id).then((fd) => {
       if (fd) {
+        if (guard("editing quotations")) return;
         setEditData(fd);
         setEditKey((k) => k + 1);
         setShowForm(true);
@@ -1040,6 +1044,7 @@ export default function QuotationsPage() {
               onMouseLeave={() => setHoveredAction(null)}
               onClick={(e) => {
                 e.stopPropagation();
+                if (guard("deleting quotations")) return;
                 setDeleteTargetId(quotation.id);
               }}
             >
@@ -1164,6 +1169,7 @@ export default function QuotationsPage() {
               title="Delete"
               onClick={(e) => {
                 e.stopPropagation();
+                if (guard("deleting quotations")) return;
                 setDeleteTargetId(quotation.id);
               }}
             >
@@ -1213,7 +1219,10 @@ export default function QuotationsPage() {
               <p className="mt-1 text-sm text-muted-foreground">Create and manage quotations for your customers.</p>
             </div>
             <div className="flex items-center justify-center gap-3 w-full sm:w-auto sm:gap-2 sm:justify-start">
-              <Button variant="gradient" onClick={() => setShowForm(true)}>
+              <Button variant="gradient" onClick={() => {
+                if (guard("creating quotations")) return;
+                setShowForm(true);
+              }}>
                 <Plus className="size-4" />
                 Add New Quotation
               </Button>

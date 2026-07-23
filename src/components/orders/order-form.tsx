@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
-import { X } from "lucide-react";
+import { RotateCcw, X } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
@@ -98,7 +98,8 @@ export function OrderForm({ onSubmit, onCancel, initialData, isEditing }: OrderF
       return { ...initialData, items: updatedItems };
     }
     const defaults = createDefaultForm();
-    defaults.delivery_charge = ordersSettings.defaultDeliveryCharge;
+    defaults.delivery_charge = ordersSettings.courierCharge;
+    defaults.payment_method = ordersSettings.defaultPaymentMethod;
     return defaults;
   });
   const [saving, setSaving] = useState(false);
@@ -325,6 +326,19 @@ export function OrderForm({ onSubmit, onCancel, initialData, isEditing }: OrderF
     return Object.keys(errs).length === 0;
   }, [form]);
 
+  // ─── Reset Customer Details ─────────────────────────────────
+  const handleReset = useCallback(() => {
+    updateForm("customer_name", "");
+    updateForm("phone", "");
+    updateForm("address", "");
+    updateForm("district", "");
+    updateForm("nearest_city", "");
+    updateForm("whatsapp", "");
+    updateForm("email", "");
+    updateForm("remarks", "");
+    toast.success("Customer details cleared");
+  }, [updateForm]);
+
   // ─── Cancel with unsaved changes check ───────────────────────
   const handleCancel = useCallback(() => {
     if (isDirty) {
@@ -456,6 +470,13 @@ export function OrderForm({ onSubmit, onCancel, initialData, isEditing }: OrderF
         handleProductSelect={handleProductSelect}
         handleSave={handleSave}
         handleCancel={handleCancel}
+        paymentMethods={ordersSettings.orderPaymentMethods.map((m) => ({
+          value: m,
+          label:
+            m === "bank_transfer"
+              ? "Bank Transfer"
+              : m.charAt(0).toUpperCase() + m.slice(1).replace(/_/g, " "),
+        }))}
       />
     );
   }
@@ -536,6 +557,13 @@ export function OrderForm({ onSubmit, onCancel, initialData, isEditing }: OrderF
               }}
               calculations={calculations}
               updateForm={updateForm}
+              paymentMethods={ordersSettings.orderPaymentMethods.map((m) => ({
+                value: m,
+                label:
+                  m === "bank_transfer"
+                    ? "Bank Transfer"
+                    : m.charAt(0).toUpperCase() + m.slice(1).replace(/_/g, " "),
+              }))}
             />
             <OrderManagementSection
               form={{
@@ -558,14 +586,25 @@ export function OrderForm({ onSubmit, onCancel, initialData, isEditing }: OrderF
 
       {/* ═══════ Sticky Action Bar ════════════════════════════════ */}
       <div className="flex items-center justify-between px-8 py-4">
-        <Button
-          variant="ghost"
-          onClick={handleCancel}
-          disabled={saving}
-          className="text-sm"
-        >
-          Cancel
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            onClick={handleReset}
+            disabled={saving}
+            className="text-sm gap-1.5 text-muted-foreground/60 hover:text-destructive"
+          >
+            <RotateCcw className="size-3.5" />
+            Reset
+          </Button>
+          <Button
+            variant="ghost"
+            onClick={handleCancel}
+            disabled={saving}
+            className="text-sm"
+          >
+            Cancel
+          </Button>
+        </div>
         <div className="flex items-center gap-3">
           <Button
             variant="outline"

@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { createClient } from "@/lib/supabase/client";
+import { useReadOnlyMode } from "@/providers/readonly-mode-provider";
 import { cn } from "@/lib/utils";
 import {
   DropdownMenu,
@@ -86,6 +87,7 @@ const paymentStatusOptions: { value: string; label: string }[] = paymentStatusVa
 }));
 
 import { useExpenseSettings } from "@/stores/expense-settings-store";
+import { useOrdersSettings } from "@/stores/orders-settings-store";
 
 // ─── Color Maps ────────────────────────────────────────────────────
 
@@ -110,8 +112,11 @@ function todayStr() {
 // ─── Main Page ─────────────────────────────────────────────────────
 
 function ExpensesPageInner() {
+  const { guard } = useReadOnlyMode();
+
   // ─── Dynamic payment methods from expense settings ────────────
   const expenseSettings = useExpenseSettings();
+  const ordersSettings = useOrdersSettings();
   const localPaymentMethodOptions = useMemo(
     () =>
       expenseSettings.expensePaymentMethods.map((method) => ({
@@ -746,16 +751,18 @@ function ExpensesPageInner() {
             <Button variant="ghost" size="icon-xs" onClick={(e) => { e.stopPropagation(); }}>
               <Eye className="size-3.5" />
             </Button>
-            <Button variant="ghost" size="icon-xs" onClick={(e) => {
-              e.stopPropagation();
-              handleEditExpense(expense);
-            }}>
+            <Button variant="ghost" size="icon-xs"              onClick={(e) => {
+                e.stopPropagation();
+                if (guard("editing expenses")) return;
+                handleEditExpense(expense);
+              }}>
               <Pencil className="size-3.5" />
             </Button>
-            <Button variant="ghost" size="icon-xs" onClick={(e) => {
-              e.stopPropagation();
-              setDeleteTargetId(expense.id);
-            }}>
+            <Button variant="ghost" size="icon-xs"              onClick={(e) => {
+                e.stopPropagation();
+                if (guard("deleting expenses")) return;
+                setDeleteTargetId(expense.id);
+              }}>
               <Trash2 className="size-3.5" />
             </Button>
           </div>
@@ -854,7 +861,10 @@ function ExpensesPageInner() {
                 <Plus className="size-3.5" />
                 Add Category
               </Button>
-              <Button variant="gradient" onClick={() => setShowForm(true)}>
+              <Button variant="gradient" onClick={() => {
+                if (guard("creating expenses")) return;
+                setShowForm(true);
+              }}>
                 <Plus className="size-4" />
                 Add New Expense
               </Button>
@@ -971,17 +981,18 @@ function ExpensesPageInner() {
             <div className="flex flex-1 overflow-hidden" style={{ maxHeight: "calc(100vh - 280px)" }}>
               <div className="flex-1 overflow-y-auto px-8 py-6">
                 <div className="mx-auto max-w-2xl space-y-8">
-                  {/* ─── Add to Inventory ────────────────────────── */}
-                  <div className="flex items-center gap-3 rounded-2xl border border-border/50 bg-muted/30 px-5 py-3.5">
-                    <Checkbox
-                      id="add_to_inventory"
-                      checked={formData.add_to_inventory}
-                      onCheckedChange={(checked) => setFormData((prev) => ({ ...prev, add_to_inventory: checked === true }))}
-                    />
-                    <Label htmlFor="add_to_inventory" className="text-sm font-medium text-foreground cursor-pointer">
-                      Add to Inventory
-                    </Label>
-                  </div>
+                  {ordersSettings.enableInventory && (
+                    <div className="flex items-center gap-3 rounded-2xl border border-border/50 bg-muted/30 px-5 py-3.5">
+                      <Checkbox
+                        id="add_to_inventory"
+                        checked={formData.add_to_inventory}
+                        onCheckedChange={(checked) => setFormData((prev) => ({ ...prev, add_to_inventory: checked === true }))}
+                      />
+                      <Label htmlFor="add_to_inventory" className="text-sm font-medium text-foreground cursor-pointer">
+                        Add to Inventory
+                      </Label>
+                    </div>
+                  )}
 
                   {/* ─── Row 1 ────────────────────────────────────── */}
                   <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">

@@ -3,6 +3,13 @@
 import { ChevronDown } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import type { OrderFormData, OrderFormCalculations } from "./types";
 import { formatCurrency } from "./utils";
@@ -21,9 +28,10 @@ interface PaymentSectionProps {
     key: K,
     value: OrderFormData[K],
   ) => void;
+  paymentMethods?: { value: string; label: string }[];
 }
 
-const PAYMENT_METHODS = [
+const FALLBACK_PAYMENT_METHODS = [
   { value: "cash" as const, label: "Cash" },
   { value: "bank_transfer" as const, label: "Bank Transfer" },
   { value: "cod" as const, label: "COD" },
@@ -34,6 +42,7 @@ export function PaymentSection({
   form,
   calculations,
   updateForm,
+  paymentMethods = FALLBACK_PAYMENT_METHODS,
 }: PaymentSectionProps) {
   return (
     <>
@@ -146,44 +155,29 @@ export function PaymentSection({
         </div>
       </div>
 
-      {/* ─── Row 4: Payment Method — Separate Options ──────────── */}
-      <div className="space-y-2.5" role="radiogroup" aria-label="Payment method">
+      {/* ─── Row 4: Payment Method — Dropdown ─────────────────── */}
+      <div className="space-y-1.5">
         <span className="text-sm text-muted-foreground">Payment Method</span>
-        <div className="grid grid-cols-2 gap-2">
-          {PAYMENT_METHODS.map((method) => (
-            <button
-              key={method.value}
-              type="button"
-              role="radio"
-              aria-checked={form.payment_method === method.value}
-              onClick={() => updateForm("payment_method", method.value)}
-              className={cn(
-                "rounded-lg border px-3 py-2 text-sm font-medium transition-all",
-                form.payment_method === method.value
-                  ? "border-primary/40 bg-primary/5 text-foreground shadow-sm"
-                  : "border-border bg-muted/20 text-muted-foreground hover:border-border/80 hover:text-foreground",
-              )}
-            >
-              {method.label}
-            </button>
-          ))}
-        </div>
+        <Select
+          value={form.payment_method}
+          onValueChange={(v) => v && updateForm("payment_method", v)}
+        >
+          <SelectTrigger className="h-9 w-full">
+            <SelectValue placeholder="Select payment method">
+              {paymentMethods.find((m) => m.value === form.payment_method)?.label || form.payment_method}
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            {paymentMethods.map((method) => (
+              <SelectItem key={method.value} value={method.value}>
+                {method.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {/* ─── Conditional Payment Information ─────────────────────── */}
-      {form.payment_method === "cod" && (
-        <div className="space-y-1.5">
-          <span className="text-sm text-muted-foreground">COD Amount</span>
-          <Input
-            type="number"
-            min={0}
-            placeholder="Cash on delivery amount"
-            readOnly
-            className="bg-muted/40 h-9"
-            value={calculations.balanceRemaining || ""}
-          />
-        </div>
-      )}
       {form.payment_method === "bank_transfer" && (
         <div className="space-y-1.5">
           <span className="text-sm text-muted-foreground">Reference No.</span>

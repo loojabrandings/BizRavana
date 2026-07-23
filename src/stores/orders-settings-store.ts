@@ -1,6 +1,8 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
+const DEFAULT_ORDER_PAYMENT_METHODS = ["cash", "bank_transfer", "card", "online", "cod"];
+
 export interface OrdersSettings {
   orderNumberPrefix: string;
   orderNumberStart: string;
@@ -10,15 +12,13 @@ export interface OrdersSettings {
   enabledStatuses: string[];
   enableInventory: boolean;
   deductStockAt: string;
-  /** @deprecated Use waybillMode instead */
-  requireWaybillBeforePacked: boolean;
-  waybillMode: "manual" | "auto";
   enableBarcodeScanner: boolean;
   defaultCourier: string;
   courierCharge: number;
   defaultSorting: string;
   defaultRowsPerPage: number;
   defaultPaymentMethod: string;
+  orderPaymentMethods: string[];
   allowPartialPayments: boolean;
   defaultAdvancePercent: number;
   defaultDeliveryCharge: number;
@@ -34,15 +34,15 @@ interface OrdersSettingsStore extends OrdersSettings {
   toggleStatus: (status: string) => void;
   setEnableInventory: (v: boolean) => void;
   setDeductStockAt: (v: string) => void;
-  /** @deprecated Use setWaybillMode instead */
-  setRequireWaybillBeforePacked: (v: boolean) => void;
-  setWaybillMode: (v: "manual" | "auto") => void;
   setEnableBarcodeScanner: (v: boolean) => void;
   setDefaultCourier: (v: string) => void;
   setCourierCharge: (v: number) => void;
   setDefaultSorting: (v: string) => void;
   setDefaultRowsPerPage: (v: number) => void;
   setDefaultPaymentMethod: (v: string) => void;
+  setOrderPaymentMethods: (v: string[]) => void;
+  addOrderPaymentMethod: (method: string) => void;
+  removeOrderPaymentMethod: (method: string) => void;
   setAllowPartialPayments: (v: boolean) => void;
   setDefaultAdvancePercent: (v: number) => void;
   setDefaultDeliveryCharge: (v: number) => void;
@@ -69,14 +69,13 @@ export const useOrdersSettings = create<OrdersSettingsStore>()(
       enabledStatuses: allStatuses,
       enableInventory: true,
       deductStockAt: "packed",
-      requireWaybillBeforePacked: true,
-      waybillMode: "manual",
-      enableBarcodeScanner: false,
+      enableBarcodeScanner: true,
       defaultCourier: "",
       courierCharge: 0,
       defaultSorting: "created_at_desc",
       defaultRowsPerPage: 25,
       defaultPaymentMethod: "cash",
+      orderPaymentMethods: DEFAULT_ORDER_PAYMENT_METHODS,
       allowPartialPayments: true,
       defaultAdvancePercent: 50,
       defaultDeliveryCharge: 0,
@@ -98,14 +97,27 @@ export const useOrdersSettings = create<OrdersSettingsStore>()(
         }),
       setEnableInventory: (v) => set({ enableInventory: v }),
       setDeductStockAt: (v) => set({ deductStockAt: v }),
-      setRequireWaybillBeforePacked: (v) => set({ requireWaybillBeforePacked: v }),
-      setWaybillMode: (v) => set({ waybillMode: v, requireWaybillBeforePacked: v === "manual" }),
       setEnableBarcodeScanner: (v) => set({ enableBarcodeScanner: v }),
       setDefaultCourier: (v) => set({ defaultCourier: v }),
       setCourierCharge: (v) => set({ courierCharge: v }),
       setDefaultSorting: (v) => set({ defaultSorting: v }),
       setDefaultRowsPerPage: (v) => set({ defaultRowsPerPage: v }),
       setDefaultPaymentMethod: (v) => set({ defaultPaymentMethod: v }),
+      setOrderPaymentMethods: (v) => set({ orderPaymentMethods: v }),
+      addOrderPaymentMethod: (method) =>
+        set((state) => {
+          if (state.orderPaymentMethods.includes(method)) return state;
+          return { orderPaymentMethods: [...state.orderPaymentMethods, method] };
+        }),
+      removeOrderPaymentMethod: (method) =>
+        set((state) => {
+          const updated = state.orderPaymentMethods.filter((m) => m !== method);
+          const newDefault =
+            state.defaultPaymentMethod === method
+              ? updated[0] || "cash"
+              : state.defaultPaymentMethod;
+          return { orderPaymentMethods: updated, defaultPaymentMethod: newDefault };
+        }),
       setAllowPartialPayments: (v) => set({ allowPartialPayments: v }),
       setDefaultAdvancePercent: (v) => set({ defaultAdvancePercent: v }),
       setDefaultDeliveryCharge: (v) => set({ defaultDeliveryCharge: v }),

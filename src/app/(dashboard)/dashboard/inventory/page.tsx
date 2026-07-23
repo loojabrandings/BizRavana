@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { createClient } from "@/lib/supabase/client";
+import { useReadOnlyMode } from "@/providers/readonly-mode-provider";
 import { cn } from "@/lib/utils";
 import {
   DropdownMenu,
@@ -68,6 +69,8 @@ const itemVariants = {
 // ─── Main Page ─────────────────────────────────────────────────────
 
 function InventoryPageInner() {
+  const { guard } = useReadOnlyMode();
+
   // ─── Read query params for pre-applied filters ───────────────
   const searchParams = useSearchParams();
 
@@ -750,6 +753,7 @@ function InventoryPageInner() {
               size="icon-xs"
               onClick={(e) => {
                 e.stopPropagation();
+                if (guard("deleting inventory items")) return;
                 setDeleteTargetId(item.id);
               }}
             >
@@ -849,7 +853,11 @@ function InventoryPageInner() {
               type="button"
               className="flex size-9 items-center justify-center rounded-xl text-accent-foreground/70 hover:bg-accent hover:text-accent-foreground transition-colors"
               title="Edit"
-              onClick={(e) => { e.stopPropagation(); handleEditItem(item); }}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (guard("editing inventory items")) return;
+                handleEditItem(item);
+              }}
             >
               <Pencil className="size-4" />
             </button>
@@ -879,7 +887,12 @@ function InventoryPageInner() {
         ? "There are no items with this status yet."
         : "Add your first inventory item to start tracking stock.",
       action: isFiltered ? undefined : (
-        <Button variant="gradient" size="sm" onClick={() => { setShowForm(true); setEditingItem(null); setFormKey((k) => k + 1); }}>
+        <Button variant="gradient" size="sm" onClick={() => {
+                if (guard("creating inventory items")) return;
+                setShowForm(true);
+                setEditingItem(null);
+                setFormKey((k) => k + 1);
+              }}>
           <Plus className="size-3.5" />
           New Inventory Item
         </Button>
@@ -912,7 +925,12 @@ function InventoryPageInner() {
             </Button>
             <Button
               variant="gradient"
-              onClick={() => { setShowForm(true); setEditingItem(null); setFormKey((k) => k + 1); }}
+              onClick={() => {
+                if (guard("creating inventory items")) return;
+                setShowForm(true);
+                setEditingItem(null);
+                setFormKey((k) => k + 1);
+              }}
             >
               <Plus className="size-4" />
               Stock In / Out
@@ -980,7 +998,10 @@ function InventoryPageInner() {
           <StockPreview
             item={previewItem}
             onBack={() => setPreviewItem(null)}
-            onEdit={() => handleEditItem(previewItem)}
+            onEdit={() => {
+              if (guard("editing inventory items")) return;
+              handleEditItem(previewItem);
+            }}
           />
         ) : showForm ? (
           <StockForm

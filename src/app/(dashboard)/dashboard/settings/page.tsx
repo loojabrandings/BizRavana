@@ -43,6 +43,7 @@ import {
   UserCog,
   SlidersHorizontal,
   MessageCircle,
+  X,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { cn, formatEnumLabel } from "@/lib/utils";
@@ -1146,6 +1147,7 @@ function ProfileSettings() {
 // ═══════════════════════════════════════════════════════════════════════
 
 function OperationalSettings() {
+  const [newPaymentMethod, setNewPaymentMethod] = useState("");
   const ordersSettings = useOrdersSettings();
   const quotationSettings = useQuotationSettings();
 
@@ -1202,11 +1204,69 @@ function OperationalSettings() {
 
         <div>
           <SectionHeader title="Defaults" />
-          <SettingsRow label="Default Payment Method">
-            <Select value={ordersSettings.defaultPaymentMethod} onValueChange={(v) => v && ordersSettings.setDefaultPaymentMethod(v)}>
-              <SelectTrigger className="w-full sm:w-[200px] h-9"><SelectValue>{formatEnumLabel(ordersSettings.defaultPaymentMethod)}</SelectValue></SelectTrigger>
-              <SelectContent>{paymentMethodOptions.map((opt) => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}</SelectContent>
-            </Select>
+          <SettingsRow label="Payment Methods">
+            <div className="flex flex-wrap gap-2 w-full sm:w-auto justify-end">
+              {ordersSettings.orderPaymentMethods.map((method) => {
+                const isDefault = ordersSettings.defaultPaymentMethod === method;
+                return (
+                  <motion.div
+                    key={method}
+                    layout
+                    className="flex items-center gap-1.5 rounded-xl border bg-card px-3 py-2 transition-all duration-200"
+                  >
+                    <span
+                      className={cn(
+                        "text-sm font-medium cursor-pointer",
+                        isDefault ? "text-primary" : "text-foreground",
+                      )}
+                      onClick={() => ordersSettings.setDefaultPaymentMethod(method)}
+                      title="Click to set as default"
+                    >
+                      {formatEnumLabel(method)}
+                      {isDefault && (
+                        <span className="ml-1.5 text-[10px] font-semibold uppercase tracking-wider text-primary">
+                          Default
+                        </span>
+                      )}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => ordersSettings.removeOrderPaymentMethod(method)}
+                      className="ml-0.5 flex size-4 items-center justify-center rounded-full text-muted-foreground/40 hover:bg-destructive/10 hover:text-destructive transition-colors"
+                    >
+                      <X className="size-3" />
+                    </button>
+                  </motion.div>
+                );
+              })}
+              <div className="flex items-center gap-1.5">
+                <Input
+                  placeholder="Add method..."
+                  className="h-9 w-32 text-sm"
+                  value={newPaymentMethod}
+                  onChange={(e) => setNewPaymentMethod(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && newPaymentMethod.trim()) {
+                      ordersSettings.addOrderPaymentMethod(newPaymentMethod.trim());
+                      setNewPaymentMethod("");
+                    }
+                  }}
+                />
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="size-9 shrink-0"
+                  onClick={() => {
+                    if (newPaymentMethod.trim()) {
+                      ordersSettings.addOrderPaymentMethod(newPaymentMethod.trim());
+                      setNewPaymentMethod("");
+                    }
+                  }}
+                >
+                  <Plus className="size-4" />
+                </Button>
+              </div>
+            </div>
           </SettingsRow>
           <SettingsRow label="Default Delivery Charge" hint="Pre-filled in new orders (LKR)">
             <Input
@@ -1230,36 +1290,7 @@ function OperationalSettings() {
           </div>
         </SettingsRow>
 
-        <SectionDivider />
-
-        <div>
-          <SectionHeader title="Waybill" />
-          <SettingsRow label="Waybill Mode" hint="How waybill IDs are assigned when orders reach packed/dispatched status">
-            <div className="flex items-center gap-2 w-full sm:w-auto">
-              <Select
-                value={ordersSettings.waybillMode}
-                onValueChange={(v) => v && ordersSettings.setWaybillMode(v as "manual" | "auto")}
-              >
-                <SelectTrigger className="h-9 w-full sm:w-[180px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="manual">Manual — Prompt for entry</SelectItem>
-                  <SelectItem value="auto">Auto — Generate via courier API</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </SettingsRow>
-          {ordersSettings.waybillMode === "auto" && (
-            <div className="rounded-lg bg-info/5 border border-info/10 px-4 py-2.5 text-sm text-muted-foreground">
-              Auto mode requires a courier provider to be configured in{' '}
-              <strong>Settings → Courier</strong>. When an order reaches{' '}
-              <strong>packed</strong> or <strong>dispatched</strong> status, a waybill
-              will be generated automatically via the courier API.
-            </div>
-          )}
-        </div>
-      </CollapsibleCard>
+        <SectionDivider />      </CollapsibleCard>
 
       {/* Quotation Settings */}
       <CollapsibleCard icon={FileText} title="Quotation Settings" description="Configure quotation numbering and default expiry.">

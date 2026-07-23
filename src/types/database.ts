@@ -7,19 +7,34 @@ export interface Database {
         Row: {
           id: string; name: string; monthly_price: number;
           order_limit: number; expense_limit: number; product_limit: number;
-          storage_limit_mb: number; features: Json; is_active: boolean;
+          quotation_limit: number; inventory_limit: number;
+          storage_limit_mb: number;
+          courier_accounts: number; whatsapp_templates: number; team_members: number;
+          bulk_import: boolean; activity_log: boolean;
+          smart_automation: boolean; ai_assistant: boolean;
+          features: Json; is_active: boolean;
           sort_order: number; created_at: string; updated_at: string;
         };
         Insert: {
           id?: string; name: string; monthly_price: number;
           order_limit: number; expense_limit: number; product_limit: number;
-          storage_limit_mb?: number; features?: Json; is_active?: boolean;
+          quotation_limit?: number; inventory_limit?: number;
+          storage_limit_mb?: number;
+          courier_accounts?: number; whatsapp_templates?: number; team_members?: number;
+          bulk_import?: boolean; activity_log?: boolean;
+          smart_automation?: boolean; ai_assistant?: boolean;
+          features?: Json; is_active?: boolean;
           sort_order?: number; created_at?: string; updated_at?: string;
         };
         Update: {
           id?: string; name?: string; monthly_price?: number;
           order_limit?: number; expense_limit?: number; product_limit?: number;
-          storage_limit_mb?: number; features?: Json; is_active?: boolean;
+          quotation_limit?: number; inventory_limit?: number;
+          storage_limit_mb?: number;
+          courier_accounts?: number; whatsapp_templates?: number; team_members?: number;
+          bulk_import?: boolean; activity_log?: boolean;
+          smart_automation?: boolean; ai_assistant?: boolean;
+          features?: Json; is_active?: boolean;
           sort_order?: number; created_at?: string; updated_at?: string;
         };
         Relationships: [];

@@ -57,6 +57,7 @@ import { validateLabelData } from "@/lib/shipping-label/validate";
 import type { ShippingLabelData } from "@/lib/shipping-label/types";
 import { HoverPopover } from "@/components/shared/hover-popover";
 import { useIsMobile } from "@/hooks/use-media-query";
+import { useReadOnlyMode } from "@/providers/readonly-mode-provider";
 import { useWhatsAppAction } from "@/components/whatsapp/use-whatsapp-action";
 import { orderRowToTemplateData } from "@/components/whatsapp/whatsapp-actions";
 import { fetchManualWaybills, getWaybillMethod, assignWaybillToOrder, markWaybillAsUsed, type ManualWaybill } from "@/lib/delivery/waybill-utils";
@@ -288,6 +289,8 @@ function RepeatBadge({
 // ─── Main Page ─────────────────────────────────────────────────────
 
 function OrdersPageInner() {
+  const { guard } = useReadOnlyMode();
+
   // ─── Read query params for pre-applied filters ───────────────
   const searchParams = useSearchParams();
 
@@ -328,7 +331,9 @@ function OrdersPageInner() {
     const search = searchParams.get("search");
 
     if (action === "new") {
-      setShowForm(true);
+      if (!guard("creating orders")) {
+        setShowForm(true);
+      }
     }
     if (status && orderStatusValues.includes(status as any)) {
       setActiveStatusTab(status);
@@ -459,10 +464,16 @@ function OrdersPageInner() {
           });
           return;
         }
-        setShippingLabelData(fetchedData);
         const result = await generateShippingLabelPdf(fetchedData);
-        setShippingLabelDataUrl(result.dataUrl);
-        setShippingLabelDialogOpen(true);
+        // Auto-download without showing a preview dialog
+        const orderNumber = fetchedData.orderNumber || waybillId;
+        const link = document.createElement("a");
+        link.href = result.dataUrl;
+        link.download = `shipping-label-${orderNumber}.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        toast.success("Shipping label downloaded");
       } else {
         toast.error("Failed to load label data", {
           description: error || "Unable to fetch order or business info.",
@@ -506,8 +517,7 @@ const handleStatusChange = useCallback(async (orderId: string, newStatus: string
   // Check waybill method from business_settings
   let effectiveMethod = waybillMethod;
   if (!businessId) {
-    const { waybillMode } = useOrdersSettings.getState();
-    effectiveMethod = waybillMode;
+    effectiveMethod = "manual";
   }
 
   // Manual waybill mode + packing: prompt for waybill entry
@@ -527,6 +537,7 @@ const handleStatusChange = useCallback(async (orderId: string, newStatus: string
   // Changing to dispatched: always show the dispatch dialog
   // (Dispatch dialog handles "dispatch locally" vs "dispatch to courier" internally)
   if (newStatus === "dispatched") {
+    if (guard("dispatching orders")) return;
     setPendingDispatchOrderId(orderId);
     setPendingDispatchNewStatus(newStatus);
     setDispatchDialogOpen(true);
@@ -563,6 +574,7 @@ const handleStatusChange = useCallback(async (orderId: string, newStatus: string
 
   // ─── Dispatch Handler ────────────────────────────────────────
   const handleDispatch = useCallback(async (mode: DispatchMode): Promise<boolean> => {
+    if (guard("dispatching orders")) return false;
     const orderId = pendingDispatchOrderId;
     const newStatus = pendingDispatchNewStatus || "dispatched";
     if (!orderId) return false;
@@ -675,6 +687,7 @@ const handleStatusChange = useCallback(async (orderId: string, newStatus: string
 
   // ─── Waybill Entry Handler (manual mode) ──────────────────
   const handleWaybillConfirm = useCallback(async (waybillId: string): Promise<boolean> => {
+    if (guard("assigning waybills")) return false;
     const orderId = pendingWaybillOrderId;
     const newStatus = pendingWaybillNewStatus;
     if (!orderId || !newStatus) return false;
@@ -719,6 +732,7 @@ const handleStatusChange = useCallback(async (orderId: string, newStatus: string
   }, [pendingWaybillOrderId, pendingWaybillNewStatus, waybillMethod]);
 
   const handlePaymentChange = useCallback(async (orderId: string, newPayment: string) => {
+    if (guard("changing payment status")) return;
     setOrders((prev) => prev.map((o) => (o.id === orderId ? { ...o, payment_status: newPayment } : o)));
     try {
       const { error: e } = await createClient().from("orders").update({ payment_status: newPayment, updated_at: new Date().toISOString() }).eq("id", orderId);
@@ -931,6 +945,7 @@ const handleStatusChange = useCallback(async (orderId: string, newStatus: string
 
   // ─── Bulk Delete Confirm ───────────────────────────────────────
   const confirmBulkDelete = useCallback(() => {
+    if (guard("bulk deleting")) return;
     const ids = [...selectedIds].filter((id): id is string => typeof id === "string");
     setShowBulkDelete(false);
     if (ids.length === 0) return;
@@ -961,6 +976,10 @@ const handleStatusChange = useCallback(async (orderId: string, newStatus: string
   // ─── In-Page Form Submit ─────────────────────────────────────
   const handleOrderSubmit = useCallback(
     async (data: OrderFormData, preview: boolean) => {
+      if (guard("submitting orders")) {
+        setShowForm(false);
+        return;
+      }
       const supabase = createClient();
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.user) throw new Error("Not authenticated");
@@ -1425,7 +1444,10 @@ const handleStatusChange = useCallback(async (orderId: string, newStatus: string
                 value={order.status}
                 options={orderStatusOptions}
                 colorMap={statusColorMap}
-                onUpdate={(v) => handleStatusChange(order.id, v)}
+                onUpdate={(v) => {
+                if (guard("status changes")) return;
+                handleStatusChange(order.id, v);
+              }}
               />
               <EditableStatusBadge
                 value={order.payment_status}
@@ -1442,9 +1464,9 @@ const handleStatusChange = useCallback(async (orderId: string, newStatus: string
           {/* ── Section 3: Order Details ──────────────────────── */}
           <div className="mt-4 space-y-3">
             {/* Customer */}
-            <div>
-              <p className="text-base font-medium text-foreground leading-snug">{order.customer_name}</p>
-
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-base font-medium text-foreground leading-snug truncate">{order.customer_name}</p>
+              <RepeatBadge order={order} counts={repeatCustomerCounts} />
             </div>
 
             {/* Items */}
@@ -1502,6 +1524,7 @@ const handleStatusChange = useCallback(async (orderId: string, newStatus: string
                 e.stopPropagation();
                 fetchOrderForPreview(order.id).then((fd) => {
                   if (fd) {
+                    if (guard("editing orders")) return;
                     setEditData(fd);
                     setEditKey((k) => k + 1);
                     setShowForm(true);
@@ -1543,6 +1566,7 @@ const handleStatusChange = useCallback(async (orderId: string, newStatus: string
               title="Delete"
               onClick={(e) => {
                 e.stopPropagation();
+                if (guard("deleting orders")) return;
                 setDeleteTargetId(order.id);
               }}
             >
@@ -1696,7 +1720,10 @@ const handleStatusChange = useCallback(async (orderId: string, newStatus: string
               <DropdownMenuItem
                 key={option.value}
                 className="rounded-lg text-sm gap-2 py-1.5"
-                onClick={() => handleBulkStatusChange(option.value)}
+                onClick={() => {
+                if (guard("bulk status changes")) return;
+                handleBulkStatusChange(option.value)
+              }}
               >
                 <span
                   className={cn(
@@ -1727,7 +1754,10 @@ const handleStatusChange = useCallback(async (orderId: string, newStatus: string
               <DropdownMenuItem
                 key={option.value}
                 className="rounded-lg text-sm gap-2 py-1.5"
-                onClick={() => handleBulkPaymentChange(option.value)}
+                onClick={() => {
+                if (guard("bulk payment changes")) return;
+                handleBulkPaymentChange(option.value);
+              }}
               >
                 <span
                   className={cn(
@@ -1765,7 +1795,10 @@ const handleStatusChange = useCallback(async (orderId: string, newStatus: string
         <Button
           variant="gradient"
           size="sm"
-          onClick={handleBulkPrintLabels}
+          onClick={() => {
+              if (guard("bulk printing")) return;
+              handleBulkPrintLabels();
+            }}
           className="gap-1.5"
         >
           <Truck className="size-3.5" />
@@ -1988,7 +2021,10 @@ const handleStatusChange = useCallback(async (orderId: string, newStatus: string
             value={order.status}
             options={orderStatusOptions}
             colorMap={statusColorMap}
-            onUpdate={(v) => handleStatusChange(order.id, v)}
+            onUpdate={(v) => {
+                if (guard("status changes")) return;
+                handleStatusChange(order.id, v);
+              }}
           />
         ),
       },
@@ -2048,7 +2084,8 @@ const handleStatusChange = useCallback(async (orderId: string, newStatus: string
                         }
                       : (e) => {
                           e.stopPropagation();
-                          setDeleteTargetId(order.id);
+                          if (guard("deleting orders")) return;
+                setDeleteTargetId(order.id);
                         }
                 }
               >
@@ -2126,7 +2163,10 @@ const handleStatusChange = useCallback(async (orderId: string, newStatus: string
         <Button
           variant="gradient"
           size="sm"
-          onClick={() => setShowForm(true)}
+          onClick={() => {
+            if (guard("creating orders")) return;
+            setShowForm(true);
+          }}
         >
           <Plus className="size-3.5" />
           New Order
@@ -2214,7 +2254,10 @@ const handleStatusChange = useCallback(async (orderId: string, newStatus: string
           <div className="flex items-center justify-center gap-3 w-full sm:w-auto sm:gap-2 sm:justify-start">
             <Button
               variant="outline"
-              onClick={() => setShowBulkImport(true)}
+              onClick={() => {
+                if (guard("bulk importing")) return;
+                setShowBulkImport(true);
+              }}
               className="text-sm"
             >
               <Upload className="size-4" />
@@ -2222,7 +2265,10 @@ const handleStatusChange = useCallback(async (orderId: string, newStatus: string
             </Button>
             <Button
               variant="gradient"
-              onClick={() => setShowForm(true)}
+              onClick={() => {
+                if (guard("creating orders")) return;
+                setShowForm(true);
+              }}
             >
               <Plus className="size-4" />
               Add New Order

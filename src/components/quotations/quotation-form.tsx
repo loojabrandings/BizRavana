@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { X } from "lucide-react";
+import { RotateCcw, X } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
@@ -261,6 +261,19 @@ export function QuotationForm({ onSubmit, onCancel, initialData, isEditing }: Qu
     return Object.keys(errs).length === 0;
   }, [form]);
 
+  // ─── Reset Customer Details ─────────────────────────────────
+  const handleReset = useCallback(() => {
+    updateForm("customer_name", "");
+    updateForm("phone", "");
+    updateForm("address", "");
+    updateForm("district", "");
+    updateForm("nearest_city", "");
+    updateForm("whatsapp", "");
+    updateForm("email", "");
+    updateForm("remarks", "");
+    toast.success("Customer details cleared");
+  }, [updateForm]);
+
   // ─── Cancel with unsaved changes check ───────────────────────
   const handleCancel = useCallback(() => {
     if (isDirty) {
@@ -431,14 +444,25 @@ export function QuotationForm({ onSubmit, onCancel, initialData, isEditing }: Qu
 
       {/* ═══════ Sticky Action Bar ════════════════════════════════ */}
       <div className="flex items-center justify-between px-8 py-4">
-        <Button
-          variant="ghost"
-          onClick={handleCancel}
-          disabled={saving}
-          className="text-sm"
-        >
-          Cancel
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            onClick={handleReset}
+            disabled={saving}
+            className="text-sm gap-1.5 text-muted-foreground/60 hover:text-destructive"
+          >
+            <RotateCcw className="size-3.5" />
+            Reset
+          </Button>
+          <Button
+            variant="ghost"
+            onClick={handleCancel}
+            disabled={saving}
+            className="text-sm"
+          >
+            Cancel
+          </Button>
+        </div>
         <div className="flex items-center gap-3">
           <Button
             variant="outline"

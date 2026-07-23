@@ -51,6 +51,7 @@ interface OrderFormWizardProps {
   handleProductSelect: (product: ProductResult) => void;
   handleSave: (preview: boolean) => Promise<void>;
   handleCancel: () => void;
+  paymentMethods?: { value: string; label: string }[];
 }
 
 // ─── Step Validation ───────────────────────────────────────────────
@@ -298,6 +299,7 @@ function StepContent({
             }}
             calculations={calculations}
             updateForm={updateForm}
+            paymentMethods={paymentMethods}
           />
 
           <OrderManagementSection
@@ -348,6 +350,7 @@ export function OrderFormWizard({
   handleProductSelect,
   handleSave,
   handleCancel,
+  paymentMethods,
 }: OrderFormWizardProps) {
   const [currentStep, setCurrentStep] = useState(1);
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(

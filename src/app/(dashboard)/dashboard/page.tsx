@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useOrdersSettings } from "@/stores/orders-settings-store";
 import {
   AlertTriangle,
   Boxes,
@@ -113,6 +114,14 @@ export default function DashboardPage() {
   const router = useRouter();
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // ─── Redirect to orders if set as default landing page ───
+  useEffect(() => {
+    const settings = useOrdersSettings.getState();
+    if (settings.isDefaultLandingPage) {
+      router.replace("/dashboard/orders");
+    }
+  }, [router]);
   const [dateFilter, setDateFilter] = useState<string>("this_month");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");

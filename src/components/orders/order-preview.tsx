@@ -32,11 +32,11 @@ import {
 import { cn, formatEnumLabel } from "@/lib/utils";
 import { formatPhoneNumber } from "@/lib/formatters";
 import type { OrderFormData } from "./types";
-import type { ShippingLabelData } from "@/lib/shipping-label/types";
 import { formatCurrency } from "./utils";
 import { toast } from "sonner";
 import { ShipmentStatusPanel } from "./shipment-status-panel";
 import { useIsMobile } from "@/hooks/use-media-query";
+import { useReadOnlyMode } from "@/providers/readonly-mode-provider";
 import {
   Dialog,
   DialogTrigger,
@@ -47,7 +47,6 @@ import { orderPreviewToTemplateData } from "@/components/whatsapp/whatsapp-actio
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { Separator } from "@/components/ui/separator";
-import { ShippingLabelDialog } from "@/components/orders/shipping-label-dialog";
 import { fetchLabelData } from "@/lib/shipping-label/fetch-data";
 import { generateShippingLabelPdf } from "@/lib/shipping-label/generate-pdf";
 import { validateLabelData } from "@/lib/shipping-label/validate";
@@ -962,13 +961,10 @@ export function OrderPreview({
 }: OrderPreviewProps) {
   const isMobile = useIsMobile();
   const { handleAction, renderDialogs } = useWhatsAppAction();
-
-  // ─── Shipping Label Reprint State ─────────────────────────
-  const [labelDialogOpen, setLabelDialogOpen] = useState(false);
-  const [labelData, setLabelData] = useState<ShippingLabelData | null>(null);
-  const [labelDataUrl, setLabelDataUrl] = useState<string | null>(null);
+  const { guard } = useReadOnlyMode();
 
   const handlePrintLabel = useCallback(async () => {
+    if (guard("printing shipping labels")) return;
     if (!data.waybill_id || !data.id) return;
     try {
       const { data: fetchedData, error } = await fetchLabelData(data.id);
@@ -983,17 +979,28 @@ export function OrderPreview({
           });
           return;
         }
-        setLabelData(fetchedData);
         const result = await generateShippingLabelPdf(fetchedData);
-        setLabelDataUrl(result.dataUrl);
-        setLabelDialogOpen(true);
+        // Auto-download without showing a preview dialog
+        const link = document.createElement("a");
+        link.href = result.dataUrl;
+        link.download = `shipping-label-${data.order_number || "label"}.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        toast.success("Shipping label downloaded", {
+          description: `Order #${data.order_number}`,
+        });
       } else {
         console.error("Failed to fetch label data:", error);
+        toast.error("Failed to generate shipping label", {
+          description: error || "Unable to load order data.",
+        });
       }
     } catch (err) {
       console.error("Failed to generate shipping label:", err);
+      toast.error("Failed to generate shipping label");
     }
-  }, [data.id, data.waybill_id]);
+  }, [data.id, data.waybill_id, data.order_number]);
 
   const handleWhatsApp = useCallback(() => {
     const phone = data.whatsapp || data.phone;
@@ -1017,14 +1024,6 @@ export function OrderPreview({
   return (
     <>
       {renderDialogs()}
-
-      {/* ─── Shipping Label Reprint Dialog ──────────────── */}
-      <ShippingLabelDialog
-        open={labelDialogOpen}
-        onOpenChange={setLabelDialogOpen}
-        labelData={labelData}
-        initialDataUrl={labelDataUrl || undefined}
-      />
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}

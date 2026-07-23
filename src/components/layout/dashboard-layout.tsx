@@ -11,6 +11,7 @@ import {
   Search,
   UserCircle,
 } from "lucide-react";
+import { NotificationBell } from "@/components/notifications/notification-popover";
 import { createClient } from "@/lib/supabase/client";
 import { Sidebar } from "@/components/layout/sidebar";
 import { MobileBottomNav } from "@/components/layout/mobile-bottom-nav";
@@ -33,6 +34,9 @@ import { GlobalSearchDialog } from "@/components/shared/global-search-dialog";
 import { GlobalSearchPopover } from "@/components/shared/global-search-popover";
 import { useGlobalSearchStore } from "@/stores/global-search-store";
 import { usePreferences } from "@/stores/preferences-store";
+import { ReadOnlyModeProvider } from "@/providers/readonly-mode-provider";
+import { NotificationProvider } from "@/providers/notification-provider";
+import { ReadOnlyBanner } from "@/components/shared/readonly-banner";
 
 // ─── Shared Avatar Dropdown (used on both mobile and desktop) ─────
 
@@ -173,61 +177,6 @@ function HeaderAvatarDropdown({
   );
 }
 
-// ─── Shared Notification Bell (used on both mobile and desktop) ───
-
-function HeaderNotificationBell() {
-  const router = useRouter();
-  const [unreadCount, setUnreadCount] = useState(0);
-
-  // ─── Fetch unread notification count on mount ──────────────
-  useEffect(() => {
-    const fetchCount = async () => {
-      try {
-        const supabase = createClient();
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session?.user) return;
-
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("business_id")
-          .eq("user_id", session.user.id)
-          .single();
-
-        const bizId = (profile as { business_id: string | null } | null)?.business_id;
-        if (!bizId) return;
-
-        const { count } = await supabase
-          .from("notifications")
-          .select("*", { count: "exact", head: true })
-          .eq("business_id", bizId)
-          .eq("is_read", false);
-
-        if (count !== null) setUnreadCount(count);
-      } catch {
-        // Silently fall back to 0
-      }
-    };
-
-    fetchCount();
-  }, []);
-
-  return (
-    <button
-      type="button"
-      onClick={() => router.push("/dashboard")}
-      className="relative inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-xl text-muted-foreground transition-all hover:scale-105 hover:bg-accent hover:text-accent-foreground active:scale-95"
-      aria-label={`Notifications${unreadCount > 0 ? ` (${unreadCount} unread)` : ""}`}
-    >
-      <Bell className="size-[18px]" aria-hidden />
-      {unreadCount > 0 && (
-        <span className="absolute -top-0.5 -right-0.5 flex min-w-[16px] h-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold leading-none text-primary-foreground shadow-sm">
-          {unreadCount > 9 ? "9+" : unreadCount}
-        </span>
-      )}
-    </button>
-  );
-}
-
 // ═══════════════════════════════════════════════════════════════
 // MAIN LAYOUT COMPONENT
 // ═══════════════════════════════════════════════════════════════
@@ -320,7 +269,8 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const openSearch = useCallback(() => setDialogOpen(true), [setDialogOpen]);
 
   return (
-    <>
+    <ReadOnlyModeProvider>
+      <NotificationProvider>
       <KeyboardShortcutsDialog open={showHelp} onClose={() => setShowHelp(false)} />
       <GlobalSearchDialog />
 
@@ -328,6 +278,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
       <Sidebar />
 
       <div data-main-content className="flex min-w-0 flex-1 flex-col">
+        <ReadOnlyBanner />
         <header className="glass-panel sticky top-0 z-30 backdrop-blur-xl bg-background/60 border-b border-border/40" style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}>
           {/* ─── MOBILE / TABLET toolbar (< 1024px) ────────────────── */}
           <div className="flex h-16 items-center gap-2 px-4 lg:hidden">
@@ -366,7 +317,9 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
               </div>
 
               {/* Notification bell */}
-              <HeaderNotificationBell />
+              <div className="relative">
+                <NotificationBell />
+              </div>
 
               {/* User avatar dropdown */}
               <HeaderAvatarDropdown
@@ -388,7 +341,9 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
               <div className="transition-all hover:scale-105 active:scale-95">
                 <ThemeToggle />
               </div>
-              <HeaderNotificationBell />
+              <div className="relative">
+                <NotificationBell />
+              </div>
               <NetworkStatusIndicator />
               <HeaderAvatarDropdown
                 userAvatar={userAvatar}
@@ -416,6 +371,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
       />
       <QuickActionSheet open={quickActionOpen} onClose={handleCloseQuickAction} />
       <MobileRightDrawer open={mobileDrawerOpen} onClose={handleCloseDrawer} />
-    </>
+    </NotificationProvider>
+    </ReadOnlyModeProvider>
   );
 }

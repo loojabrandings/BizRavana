@@ -1,6 +1,6 @@
 # BizRavana
 
-A modern, multi-tenant business management SaaS platform for Sri Lankan small and medium enterprises. Manage orders, products, inventory, expenses, quotations, deliveries, and reports — all in one place.
+A modern, multi-tenant business management SaaS platform for Sri Lankan small and medium enterprises. Manage orders, products, inventory, expenses, quotations, deliveries, reports, and notifications — all in one place.
 
 ## Tech Stack
 
@@ -9,16 +9,18 @@ A modern, multi-tenant business management SaaS platform for Sri Lankan small an
 | **Frontend** | Next.js 16 + React 19 + TypeScript |
 | **UI** | shadcn/ui + Tailwind CSS v4 |
 | **Animations** | Framer Motion + Tailwind CSS transitions |
-| **Backend** | Supabase (PostgreSQL + Auth + Storage) |
+| **Backend** | Supabase (PostgreSQL + Auth + Storage + Realtime) |
 | **Charts** | Recharts |
 | **Tables** | TanStack Table |
 | **Forms** | React Hook Form + Zod |
 | **State** | Zustand + TanStack Query |
 | **Icons** | Lucide React |
+| **PDF** | jsPDF + JsBarcode + svg2pdf.js |
 | **Hosting** | Vercel |
 
 ## Features
 
+- **Smart Customer Parser** — Paste WhatsApp messages or any text to auto-extract customer name, phone, address, district, and city. Handles Sri Lankan phone formats, Sinhala transliteration variations ("Rathnapura" → "Ratnapura"), and reverse city lookup via courier data.
 - **Dashboard** — Revenue overview, order statistics, top sales, low stock alerts, scheduled deliveries
 - **Orders** — Full CRUD, bulk XLSX import, filter/sort/paginate, status tracking, dispatch & shipment tracking
 - **Products** — Full CRUD, category manager, bulk XLSX import, auto-calculated profit margins
@@ -27,11 +29,29 @@ A modern, multi-tenant business management SaaS platform for Sri Lankan small an
 - **Quotations** — Full CRUD, preview panel, conversion to orders
 - **Reports** — Orders analytics, expense analytics, financial P&L with Recharts visualizations
 - **Delivery** — Courier settings, shipment status tracking, Royal Express API integration
+- **Subscription** — Pricing comparison table, usage meters, payment proof upload, payment history
 - **Settings** — Business profile, appearance (themes/accent/font), preferences, courier config, WhatsApp templates, shipping label defaults, data export/import/reset
-- **Shipping Labels** — A5 PDF generation with Code 128 barcode, business header, handling instructions, combined multi-page PDF printing, reprint support
-- **WhatsApp** — Message template management (3 contexts), template selection dialogs, live preview, one-click send via wa.me
+- **Shipping Labels** — A5 PDF generation with Code 128 barcode, handling instructions, combined multi-page bulk printing
+- **WhatsApp** — Message template management (3 contexts), template selection dialogs, one-click send via wa.me
 - **Global Search** — Cmd+K search with recent searches persistence
 - **Keyboard Shortcuts** — Navigation, actions, arrow key dialog navigation, Delete key bulk operations
+- **Notifications** — Shared NotificationProvider with Supabase Realtime WebSocket. Bell icon with live unread count, popover with notification list, mark-as-read. Powered by:
+  - **Admin broadcasts** — Create/send/schedule/cancel platform-wide notifications
+  - **Automated rules** — 14 seed rules for trial, subscription, payment, usage, storage events
+  - **Real-time delivery** — New notifications appear instantly via WebSocket
+- **Admin Panel** — Full Super Admin dashboard at `/admin` with:
+  - Dashboard overview (businesses, active subs, trials, pending payments, revenue)
+  - Business management (list, detail with subscription + usage + payment history + danger zone)
+  - Pending payments approval (receipt preview, admin notes, approve/reject workflows)
+  - Plans management (CRUD, disable, duplicate)
+  - Trials management (extend, lock, delete)
+  - Subscription management (extend, change plan, suspend, cancel)
+  - **Notification Management** (create/send/schedule/cancel broadcasts, manage automated rules)
+  - Data Cleanup Queue, Storage Management, Activity Log, Admin Settings
+  - JWT-based `is_super_admin` auth guard
+  - Fully mobile-responsive with card layouts on small screens
+- **Read Only Mode** — When subscription expires, dashboard enters read-only mode with upgrade banner
+- **Trial Auto-Expiry** — Daily cron job automatically expires trial/subscription accounts
 - **Authentication** — Email/password with Supabase Auth, 3-step registration wizard, forgot password flow
 - **Multi-Tenant** — Row Level Security, business-scoped data isolation
 
@@ -57,6 +77,7 @@ Open [http://localhost:3000](http://localhost:3000) to see the app.
 |----------|-------------|
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anonymous API key |
+| `SUPABASE_SERVICE_ROLE_KEY` | Service role key (admin-only routes) |
 
 ## Project Structure
 
@@ -65,30 +86,36 @@ src/
 ├── app/
 │   ├── (auth)/          # Login, Registration, Callback
 │   ├── (dashboard)/     # Dashboard, Orders, Products, etc.
-│   └── admin/           # Super Admin (future)
+│   ├── admin/           # Super Admin (13 pages)
+│   └── api/             # API routes (user-emails, deliver-broadcast, message-templates)
 ├── components/
-│   ├── charts/          # Reusable chart components
+│   ├── admin/           # Mobile-responsive admin components
+│   ├── charts/          # Rechart wrapper components
 │   ├── dashboard/       # Dashboard-specific components
 │   ├── delivery/        # Courier/delivery components
 │   ├── inventory/       # Stock management components
 │   ├── layout/          # Sidebar, BottomNav, DashboardLayout
-│   ├── orders/          # Order CRUD components
+│   ├── notifications/   # NotificationBell popover
+│   ├── orders/          # Order CRUD components (includes CustomerDetailsSection with Smart Parser)
 │   ├── products/        # Product CRUD components
 │   ├── quotations/      # Quotation CRUD components
 │   ├── reports/         # Analytics components
 │   ├── shared/          # DataTable, PageForm, FilterBar, etc.
 │   └── ui/              # shadcn/ui primitives
 ├── hooks/               # Custom React hooks
-├── lib/                 # Utilities, formatters, Supabase clients
-├── providers/           # Theme, Query, Preferences providers
+├── lib/                 # Utilities, formatters, Supabase clients, customer-parser
+├── providers/           # Theme, Query, Preferences, ReadOnlyMode, Notification
 ├── stores/              # Zustand stores
 ├── types/               # Database TypeScript types
 └── constants/           # App constants (districts, etc.)
+
+supabase/
+└── migrations/          # 25 SQL migrations (001–025)
 ```
 
 ## Database
 
-The project uses PostgreSQL via Supabase with 23 tables, Row Level Security, and 13 database migrations. See [DATABASE_SCHEMA.md](./DATABASE_SCHEMA.md) for full documentation.
+The project uses PostgreSQL via Supabase with 28 tables, Row Level Security, and 25 database migrations. See [DATABASE_SCHEMA.md](./DATABASE_SCHEMA.md) for full documentation.
 
 ## Development
 

@@ -8,6 +8,7 @@ import {
   Boxes,
   ChevronDown,
   ChevronLeft,
+  CreditCard,
   FileText,
   Home,
   Package,
@@ -54,6 +55,7 @@ const coreNav: (NavItem | NavGroup)[] = [
   { label: "Products", href: "/dashboard/products", icon: Package },
   { label: "Inventory", href: "/dashboard/inventory", icon: Boxes },
   { label: "Reports", href: "/dashboard/reports", icon: BarChart3 },
+  { label: "Subscription", href: "/dashboard/subscription", icon: CreditCard },
 ];
 
 const systemNav: (NavItem | NavGroup)[] = [

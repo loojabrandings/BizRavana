@@ -1,9 +1,9 @@
 # Bizravana — Database Schema
 
-> Last updated: 2026-07-19
+> Last updated: 2026-07-22
 > Database: PostgreSQL (Supabase)
 > RLS: Enabled on all business-scoped tables
-> Migrations: 16 total (001 through 016)
+> Migrations: 25 total (001 through 025)
 
 ---
 
@@ -12,21 +12,30 @@
 | # | Name | Purpose |
 |---|------|---------|
 | 001 | `schema.sql` | Initial schema — 20 tables, seed data, indexes, RLS |
-| 002 | `fix_rls_policies.sql` | Add INSERT policies for profiles & businesses (needed for registration) |
-| 003 | `fix_rls_recursion.sql` | Fix recursive RLS — make `get_user_business_id()` SECURITY DEFINER, move super_admin check to JWT `app_metadata` |
-| 004 | `add_waybill_to_orders.sql` | Add `waybill_id` column + index to orders |
-| 005 | `add_delete_policies.sql` | Add DELETE RLS policies for all business-scoped tables |
+| 002 | `fix_rls_policies.sql` | Add INSERT policies for profiles & businesses |
+| 003 | `fix_rls_recursion.sql` | Fix recursive RLS — SECURITY DEFINER + JWT app_metadata |
+| 004 | `add_waybill_to_orders.sql` | Add `waybill_id` column to orders |
+| 005 | `add_delete_policies.sql` | Add DELETE RLS policies |
 | 006 | `add_order_source.sql` | Add `order_source` column to orders |
-| 007 | `add_categories_table.sql` | Create `categories` table (product categories) |
-| 008 | `fix_update_rls_policies.sql` | Add explicit WITH CHECK clauses to all UPDATE policies |
-| 009 | `add_soft_delete_rpc.sql` | Create `soft_delete_products` and `soft_delete_inventory_items` SECURITY DEFINER RPCs |
-| 010 | `add_inventory_expense_categories.sql` | Create `inventory_categories` and `expense_categories` tables |
-| 011 | `remove_expense_category_check.sql` | Remove restrictive CHECK constraints on expenses |
-| 012 | `add_profile_images_storage.sql` | Create `profile-images` storage bucket + RLS policies |
-| 013 | `fix_storage_logos_rls.sql` | Extend storage RLS to allow `logos/` path |
-| 014 | `add_order_images_bucket.sql` | Create `order-images` storage bucket + RLS policies |
-| 015 | `add_message_templates.sql` | Create `message_templates` table with soft delete, unique constraints, indexes |
-| 016 | `add_courier_shipment_metadata.sql` | Add `courier_shipment_metadata JSONB` column to orders for shipping label snapshot |
+| 007 | `add_categories_table.sql` | Create `categories` table |
+| 008 | `fix_update_rls_policies.sql` | Add WITH CHECK clauses to UPDATE policies |
+| 009 | `add_soft_delete_rpc.sql` | Soft-delete SECURITY DEFINER RPCs |
+| 010 | `add_inventory_expense_categories.sql` | Create inventory/expense categories tables |
+| 011 | `remove_expense_category_check.sql` | Remove restrictive CHECK constraints |
+| 012 | `add_profile_images_storage.sql` | Create profile-images storage bucket |
+| 013 | `fix_storage_logos_rls.sql` | Extend storage RLS for logos |
+| 014 | `add_order_images_bucket.sql` | Create order-images storage bucket |
+| 015 | `add_message_templates.sql` | Create message_templates table |
+| 016 | `add_courier_shipment_metadata.sql` | Add courier_shipment_metadata JSONB to orders |
+| 017 | `add_manual_waybills.sql` | Add delivery_provider and manual_waybill columns |
+| 018 | `add_subscription_plan_columns.sql` | Extended plan columns (quotation, inventory, etc.) |
+| 019 | `create_payment_proofs_bucket.sql` | Create payment-proofs storage bucket |
+| 020 | `add_subscription_expiry_cron.sql` | pg_cron trial/subscription expiry function |
+| 021 | `fix_admin_payment_proofs_rls.sql` | Add `OR is_super_admin()` to payment_proofs policies |
+| 022 | `add_admin_settings.sql` | Create admin_settings table for platform config |
+| 023 | `add_get_user_emails.sql` | RPC function to fetch user emails from auth.users |
+| 024 | `add_notification_broadcasts.sql` | Notification broadcast system tables + seed rules |
+| 025 | `add_auto_notifications.sql` | Automated notification delivery functions + cron |
 
 ---
 
@@ -34,10 +43,10 @@
 
 | # | Table | Purpose | RLS |
 |---|-------|---------|-----|
-| 1 | `subscription_plans` | SaaS plan definitions | Public read |
+| 1 | `subscription_plans` | SaaS plan definitions (5 plans) | Public read |
 | 2 | `businesses` | Multi-tenant business accounts | Owner + Admin |
-| 3 | `profiles` | User profiles extending auth.users | Self + Business |
-| 4 | `payment_proofs` | Manual payment uploads | Business-scoped |
+| 3 | `profiles` | User profiles (full_name, phone, role, avatar_url) | Self + Business |
+| 4 | `payment_proofs` | Manual payment uploads (pending/approved/rejected) | Business-scoped |
 | 5 | `products` | Product catalog | Business-scoped |
 | 6 | `price_snapshots` | Versioned product pricing | Business-scoped |
 | 7 | `inventory_items` | Stock items | Business-scoped |
@@ -50,385 +59,178 @@
 | 14 | `quotation_items` | Line items per quotation | Business-scoped |
 | 15 | `expenses` | Business expenses | Business-scoped |
 | 16 | `deliveries` | Delivery tracking | Business-scoped |
-| 17 | `notifications` | In-app notifications | Business-scoped |
+| 17 | `notifications` | In-app notifications (now with source, priority, category) | Business-scoped |
 | 18 | `business_settings` | Key-value settings per business | Business-scoped |
 | 19 | `tasks` | Action items tied to records | Business-scoped |
 | 20 | `admin_activity_log` | Super Admin audit log | Admin only |
-| 21 | `categories` | Product categories (migration 007) | Business-scoped |
-| 22 | `inventory_categories` | Inventory categories (migration 010) | Business-scoped |
-| 23 | `expense_categories` | Expense categories (migration 010) | Business-scoped |
-| 24 | `message_templates` | WhatsApp message templates per context (migration 015) | Business-scoped |
+| 21 | `categories` | Product categories | Business-scoped |
+| 22 | `inventory_categories` | Inventory categories | Business-scoped |
+| 23 | `expense_categories` | Expense categories | Business-scoped |
+| 24 | `message_templates` | WhatsApp message templates (3 contexts) | Business-scoped |
+| 25 | `admin_settings` | Platform-wide admin configuration | Admin only |
+| 26 | `notification_broadcasts` | Admin-created/system notification broadcasts | Admin + Business read |
+| 27 | `notification_recipients` | Delivery tracking per business/user | Business-scoped |
+| 28 | `notification_rules` | Configuration for automated notifications | Admin only |
 
 ---
 
-## Table Definitions
+## New Tables (Migrations 024-025)
 
-### 1. subscription_plans
-| Column | Type | Constraints |
-|--------|------|-------------|
-| id | UUID | PK, default gen_random_uuid() |
-| name | TEXT | NOT NULL |
-| monthly_price | DECIMAL(10,2) | NOT NULL |
-| order_limit | INT | NOT NULL |
-| expense_limit | INT | NOT NULL |
-| product_limit | INT | NOT NULL |
-| storage_limit_mb | INT | default 500 |
-| features | JSONB | default '[]' |
-| is_active | BOOLEAN | default true |
-| sort_order | INT | default 0 |
-| created_at | TIMESTAMPTZ | default now() |
-| updated_at | TIMESTAMPTZ | default now() |
+### notification_broadcasts
 
-### 2. businesses
-| Column | Type | Constraints |
-|--------|------|-------------|
-| id | UUID | PK, default gen_random_uuid() |
-| owner_id | UUID | FK → auth.users(id), ON DELETE CASCADE |
-| name | TEXT | NOT NULL |
-| type | TEXT | nullable |
-| phone | TEXT | nullable |
-| district | TEXT | nullable |
-| address | TEXT | nullable |
-| logo_url | TEXT | nullable |
-| theme_prefs | JSONB | default '{"mode":"system","accent":"blue"}' |
-| plan_id | UUID | FK → subscription_plans(id), nullable |
-| account_status | TEXT | CHECK (trial, trial_expired, pending_payment, active, expired, suspended, archived, deleted) |
-| trial_started_at | TIMESTAMPTZ | nullable |
-| trial_ends_at | TIMESTAMPTZ | nullable |
-| subscription_started_at | TIMESTAMPTZ | nullable |
-| subscription_ends_at | TIMESTAMPTZ | nullable |
-| data_delete_after | TIMESTAMPTZ | nullable |
-| created_at | TIMESTAMPTZ | default now() |
-| updated_at | TIMESTAMPTZ | default now() |
-| deleted_at | TIMESTAMPTZ | nullable (soft delete) |
-
-### 3. profiles
-| Column | Type | Constraints |
-|--------|------|-------------|
-| id | UUID | PK, default gen_random_uuid() |
-| user_id | UUID | UNIQUE, FK → auth.users(id), ON DELETE CASCADE |
-| business_id | UUID | FK → businesses(id), ON DELETE SET NULL |
-| full_name | TEXT | NOT NULL |
-| phone | TEXT | nullable |
-| role | TEXT | CHECK (owner, admin, member), default 'owner' |
-| avatar_url | TEXT | nullable |
-| created_at | TIMESTAMPTZ | default now() |
-| updated_at | TIMESTAMPTZ | default now() |
-
-### 4. payment_proofs
-| Column | Type | Constraints |
+| Column | Type | Description |
 |--------|------|-------------|
 | id | UUID | PK |
-| business_id | UUID | FK → businesses(id) |
-| plan_id | UUID | FK → subscription_plans(id), nullable |
-| amount | DECIMAL(10,2) | NOT NULL |
-| payment_method | TEXT | default 'bank_transfer' |
-| proof_image_url | TEXT | nullable |
-| notes | TEXT | nullable |
-| status | TEXT | CHECK (pending, approved, rejected) |
-| admin_note | TEXT | nullable |
-| approved_by | UUID | FK → auth.users(id), nullable |
-| approved_at | TIMESTAMPTZ | nullable |
-| created_at | TIMESTAMPTZ | default now() |
+| title | TEXT | NOT NULL |
+| message | TEXT | NOT NULL |
+| category | TEXT | CHECK: general, announcement, subscription, payment, maintenance, usage, storage, security, account |
+| priority | TEXT | CHECK: normal, important, urgent |
+| source | TEXT | CHECK: admin, system |
+| audience_type | TEXT | CHECK: all, active, trial, expired, suspended, basic_plan, standard_plan, premium_plan, enterprise_plan, selected |
+| audience_config | JSONB | Business IDs for "selected" audience |
+| action_label | TEXT | Optional button text |
+| action_url | TEXT | Optional navigation URL |
+| status | TEXT | CHECK: draft, scheduled, sent, cancelled, archived |
+| scheduled_at | TIMESTAMPTZ | For scheduled delivery |
+| sent_at | TIMESTAMPTZ | When actually sent |
+| expires_at | TIMESTAMPTZ | Optional expiry |
+| recipient_count | INT | Count of delivered notifications |
+| read_count | INT | Count of read notifications |
+| created_by | UUID | FK → auth.users |
+| created_at | TIMESTAMPTZ | |
+| updated_at | TIMESTAMPTZ | |
 
-### 5. products
-| Column | Type | Constraints |
+### notification_recipients
+
+| Column | Type | Description |
 |--------|------|-------------|
 | id | UUID | PK |
-| business_id | UUID | FK → businesses(id) |
-| name | TEXT | NOT NULL |
-| category | TEXT | nullable |
-| size_variant | TEXT | nullable |
-| selling_price | DECIMAL(10,2) | NOT NULL |
-| cost_price | DECIMAL(10,2) | nullable |
-| profit_margin | DECIMAL(5,2) | GENERATED (STORED) |
-| image_url | TEXT | nullable |
-| inventory_item_id | UUID | nullable (link to inventory) |
-| is_active | BOOLEAN | default true |
-| created_by | UUID | FK → auth.users(id) |
-| created_at | TIMESTAMPTZ | default now() |
-| updated_at | TIMESTAMPTZ | default now() |
-| deleted_at | TIMESTAMPTZ | nullable |
+| broadcast_id | UUID | FK → notification_broadcasts |
+| notification_id | UUID | FK → notifications |
+| business_id | UUID | FK → businesses |
+| user_id | UUID | FK → auth.users |
+| read_at | TIMESTAMPTZ | When user read it |
+| delivered_at | TIMESTAMPTZ | When delivered |
+| dismissed_at | TIMESTAMPTZ | When dismissed |
+| created_at | TIMESTAMPTZ | |
 
-### 6. price_snapshots
-| Column | Type | Constraints |
+### notification_rules
+
+| Column | Type | Description |
 |--------|------|-------------|
 | id | UUID | PK |
-| business_id | UUID | FK → businesses(id) |
-| product_id | UUID | FK → products(id) |
-| selling_price | DECIMAL(10,2) | NOT NULL |
-| cost_price | DECIMAL(10,2) | nullable |
-| effective_date | DATE | NOT NULL |
-| created_at | TIMESTAMPTZ | default now() |
+| rule_key | TEXT | UNIQUE identifier (e.g., trial_ending_1d) |
+| name | TEXT | Human-readable name |
+| description | TEXT | What the rule does |
+| category | TEXT | Same category enum as broadcasts |
+| priority | TEXT | normal, important, urgent |
+| trigger_config | JSONB | Trigger configuration |
+| template_title | TEXT | Notification title template |
+| template_message | TEXT | Notification message template |
+| is_enabled | BOOLEAN | Whether the rule is active |
+| is_essential | BOOLEAN | Cannot be disabled (security/account rules) |
+| last_executed_at | TIMESTAMPTZ | When the rule last fired |
+| created_at | TIMESTAMPTZ | |
+| updated_at | TIMESTAMPTZ | |
 
-### 7. inventory_items
-| Column | Type | Constraints |
+### Existing `notifications` table — New Columns (Migration 024)
+
+| Column | Type | Description |
 |--------|------|-------------|
-| id | UUID | PK |
-| business_id | UUID | FK → businesses(id) |
-| name | TEXT | NOT NULL |
-| category | TEXT | nullable |
-| size_variant | TEXT | nullable |
-| current_stock | DECIMAL(10,2) | default 0 |
-| unit_cost | DECIMAL(10,2) | nullable |
-| supplier | TEXT | nullable |
-| reorder_level | DECIMAL(10,2) | default 0 |
-| last_restocked_at | TIMESTAMPTZ | nullable |
-| created_by | UUID | FK → auth.users(id) |
-| created_at | TIMESTAMPTZ | default now() |
-| updated_at | TIMESTAMPTZ | default now() |
-| deleted_at | TIMESTAMPTZ | nullable |
-
-### 8. inventory_transactions
-| Column | Type | Constraints |
-|--------|------|-------------|
-| id | UUID | PK |
-| business_id | UUID | FK → businesses(id) |
-| inventory_item_id | UUID | FK → inventory_items(id) |
-| type | TEXT | CHECK (stock_in, stock_out, adjustment) |
-| quantity | DECIMAL(10,2) | NOT NULL |
-| unit_cost | DECIMAL(10,2) | nullable |
-| reference_type | TEXT | nullable (expense, order, manual) |
-| reference_id | UUID | nullable |
-| notes | TEXT | nullable |
-| created_by | UUID | FK → auth.users(id) |
-| created_at | TIMESTAMPTZ | default now() |
-
-### 9. customers
-| Column | Type | Constraints |
-|--------|------|-------------|
-| id | UUID | PK |
-| business_id | UUID | FK → businesses(id) |
-| name | TEXT | NOT NULL |
-| phone | TEXT | nullable |
-| whatsapp | TEXT | nullable |
-| email | TEXT | nullable |
-| address | TEXT | nullable |
-| district | TEXT | nullable |
-| nearest_city | TEXT | nullable |
-| lifetime_spend | DECIMAL(12,2) | default 0 |
-| total_orders | INT | default 0 |
-| pending_balance | DECIMAL(10,2) | default 0 |
-| created_at | TIMESTAMPTZ | default now() |
-| updated_at | TIMESTAMPTZ | default now() |
-| deleted_at | TIMESTAMPTZ | nullable |
-
-### 10. orders
-| Column | Type | Constraints |
-|--------|------|-------------|
-| id | UUID | PK |
-| business_id | UUID | FK → businesses(id) |
-| order_number | TEXT | NOT NULL |
-| customer_id | UUID | FK → customers(id), ON DELETE SET NULL |
-| customer_name | TEXT | NOT NULL (snapshot) |
-| customer_phone | TEXT | nullable (snapshot) |
-| customer_address | TEXT | nullable (snapshot) |
-| customer_district | TEXT | nullable (snapshot) |
-| customer_city | TEXT | nullable (snapshot) |
-| customer_whatsapp | TEXT | nullable (snapshot) |
-| customer_email | TEXT | nullable (snapshot) |
-| expected_delivery_date | DATE | nullable |
-| dispatched_date | TIMESTAMPTZ | nullable |
-| delivery_charge | DECIMAL(10,2) | default 0 |
-| subtotal | DECIMAL(12,2) | NOT NULL |
-| discount | DECIMAL(10,2) | default 0 |
-| discount_type | TEXT | CHECK (percentage, fixed) |
-| advance_paid | DECIMAL(10,2) | default 0 |
-| balance_remaining | DECIMAL(12,2) | GENERATED (STORED) |
-| total | DECIMAL(12,2) | GENERATED (STORED) |
-| payment_method | TEXT | CHECK (cod, bank_transfer, cash, other) |
-| payment_status | TEXT | CHECK (pending, advanced, paid), default 'pending' |
-| status | TEXT | CHECK (new_order, ready, packed, dispatched, delivered, cancelled, returned), default 'new_order' |
-| remarks | TEXT | nullable |
-| images | JSONB | default '[]' |
-| waybill_id | TEXT | nullable (added in migration 004) |
-| order_source | TEXT | default 'ad' (added in migration 006) |
-| created_by | UUID | FK → auth.users(id) |
-| created_at | TIMESTAMPTZ | default now() |
-| updated_at | TIMESTAMPTZ | default now() |
-| deleted_at | TIMESTAMPTZ | nullable |
-
-### 11. order_items
-| Column | Type | Constraints |
-|--------|------|-------------|
-| id | UUID | PK |
-| order_id | UUID | FK → orders(id), ON DELETE CASCADE |
-| business_id | UUID | FK → businesses(id) |
-| product_id | UUID | FK → products(id), ON DELETE SET NULL |
-| product_name | TEXT | NOT NULL (snapshot) |
-| category | TEXT | nullable (snapshot) |
-| unit_price | DECIMAL(10,2) | NOT NULL (snapshot) |
-| quantity | DECIMAL(10,2) | NOT NULL |
-| total_price | DECIMAL(12,2) | GENERATED (STORED) |
-| notes | TEXT | nullable |
-| sort_order | INT | default 0 |
-| created_at | TIMESTAMPTZ | default now() |
-
-### 12. order_status_history
-| Column | Type | Constraints |
-|--------|------|-------------|
-| id | UUID | PK |
-| order_id | UUID | FK → orders(id), ON DELETE CASCADE |
-| business_id | UUID | FK → businesses(id) |
-| from_status | TEXT | nullable |
-| to_status | TEXT | NOT NULL |
-| changed_by | UUID | FK → auth.users(id) |
-| created_at | TIMESTAMPTZ | default now() |
-
-### 13. quotations
-Same structure as orders but for quotations. Includes `converted_order_id` FK and statuses: draft, sent, accepted, rejected, converted, expired.
-
-### 14. quotation_items
-Same structure as order_items but linked to quotations.
-
-### 15. expenses
-| Column | Type | Constraints |
-|--------|------|-------------|
-| id | UUID | PK |
-| business_id | UUID | FK → businesses(id) |
-| description | TEXT | NOT NULL |
-| category | TEXT | nullable (CHECK constraint removed in migration 011) |
-| total_cost | DECIMAL(12,2) | NOT NULL |
-| payment_method | TEXT | nullable (CHECK constraint removed in migration 011) |
-| expense_date | DATE | NOT NULL |
-| add_to_inventory | BOOLEAN | default false |
-| created_by | UUID | FK → auth.users(id) |
-| created_at | TIMESTAMPTZ | default now() |
-| updated_at | TIMESTAMPTZ | default now() |
-| deleted_at | TIMESTAMPTZ | nullable |
-
-### 16. deliveries
-Links to orders. Tracks courier, waybill, and delivery status flow: confirmed → to_dispatch → in_branch → assigned_to_rider → delivered / cancelled / returned.
-
-### 17. notifications
-Per-user in-app notifications with type, title, message, data JSON, read status.
-
-### 18. business_settings
-Key-value settings per business. Unique constraint on (business_id, key).
-
-### 19. tasks
-Action items linked to orders, expenses, inventory, quotations, or general. Has completion checkbox and assignment.
-
-### 20. admin_activity_log
-Immutable audit trail for Super Admin actions (payment approvals, plan changes, suspensions, etc.).
-
-### 21. categories (migration 007)
-| Column | Type | Constraints |
-|--------|------|-------------|
-| id | UUID | PK, default gen_random_uuid() |
-| business_id | UUID | FK → businesses(id), ON DELETE CASCADE |
-| name | TEXT | NOT NULL |
-| created_at | TIMESTAMPTZ | default now() |
-| updated_at | TIMESTAMPTZ | default now() |
-
-### 22. inventory_categories (migration 010)
-| Column | Type | Constraints |
-|--------|------|-------------|
-| id | UUID | PK, default gen_random_uuid() |
-| business_id | UUID | FK → businesses(id), ON DELETE CASCADE |
-| name | TEXT | NOT NULL |
-| created_at | TIMESTAMPTZ | default now() |
-| updated_at | TIMESTAMPTZ | default now() |
-
-### 23. expense_categories (migration 010)
-| Column | Type | Constraints |
-|--------|------|-------------|
-| id | UUID | PK, default gen_random_uuid() |
-| business_id | UUID | FK → businesses(id), ON DELETE CASCADE |
-| name | TEXT | NOT NULL |
-| created_at | TIMESTAMPTZ | default now() |
-| updated_at | TIMESTAMPTZ | default now() |
+| source | TEXT | 'admin' or 'system' |
+| priority | TEXT | 'normal', 'important', 'urgent' |
+| category | TEXT | 'general', 'announcement', 'subscription', etc. |
+| expires_at | TIMESTAMPTZ | Optional expiry |
+| action_label | TEXT | Optional button text |
+| action_url | TEXT | Optional navigation URL |
+| broadcast_id | UUID | FK → notification_broadcasts |
 
 ---
 
-## Indexes
+## New Indexes (Migration 024)
 
 | Index | Table | Columns |
 |-------|-------|---------|
-| idx_orders_business_status | orders | business_id, status |
-| idx_orders_business_date | orders | business_id, created_at DESC |
-| idx_orders_customer | orders | business_id, customer_id |
-| idx_orders_waybill | orders | business_id, waybill_id (migration 004) |
-| idx_orders_source | orders | business_id, order_source (migration 006) |
-| idx_products_business | products | business_id |
-| idx_customers_business | customers | business_id |
-| idx_expenses_business_date | expenses | business_id, expense_date DESC |
-| idx_inventory_business | inventory_items | business_id |
-| idx_quotations_business | quotations | business_id |
-| idx_notifications_user | notifications | user_id, is_read |
-| idx_tasks_business | tasks | business_id, reference_type |
-| idx_order_items_order | order_items | order_id |
-| idx_order_status_history_order | order_status_history | order_id |
-| idx_deliveries_order | deliveries | order_id |
-| idx_business_settings_key | business_settings | business_id, key |
-| idx_payment_proofs_business | payment_proofs | business_id, status |
-| idx_categories_business | categories | business_id (migration 007) |
-| idx_inventory_categories_business | inventory_categories | business_id (migration 010) |
-| idx_expense_categories_business | expense_categories | business_id (migration 010) |
+| idx_notification_broadcasts_status | notification_broadcasts | status, scheduled_at |
+| idx_notification_broadcasts_created | notification_broadcasts | created_at DESC |
+| idx_notification_recipients_broadcast | notification_recipients | broadcast_id |
+| idx_notification_recipients_business | notification_recipients | business_id, read_at |
+| idx_notification_recipients_user | notification_recipients | user_id, read_at |
+| idx_notification_rules_enabled | notification_rules | is_enabled |
+| idx_notifications_business_unread | notifications | business_id, is_read, created_at DESC |
+| idx_notifications_expires | notifications | expires_at (partial) |
 
 ---
 
-## Row Level Security
+## Automated Notification Rules (Seed Data, Migration 024)
 
-### Helper Functions
-
-```sql
-get_user_business_id() → UUID  -- SECURITY DEFINER (migration 003), bypasses RLS to avoid recursion
-is_super_admin() → BOOLEAN     -- Reads from JWT app_metadata (migration 003), not from profiles table
-```
-
-### Policies
-
-| Table | SELECT | INSERT | UPDATE | DELETE |
-|-------|--------|--------|--------|--------|
-| businesses | Owner or admin | Owner (registration) | Owner or admin | - (soft delete) |
-| profiles | Self or same business | Self (registration) | Self | - |
-| subscription_plans | All auth users | - | - | - |
-| products | Business-scoped | Business-scoped | Business-scoped (WITH CHECK) | Business-scoped (migration 005) |
-| orders | Business-scoped | Business-scoped | Business-scoped (WITH CHECK) | Business-scoped (migration 005) |
-| All business tables | `business_id = get_user_business_id()` + soft-delete filter | `business_id = get_user_business_id()` | `business_id = get_user_business_id()` (WITH CHECK in migration 008) | Business-scoped (migration 005) |
-| admin_activity_log | Super admin only | Super admin only | - | - |
-
-Business-scoped pattern:
-```sql
-CREATE POLICY "view_own_business" ON [table] FOR SELECT
-  USING (business_id = get_user_business_id() AND deleted_at IS NULL OR is_super_admin());
-
-CREATE POLICY "insert_own_business" ON [table] FOR INSERT
-  WITH CHECK (business_id = get_user_business_id());
-
-CREATE POLICY "update_own_business" ON [table] FOR UPDATE
-  USING (business_id = get_user_business_id())
-  WITH CHECK (business_id = get_user_business_id());
-
-CREATE POLICY "delete_own_business" ON [table] FOR DELETE
-  USING (business_id = get_user_business_id());
-```
-
-### Soft Delete RPCs (migration 009)
-
-```sql
-soft_delete_products(p_ids UUID[]) → JSONB  -- SECURITY DEFINER, bypasses RLS
-soft_delete_inventory_items(p_ids UUID[]) → JSONB  -- SECURITY DEFINER, bypasses RLS
-```
-
-These RPCs explicitly check business ownership via profiles table, bypassing RLS entirely.
-
-### Storage Bucket (migration 012-013)
-
-- **Bucket**: `profile-images` (public, 2MB limit, JPEG/PNG/WebP/GIF/AVIF)
-- **Paths**: `avatars/{userId}/` and `logos/{businessId}/`
-- **Policies**: Public read, authenticated write (user-scoped for avatars, business-scoped for logos)
+| Rule Key | Name | Category | Priority | Essential |
+|----------|------|----------|----------|-----------|
+| trial_ending_1d | Trial Ending Soon (1 day) | subscription | important | No |
+| trial_expired | Trial Expired | subscription | important | Yes |
+| subscription_expiring_7d | Subscription Expiring (7 days) | subscription | normal | No |
+| subscription_expiring_3d | Subscription Expiring (3 days) | subscription | important | No |
+| subscription_expiring_1d | Subscription Expiring (1 day) | subscription | important | Yes |
+| subscription_expired | Subscription Expired | subscription | urgent | Yes |
+| payment_received | Payment Proof Submitted | payment | normal | No |
+| payment_approved | Payment Approved | payment | normal | No |
+| payment_rejected | Payment Rejected | payment | urgent | No |
+| deletion_scheduled | Account Scheduled for Deletion | account | urgent | Yes |
+| usage_80_pct | Usage Limit at 80% | usage | normal | No |
+| usage_100_pct | Usage Limit Reached | usage | important | No |
+| storage_80_pct | Storage at 80% | storage | normal | No |
+| storage_100_pct | Storage Full | storage | important | No |
 
 ---
 
-## Seed Data
+## Automated Notification Functions (Migration 025)
 
-### Subscription Plans
+### `process_auto_notifications()`
+- **Purpose**: Evaluates all businesses and creates notifications for matching rules
+- **Run**: Hourly via pg_cron (`process-auto-notifications`)
+- **Covers**: Trial ending, trial expired, subscription expiring (7/3/1 day), subscription expired, deletion scheduled, usage 80%/100%, storage 80%/100%
+- **Dedup**: Uses `notification_already_sent()` to prevent duplicate notifications within 48h
 
-| Name | Price | Orders | Expenses | Products | Features | Order |
-|------|-------|--------|----------|----------|----------|-------|
-| Basic | Rs. 450 | 90 | 90 | 10 | Core Features | 1 |
-| Standard | Rs. 950 | 200 | 200 | 20 | Core Features | 2 |
-| Premium | Rs. 1,950 | 500 | 500 | 999,999 | Core, Unlimited Products | 3 |
-| Enterprise | Custom | 999,999 | 999,999 | 999,999 | Unlimited, Team, AI, Automations | 4 |
+### `deliver_scheduled_broadcasts()`
+- **Purpose**: Delivers scheduled admin broadcasts to targeted businesses
+- **Run**: Every 15 minutes via pg_cron (`deliver-scheduled-broadcasts`)
+- **Audience types**: All, active, trial, expired, suspended, by plan, or selected businesses
+- **Batch**: Creates notification + notification_recipient records per business
+
+### `create_business_notification()`
+- **Purpose**: Helper function to insert notification + notification_recipient records atomically
+
+### `notification_already_sent()`
+- **Purpose**: Checks if a business has received a notification of a given type within the dedup window (default 48h)
+
+---
+
+## RLS Updates (Migrations 024-025)
+
+| Table | Policies |
+|-------|----------|
+| notification_broadcasts | Super admin: ALL. Businesses: SELECT only for sent broadcasts matching their audience criteria |
+| notification_recipients | Super admin: ALL. Businesses: SELECT + UPDATE for own business |
+| notification_rules | Super admin: ALL |
+
+---
+
+## Seed Data Updates
+
+### Subscription Plans (Updated in migration 018)
+
+| Name | Price | Orders | Expenses | Products | Quotations | Inventory | Storage | Couriers | WhatsApp | Team | Sort |
+|------|-------|--------|----------|----------|------------|-----------|---------|----------|-----------|------|------|
+| Trial | Free | 5 | 5 | 10 | 5 | 10 | 50MB | 1 | 1 | 1 | 0 |
+| Basic | Rs. 450 | 90 | 90 | 10 | 90 | 90 | 250MB | 1 | 3 | 1 | 1 |
+| Standard | Rs. 950 | 200 | 200 | 20 | 200 | 200 | 500MB | 2 | 5 | 2 | 2 |
+| Premium | Rs. 1,950 | 500 | 500 | 999,999 | 500 | 500 | 2GB | 3 | 10 | 3 | 3 |
+| Enterprise | Custom | 999,999 | 999,999 | 999,999 | 999,999 | 999,999 | 10GB | 999,999 | 999,999 | 10 | 4 |
+
+### Admin Settings (Migration 022)
+
+Pre-seeded with default key `admin_settings` containing company_name, bank details, support WhatsApp, trial duration, and payment instructions.
+
+### Notification Rules (Migration 024)
+
+14 pre-seeded automated rules (listed above) covering subscription lifecycle, payment events, account deletion, usage/storage thresholds.

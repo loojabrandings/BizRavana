@@ -1,0 +1,215 @@
+Subscription  &  Super  Admin  Module  
+Outline
+ 
+1.  Subscription  Plans  
+Plans   Feature  Trial  Basic  Standard  Premium  Enterprise  Price  3   Days  Free  Rs.  1,250   Rs.  2,450   Rs.  4,450   Custom   Orders  20  100  200  500  Unlimited  Expenses  10  100  200  500  Unlimited  Products  10  10  50  100  Unlimited  Quotations  5  ✅  ✅  ✅  ✅  Inventory  5  ✅  ✅  ✅  ✅  Courier  Accounts  1  1   3   Unlimited  Unlimited  WhatsApp  Templates  Per  Category  
+1  1  3  Unlimited  Unlimited  
+File  Storage  5MB  5MB  250MB  1GB  Custom  Bulk  Import  ❌  ❌  ✅  ✅  ✅  Team  Members  1  1  1  5  Unlimited  Activity  Log  ❌  ❌  ❌  ✅  ✅  Smart  Automation  ❌  ❌  ❌  ❌  ✅  AI  Assistant  ❌  ❌  ❌  ❌  ✅   
+Basic.  
+Core  Features  
+●  Dashboard  ●  Orders  ●  Products  ●  Expenses  
+
+●  Inventory  ●  Quotations  ●  Reports  ●  Customers  ●  Custom  Branding  ●  Shipping  Labels  ●  WhatsApp  Templates  x  1  ●  Courier  Integration  ●  Image  Upload  (Business  logo  and  Profile  Picture)  
+Standard  
+●  Everything  in  Basic  ●  Image  Upload  for  orders  ●  Bulk  XLSX,  CSV  Import  ●  WhatsApp  Templates  x  3  
+Premium  
+●  Everything  in  Standard  ●  Advanced  Analytics  ●  Custom  Branding  ●  Multiple  Team  Members  ●  Activity  Log  ●  Smart  Automation  ●  WhatsApp  Templates  x  Unlimited  
+Enterprise  
+●  Everything  ●  Dedicated  Support  ●  Custom  Integrations  ●  API  ●  Dedicated  Environment  ●  Unlimited  Users  ●  AI  
+  
+Plan  Limits  
+Limits  reset  every  billing  cycle.  
+●  Orders  
+
+●  Expenses  
+Limits  that  do  not  reset:  
+●  Active  Products  ●  Storage  ●  Team  Members  
+  
+2.  Trial  Management  
+Trial  
+●  3  Day  Free  Trial  ●  No  payment  required  ●  Full  feature  access  with  trial  usage  limits.  
+ 
+Trial  Expiry  Flow  New  Signup        ↓  Trial  Active        ↓  Trial  Expired        ↓  Read  Only  Mode  (3  Days)        ↓  Subscription  Required        ↓  Data  Retention  Policy    
+Read  Only  Mode  
+Allowed  
+●  Dashboard  ●  Orders  ●  Customers  ●  Products  
+
+●  Inventory  ●  Expenses  ●  Quotations  ●  Reports  ●  Settings  
+Blocked  
+●  Create  ●  Edit  ●  Delete  ●  Dispatch  Orders  ●  Generate  Shipping  Labels  ●  Import  Data  ●  Export  Data  ●  Print  Documents  
+Trial  abuse  prevention   
+One  free  trial  per  business.   Multiple  trial  accounts  may  be  reviewed  or  restricted  by  auto  and  Super  Admin.    
+3.  Subscription  Lifecycle  
+Account  Status  
+●  Trial  ●  Payment  Pending  ●  Active  ●  Expired  ●  Suspended  ●  Archived  ●  Scheduled  for  Deletion  ●  Deleted  
+Subscription  Status  
+●  Trial   ●  Pending  ●  Active  ●  Expired  ●  Cancelled  
+Payment  Status  
+
+●  Pending  ●  Approved  ●  Expired   ●  Rejected  
+ 
+4.  Manual  Payment  Workflow  
+ 
+Approved  path   
+Choose  Plan        ↓  Bank  Transfer        ↓  Upload  Payment  Proof  (or  WhatsApp)        ↓  Pending  Payment        ↓  Admin  Review        ↓  Approved        ↓  Subscription  Activated   
+Reject  path   
+Choose  Plan        ↓  Bank  Transfer        ↓  Upload  Payment  Proof        ↓  Pending  Review        ↓  ───────────────  ↓              ↓  Approved     Rejected  ↓              ↓  Activated    Upload  New  Proof                    ↓              Pending  Review  
+
+     
+Payment  Proof  
+User  can  
+●  Upload  receipt  ●  View  uploaded  proof  ●  Replace  before  approval  ●  Delete  before  approval  
+On  Approval  
+●  Subscription  Activated  ●  Account  Status  =  Active  ●  Subscription  Start  Date  updated  ●  Subscription  End  Date  calculated  
+ 
+ 
+5.  User  Subscription  Page  
+Current  Subscription  
+Display  
+●  Current  Plan  ●  Monthly  Price  ●  Status  ●  Billing  Cycle  ●  Trial  End  Date  ●  Subscription  Start  ●  Subscription  End  ●  Next  Renewal  Date  ●  Days  Remaining  
+ 
+Usage  (according  to  the  user’s  plan)  
+
+Progress  bars  
+●  Orders:  76  /  100  ●  Expenses:  43  /  100  ●  Products:  8  /  10  ●  Storage:  120MB  /  250MB  
+ 
+Available  Actions  
+●  Upgrade  Plan  ●  Renew  Subscription  ●  Upload  Payment  Proof  ●  View  Payment  History  ●  Contact  Support  ●  WhatsApp  
+ 
+6.  Subscription  Expiry  
+When  subscription  expires  
+User  enters  Read  Only  Mode.  
+Banner:  
+Your  subscription  has  expired.  Renew  your  subscription  to  continue  using  BizRavana.  Your  data  will  be  retained  until  12  August  2026   Allowed  &  Blocked  mentioned  in  Read  Only  Mode   
+7.  Data  Retention  Policy  
+0–14  Days  
+●  Locked  ●  Read  Only  
+15–30  Days  
+●  Archived  
+
+30+  Days  
+●  Permanent  Deletion  (Review  by  Admin)  
+ 
+Permanently  Delete  
+Business  Data  
+●  Orders  ●  Products  ●  Inventory  ●  Expenses  ●  Customers  ●  Images  ●  Attachments  ●  Generated  PDFs  ●  Payment  Proofs  
+System  Data  
+Retain  
+●  Account  ID  ●  Email  ●  Audit  References  ●  Subscription  History  ●  Payment  History  
+In  summary,  Delete  all  data.  But  keep,  ●  Account  Summary  ●  Business  Name  ●  Owner  Name  ●  Email  ●  Phone  ●  Created  Date  ●  Deleted  Date  ●  Subscription  History  ●  Payment  History  ●  Deletion  Reason    
+8.  Super  Admin  Dashboard  
+
+Dashboard  Overview  
+Cards  
+●  Total  Businesses  ●  New  Businesses  (This  Month)  ●  Active  Subscriptions  ●  Trial  Accounts  ●  Pending  Payments  ●  Failed  Payments  ●  Expired  Accounts  ●  Monthly  Revenue  ●  Storage  Usage  ●  Scheduled  Deletions  
+ 
+9.  Business  Management  
+Columns  
+●  Business  ●  Owner  ●  Plan  ●  Status  ●  Usage  ●  Storage  ●  Expiry  ●  Joined  ●  Actions  
+Quick  Actions  
+●  View  ●  Activate  ●  Suspend  ●  Archive  ●  Delete  ●  Change  Plan  ●  Extend  Trial  
+ 
+Business  Detail  
+●  Overview  
+
+●  Subscription  ●  Payments  ●  Usage  ●  Storage  ●  Activity  ●  Admin  Notes  ●  Danger  Zone  
+ 
+10.  Pending  Payments  
+Columns  
+●  Payment  ID  ●  Business  ●  Plan  ●  Amount  ●  Submitted  Date  ●  Payment  Method  ●  Payment  Proof  ●  Status  
+Actions  
+●  Approve  ●  Reject  ●  Download  Proof  ●  Add  Note  
+ 
+11.  Subscription  Management  
+Columns  
+●  Business  ●  Plan  ●  Start  ●  End  ●  Status  ●  Renewal  Count  ●  Last  Payment  
+Actions  
+
+●  Renew  ●  Extend  ●  Upgrade  ●  Downgrade  ●  Suspend  ●  Cancel  ●  View  History  
+ 
+12.  Plans  Management  
+Each  Plan  
+●  Name  ●  Price  ●  Billing  Cycle  ●  Orders  Limit  ●  Expenses  Limit  ●  Product  Limit  ●  Storage  Limit  ●  Team  Limit  ●  Features  ●  Status  
+Actions  
+●  Add  ●  Edit  ●  Disable  ●  Duplicate  
+ 
+13.  Trial  Management  
+Columns  
+●  Business  ●  Trial  Started  ●  Trial  Ends  ●  Days  Remaining  ●  Usage  ●  Status  
+Actions  
+
+●  Extend  Trial  ●  Convert  to  Paid  ●  Lock  ●  Delete  
+ 
+14.  Data  Cleanup  Queue  
+Display  
+●  Expired  Accounts  ●  Archived  Accounts  ●  Pending  Deletion  
+Actions  
+●  Archive  Now  ●  Restore  ●  Extend  Retention  ●  Permanently  Delete  
+ 
+15.  Storage  Management  
+Overview  
+●  Total  Storage  ●  Business  Storage  ●  Images  ●  Attachments  ●  Payment  Proofs  ●  PDFs  
+Actions  
+●  Clean  Orphan  Files  ●  Delete  Archived  Files  ●  View  Largest  Accounts  
+ 
+16.  Notifications  
+
+System  Notifications  
+●  Trial  Ending  ●  Trial  Expired  ●  Subscription  Expiring  ●  Subscription  Expired  ●  Payment  Approved  ●  Payment  Rejected  ●  Maintenance  notices   ●  Payment  Proof  Submitted  ●  Read  Only  Mode  Ending  ●  Account  Scheduled  for  Deletion  ●  Account  Restored  ●  Storage  Limit  Warning  ●  Usage  Limit  Warning  ●  Usage  Limit  Reached  
+Channels  
+●  In-App  Notifications  bell  ●  unread  count  ●  mark  as  read  ●  mark  all  as  read  ●  open  related  page  ●  Email  (Future)  
+Recommended  timing  
+Trial  
+●  Trial  Ending  —  1  day  before  ●  Trial  Expired  —  immediately  ●  Read  Only  Mode  Ending  —  1  day  before  
+Subscription  
+●  Subscription  Expiring  —  7  days  before  ●  Subscription  Expiring  —  3  days  before  ●  Subscription  Expiring  —  1  day  before  ●  Subscription  Expired  —  immediately  
+Usage  
+●  80%  reached  ●  90%  reached  ●  100%  reached  
+ 
+
+ 
+17.  Admin  Activity  Log  
+Filter  By,  Action  Business  Date  Range   
+Track,  
+●  Admin  Login  ●  Payment   ○  Approved  ○  Rejected  ●  Plans  ○  Created  ○  Updated  ○  Disabled  ●  Subscription  ○  Extended  ○  Subscription  Activated  ○  Subscription  Cancelled  ○  Subscription  Renewed  ●  User   ○  Suspended  ○  Archived  ○  Deleted  ●  Data  ○  Retention  Extended  ○  Permanent  Deletion  Executed  ●  Trial  Extended  
+Each  record  includes  
+●  Admin  ●  Action  ●  Target  Business  ●  Target  Record  ●  Timestamp  ●  Notes  (Optional)  
+Rules   
+●  Read  Only  ●  Cannot  be  edited  ●  Cannot  be  deleted   
+
+ 
+18.  Super  Admin  Settings  
+Business  
+●  Company  Name  ●  Support  Email  ●  Phone  ●  WhatsApp  ●  Bank  Details  ●  Payment  Instructions  
+ 
+Trial  
+●  Trial  Duration  ●  Read  Only  Days  ●  Retention  Days  ●  Deletion  Period  
+ 
+Subscription  
+●  Billing  Cycle  ●  Default  Currency  ●  Auto  Expiry  ●  Renewal  Rules  ●  Storage  Limits  
+ 
+Security  
+●  Super  Admin  Users  ●  Activity  Log  ●  Session  Timeout  
+ 
+●  Maintenance  Mode  ●  Notification  Settings  
+
+MVP  Scope  
+Phase  0  –  Core  Infrastructure  
+ Supabase  Auth  &  RLS   Multi-tenant  database  schema  (business_id everywhere)   Roles  &  permissions   File  storage  buckets   Usage  limit  service   Subscription  middleware  (plan  checks)   Shared  UI  components  (tables,  forms,  dialogs,  layout)  
+ 
+Phase  1  (Launch  MVP)  
+ Authentication   Subscription  Plans   Trial  System   Usage  Limits   Subscription  Lifecycle   Manual  Payments   Pending  Payments   Approve  /  Reject   Subscription  Activation   User  Subscription  Page   Super  Admin  Dashboard   Basic  Business  Management  
+ 
+Phase  2  
+ Subscription  Management   Plans  Management   Trial  Management   Notifications   Admin  Activity  Log   Admin  Notes  
+ 
+
+Phase  3  
+ Data  Cleanup  Queue   Storage  Management   Data  Retention   Restore   Archive  
+ 
+Phase  4  
+ Team  Management   Enterprise  Features   Smart  Automation   AI  Assistant  
+ 
+Phase  5  
+ Payment  Gateway   Auto  Renewals   Email  Notifications   WhatsApp  API   Advanced  Analytics  
+ 
