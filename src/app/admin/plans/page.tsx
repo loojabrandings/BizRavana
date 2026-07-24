@@ -352,7 +352,28 @@ export default function AdminPlansPage() {
     )},
     { header: "Businesses", accessor: (plan) => <span className="text-sm tabular-nums text-muted-foreground/80">{plan.businesses_count || 0}</span> },
     { header: "Status", accessor: (plan) => <StatusBadge active={plan.is_active} /> },
-  ], []);
+    { header: "", className: "w-36", headerClassName: "hidden sm:table-cell", accessor: (plan) => (
+      <div className="flex items-center gap-1 max-lg:opacity-100 opacity-0 group-hover:opacity-100 transition-opacity">
+        <Button variant="ghost" size="icon-xs" onClick={() => { setEditingPlan(plan); setFormOpen(true); }} title="Edit plan">
+          <Pencil className="size-3.5 text-primary" />
+        </Button>
+        <Button variant="ghost" size="icon-xs" onClick={() => setDisableTarget(plan)}
+          title={plan.is_active ? "Disable plan" : "Enable plan"}>
+          {plan.is_active ? (
+            <XCircle className="size-3.5 text-muted-foreground/60" />
+          ) : (
+            <CheckCircle2 className="size-3.5 text-success" />
+          )}
+        </Button>
+        <Button variant="ghost" size="icon-xs" onClick={() => handleDuplicate(plan)} title="Duplicate plan">
+          <Copy className="size-3.5 text-muted-foreground/60" />
+        </Button>
+        <Button variant="ghost" size="icon-xs" onClick={() => setDeleteTarget(plan)} title="Delete plan">
+          <Trash2 className="size-3.5 text-destructive/60" />
+        </Button>
+      </div>
+    )},
+  ], [handleDuplicate]);
 
   // ── Mobile card renderer ─────────────────────────────────────
   const renderMobileCard = useCallback((plan: PlanRecord) => {

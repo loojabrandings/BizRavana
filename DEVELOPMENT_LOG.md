@@ -22,7 +22,7 @@
 | **Data Fetching** | TanStack Query (React Query) |
 | **Global State** | Zustand (minimal) |
 | **Theming** | next-themes + OKLCH CSS variables |
-| **PDF** | jsPDF + jsPDF-AutoTable + svg2pdf.js + JsBarcode |
+| **PDF** | jsPDF + jsPDF-AutoTable |
 | **XLSX** | SheetJS (xlsx) |
 | **Image Crop** | react-easy-crop |
 | **Fuzzy Search** | Fuse.js |
@@ -197,6 +197,108 @@ Complete Notification Management System with admin broadcast creation, automated
   - `AdminMobileRecordCard` — base card structure
 - 44px minimum touch targets, no full-page horizontal scroll
 - Bottom sheets replace desktop popovers on mobile
+
+---
+
+---
+
+## Entry: Settings Sync to Supabase — Cross-Device Persistence
+**Date:** 2026-07-23
+
+**Summary:**
+All four operational setting stores (Orders, Quotations, Expenses, Preferences) now persist to the `business_settings` table in Supabase, enabling cross-device settings synchronization. Previously, all settings were stored exclusively in localStorage via Zustand persist — settings made on one device would not appear on another.
+
+### Architecture
+- **Storage**: Uses the existing `business_settings` table with `(business_id, key)` unique constraint. Each store's state is stored as a single JSONB value under a well-known key:
+  - `orders_settings` — Order prefix, numbering, statuses, payment methods, courier charge, etc.
+  - `quotation_settings` — Quotation prefix, numbering, expiry days
+  - `expense_settings` — Payment methods list, default method
+  - `preferences` — Theme, accent, font, currency, date format, background style
+- **Hydration on mount** (`hydrateStoresFromServer`): Called after business ID is known in the dashboard layout. Fetches all 4 rows from Supabase and merges into the Zustand stores. Only non-function fields that exist in the server payload are overwritten (server wins).
+- **Auto-save on change** (`setupAutoSync`): Subscribes to Zustand store changes via `.subscribe()`. A dynamic `stripFunctions()` helper uses `Object.fromEntries(Object.entries(state).filter(...))` to strip action methods — auto-adapts to store changes without manual updates. Changes are debounced 1 second before upserting to Supabase.
+- **Initial push** (`pushCurrentState`): Runs once on mount to seed the server for first-time users, making settings immediately available on other devices.
+- **Cleanup**: On unmount, all subscriptions are unsubscribed and all debounce timers are cleared.
+
+### Files Created
+- `src/lib/settings-sync.ts` — Shared utility with `hydrateStoresFromServer()`, `setupAutoSync()`, and internal helpers
+
+### Files Modified
+- `src/components/layout/dashboard-layout.tsx` — Extended `fetchUserInfo` useEffect to call `hydrateStoresFromServer()` then `setupAutoSync()` after getting businessId. Cleanup: cancelled flag + unsubscribe + timer clearing.
+
+### Design Decisions
+- **Hydration before subscription**: `hydrateStoresFromServer()` runs before `setupAutoSync()` registers subscriptions. This prevents server-loaded data from triggering unnecessary save round-trips.
+- **Dynamic function stripping**: Instead of hard-coded destructuring (`const { setFn1, setFn2, ...data } = state`), uses `Object.fromEntries` + `filter` to dynamically exclude functions. Any new action method added to a store is automatically handled — no manual sync code updates needed.
+- **Module-level debounce timers**: Shared across all instances but properly cleaned up on unmount. Prevents race conditions between rapid setting changes.
+- **localStorage fallback**: Zustand persist still writes to localStorage as a fast local cache. On next mount, Supabase data overrides localStorage (if available).
+
+### Pre-existing Bugs Fixed During Implementation
+- `order-form-wizard.tsx` — `paymentMethods` prop was added to `OrderFormWizardProps` but not threaded through to the `StepContent` component, causing the mobile wizard's Payment Section to always use the fallback method list.
+- `order-form.tsx:102` — TypeScript error: `defaultPaymentMethod` from the store is `string`, but `payment_method` in `OrderFormData` expects a union type. Added explicit type assertion.
+
+---
+
+---
+
+## Entry: Shipping Label Feature — Complete Removal
+**Date:** 2026-07-23
+
+**Summary:**
+The entire A5 shipping label PDF system was removed at user request. The feature spanned 6 files across the codebase with 3 integration points.
+
+### Files Deleted
+- `src/lib/shipping-label/types.ts` — Data structures
+- `src/lib/shipping-label/fetch-data.ts` — Supabase data fetching
+- `src/lib/shipping-label/validate.ts` — Input validation
+- `src/lib/shipping-label/generate-pdf.ts` — jsPDF A5 generation (barcode, COD, handling instructions)
+- `src/components/orders/shipping-label-dialog.tsx` — Dialog UI with preview, print, download
+
+### Files Modified
+- `orders/page.tsx` — Removed 6 imports, 3 state variables, `handleRowPrintLabel`, `handleBulkPrintLabels`, Print Label button (mobile card + bulk toolbar), `<ShippingLabelDialog>` JSX
+- `courier-settings.tsx` — Removed `HandlingInstruction` imports, ALL_HANDLING_OPTIONS, toggleHandling, shipping label state/loading/save, entire Shipping Label Defaults card
+- `order-preview.tsx` — Removed 3 imports, `handlePrintLabel` callback, `onPrintLabel` prop, Shipping Label button (desktop + mobile dropdown)
+- `package.json` — Removed `jsbarcode` and `svg2pdf.js` dependencies
+
+### Dependencies Preserved
+- `jspdf` and `jspdf-autotable` kept — still used for order/quotation invoice PDFs
+
+---
+
+## Entry: Orphaned Supabase Tables Discovered
+**Date:** 2026-07-23
+
+**Summary:**
+Cross-referenced the live Supabase schema (CSV export) against all 25 migration files to find tables with no migration coverage.
+
+### Orphaned Tables (3)
+| Table | Provider Default | Purpose (inferred) |
+|-------|-----------------|--------------------|
+| `courier_cities` | `koombiyo_delivery` | Courier city cache with external IDs |
+| `courier_districts` | `koombiyo_delivery` | Courier district cache with external IDs |
+| `courier_waybills` | `koombiyo_delivery` | Courier waybill pool (available/assigned/used) |
+
+All three default to `koombiyo_delivery` provider, suggesting they were created for a Koombiyo integration that was never completed. None are referenced in `src/` code. Safe to drop.
+
+---
+
+## Entry: WhatsApp Templates — Full-Width Desktop Layout
+**Date:** 2026-07-24
+
+**Summary:**
+The WhatsApp templates settings page desktop layout was restructured to make both the Saved Templates section and Placeholders section full-width rows instead of a side-by-side layout.
+
+### Before
+- Top row was a two-column grid: Template List (260px sidebar) + Placeholders (remaining width)
+- Template list was constrained to a narrow left sidebar
+- Placeholders occupied the remaining horizontal space beside the template list
+
+### After
+- Saved Templates section spans full width as its own row
+- Placeholders section spans full width below it
+- Editor + Preview remain as two columns in the bottom row
+- The template list items now have space to show longer titles without truncation
+
+### Files Modified
+- `src/components/whatsapp/whatsapp-templates-settings.tsx` — Restructured the desktop layout grid from `gridTemplateColumns: "260px 1fr"` to two stacked full-width sections
 
 ---
 

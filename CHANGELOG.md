@@ -4,6 +4,14 @@ All user-visible changes to Bizravana are documented here.
 
 ---
 
+## Version 0.12.3 (2026-07-24)
+
+### Changed
+
+- **WhatsApp Templates Settings Layout** — Desktop layout restructured: Saved Templates section and Placeholders section now span full width as stacked rows instead of a side-by-side grid (260px sidebar + remaining width). Template list items have more room for titles. Editor + Preview remain as two columns below.
+
+---
+
 ## Version 0.12.2 (2026-07-23)
 
 ### Added

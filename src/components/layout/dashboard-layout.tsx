@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   Bell,
   Building2,
@@ -41,12 +41,33 @@ import {
   hydrateStoresFromServer,
   setupAutoSync,
 } from "@/lib/settings-sync";
+import { UserRoleProvider } from "@/hooks/use-user-role";
 
 // ─── Shared Avatar Dropdown (used on both mobile and desktop) ─────
+
+function RoleBadge({ role }: { role: string | null }) {
+  if (!role) return null;
+  const config = {
+    owner: { label: "Owner", color: "text-amber-500", bg: "bg-amber-500/10", border: "border-amber-500/20" },
+    admin: { label: "Admin", color: "text-blue-500", bg: "bg-blue-500/10", border: "border-blue-500/20" },
+    member: { label: "Member", color: "text-muted-foreground", bg: "bg-muted", border: "border-border/40" },
+  };
+  const c = config[role as keyof typeof config];
+  if (!c) return null;
+  return (
+    <span className={cn(
+      "inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold border",
+      c.color, c.bg, c.border,
+    )}>
+      {c.label}
+    </span>
+  );
+}
 
 function HeaderAvatarDropdown({
   userAvatar,
   userFullName,
+  userRole,
   businessName,
   avatarInitials,
   onLogout,
@@ -54,6 +75,7 @@ function HeaderAvatarDropdown({
 }: {
   userAvatar: string | null;
   userFullName: string;
+  userRole: string | null;
   businessName: string;
   avatarInitials: string;
   onLogout: () => void;
@@ -116,9 +138,12 @@ function HeaderAvatarDropdown({
               <span className="absolute -bottom-0.5 -right-0.5 size-3 rounded-full border-[2.5px] border-background bg-success shadow-sm" />
             </div>
             <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-semibold text-foreground">
-                {userFullName}
-              </p>
+              <div className="flex items-center gap-2">
+                <p className="truncate text-sm font-semibold text-foreground">
+                  {userFullName}
+                </p>
+                <RoleBadge role={userRole} />
+              </div>
               {businessName && (
                 <p className="mt-0.5 truncate text-xs text-muted-foreground/70">
                   {businessName}
@@ -187,10 +212,12 @@ function HeaderAvatarDropdown({
 
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
+  const pathname = usePathname();
 
   // ─── User / Business info for avatar dropdown ────────────────
   const [userAvatar, setUserAvatar] = useState<string | null>(null);
   const [userFullName, setUserFullName] = useState("User");
+  const [userRole, setUserRole] = useState<string | null>(null);
   const [businessName, setBusinessName] = useState("");
 
   useEffect(() => {
@@ -205,13 +232,14 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
 
         const { data: profile } = await supabase
           .from("profiles")
-          .select("full_name, avatar_url, business_id")
+          .select("full_name, avatar_url, business_id, role")
           .eq("user_id", session.user.id)
           .single();
 
         if (profile) {
           setUserFullName(profile.full_name || "User");
           setUserAvatar(profile.avatar_url);
+          setUserRole(profile.role);
 
           if (profile.business_id) {
             // ── Load settings from server into Zustand stores ──
@@ -295,6 +323,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
     <ReadOnlyModeProvider>
       <NotificationProvider>
+      <UserRoleProvider>
       <KeyboardShortcutsDialog open={showHelp} onClose={() => setShowHelp(false)} />
       <GlobalSearchDialog />
 
@@ -349,6 +378,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
               <HeaderAvatarDropdown
                 userAvatar={userAvatar}
                 userFullName={userFullName}
+                userRole={userRole}
                 businessName={businessName}
                 avatarInitials={avatarInitials}
                 onLogout={handleLogout}
@@ -372,6 +402,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
               <HeaderAvatarDropdown
                 userAvatar={userAvatar}
                 userFullName={userFullName}
+                userRole={userRole}
                 businessName={businessName}
                 avatarInitials={avatarInitials}
                 onLogout={handleLogout}
@@ -380,7 +411,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
           </div>
         </header>
 
-        <main className="flex-1 p-4 pb-[calc(var(--bottom-nav-height)_+_20px_+_env(safe-area-inset-bottom))] lg:pb-6">
+        <main className={cn("flex-1 p-4 pb-[calc(var(--bottom-nav-height)_+_20px_+_env(safe-area-inset-bottom))] lg:pb-6", pathname === "/dashboard/settings" && "overflow-hidden")}>
           {children}
         </main>
       </div>
@@ -395,6 +426,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
       />
       <QuickActionSheet open={quickActionOpen} onClose={handleCloseQuickAction} />
       <MobileRightDrawer open={mobileDrawerOpen} onClose={handleCloseDrawer} />
+    </UserRoleProvider>
     </NotificationProvider>
     </ReadOnlyModeProvider>
   );

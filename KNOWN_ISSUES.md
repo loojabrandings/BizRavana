@@ -5,16 +5,12 @@ This file tracks current limitations and technical debt.
 ## Current issues
 
 - Database migration state must be verified independently in each deployed Supabase environment (25 migrations).
+- **3 orphaned Supabase tables** exist with no migration coverage — `courier_cities`, `courier_districts`, `courier_waybills`. They default to `koombiyo_delivery` provider and are not referenced by any application code.
 - Account provisioning is idempotent but client-driven. A database function should eventually make business/profile creation fully transactional.
 - There is no automated test suite yet; lint and production builds are the current verification gates.
 - **Read Only Mode** is enforced client-side via a React provider. Server-side enforcement (middleware or RLS) would be a more robust approach for locking down expired accounts.
-- Business settings preferences (theme, accent, font, currency, etc.) are stored client-side via Zustand persist (localStorage) — not yet synced to the `business_settings` or `businesses` table in Supabase.
 - Soft-deleted records are hidden from the UI but not yet purged after the retention period.
 - No automated data cleanup process for deleted businesses (no permanent delete after retention expiry).
-- **Courier snapshot not implemented**: Courier metadata (provider name, handling instructions, date option, optional note) is fetched live from `business_settings` at label generation time, not from a dispatch-time snapshot. Historical reprints will show current settings, not the settings that were active when the order was dispatched.
-- **No per-shipment override UI**: Handling instructions and optional note defaults are saved in settings but cannot be overridden per-shipment before printing.
-- **Generic handling icons**: All handling instruction types use the same △ prefix instead of distinct monochrome icons (⚠, ☂, ⬆, ◆, ⊘).
-- **`svg2pdf.js` barcode rendering** uses DOM APIs (document.createElementNS) which may cause issues in SSR or testing contexts.
 - **Dialog blur applies to main content area only on pages wrapped in DashboardLayout** — non-dashboard pages (auth, standalone) won't get the blur effect when a dialog opens since they lack the `[data-main-content]` target.
 - **Toast per-type auto-dismiss durations** not configurable globally — default is 5000ms for all types. Success/info/warning/error/loading all share the same duration.
 - **Trial auto-expiry cron** (migration 020) requires `pg_cron` to be available on the Supabase project. If not available, trials must be expired manually via SQL.
@@ -30,10 +26,9 @@ This file tracks current limitations and technical debt.
 ## MVP limitations
 
 - Manual bank-transfer subscription flow only.
-- Single-user businesses only (no team/role management).
 - No WhatsApp Business API integration (uses simple `wa.me` links).
 - No email, PWA, or offline mode yet.
-- No courier API integration beyond Royal Express (waybill tracking via API, but manual entry fallback available).
+- No courier API integration beyond Royal Express (waybill tracking via API).
 - No image upload for products yet (avatars/logos, order images, and payment proofs are implemented).
 - The delivery module has settings in the Settings page but no dedicated delivery management page.
 - Reports are limited to 500 records per query (optimization needed for larger datasets).
@@ -59,3 +54,5 @@ This file tracks current limitations and technical debt.
 - **Admin panel mobile responsiveness**: All 11 admin pages now use responsive card-based layouts on mobile.
 - **Notifications not delivered**: "Send Now" broadcasts now actually insert notification records via server-side API route.
 - **Realtime notification bell**: Upgraded from polling placeholder to shared NotificationProvider with WebSocket subscription.
+- **Royal Express waybill**: Now uses the order's pre-assigned `waybill_id` instead of generating synthetic `"CM" + order_number` waybills. Auto waybill flow (omits `waybill_number` to let Royal Express generate one) also fixed.
+- **Shipping Label Feature**: Completely removed — deleted 6 files, cleaned up 3 integration points, removed `jsbarcode` and `svg2pdf.js` dependencies. No other features affected.

@@ -115,89 +115,6 @@ Utility functions for delivery/courier operations.
 ### `src/components/ui/searchable-select.tsx`
 `SearchableSelect`: A searchable dropdown select using Popover + Command (cmdk). Replaces the standard Select component when options are long enough to benefit from keyboard filtering (districts, cities, etc.). Trigger styled to match SelectTrigger (h-9, border, chevron). Features search input, cmdk-based filtering, check icon on selected item, and auto-close on selection. Used in order and quotation customer forms for district and city selection.
 
-## 5. Shipping Label System
-
-A complete A5 shipping label generation system with PDF rendering, barcode, sender/receiver info, COD highlighting, handling instructions, and three reprint entry points.
-
-### Architecture Overview
-
-```
-Dispatch Flow (auto waybill mode)     Reprint Flow (any entry point)
-  └─ shipWithCourier()                  └─ fetchLabelData(orderId)
-       └─ fetchLabelData(orderId)             └─ validateLabelData()
-       └─ validateLabelData()                  └─ generateShippingLabelPdf()
-       └─ generateShippingLabelPdf()           └─ ShippingLabelDialog
-       └─ ShippingLabelDialog
-
-Bulk Flow (multiple selected orders)
-  └─ handleBulkPrintLabels()
-       └─ fetchLabelData() × N
-       └─ validateLabelData() × N
-       └─ generateCombinedShippingLabelsPdf()
-       └─ ShippingLabelDialog (combined)
-```
-
-### Core Modules
-
-#### `src/lib/shipping-label/types.ts`
-**Exports:** `ShippingLabelData`, `SenderInfo`, `ReceiverInfo`, `HandlingInstruction`, `HANDLING_INSTRUCTION_LABELS`, `LabelGenerationResult`, `CombinedLabelGenerationResult`, `LabelValidationResult`, `CourierShipmentMetadata`, `FormattedContact`
-
-Data structures for label generation, courier snapshots, validation results, and phone formatting.
-
-#### `src/lib/shipping-label/fetch-data.ts`
-**Exports:** `fetchLabelData(orderId)`, `fetchSenderInfo()`
-
-Queries Supabase for order snapshot + business profile (name, phone, address, logo_url). Also reads courier name, handling instructions, optional note, and date preference from `business_settings`.
-
-#### `src/lib/shipping-label/validate.ts`
-**Exports:** `validateLabelData(data)`, `canGenerateLabel(data)`
-
-Validates all required fields (waybill, business name/phone/address, customer name/address/contact, COD). Resolves phone/WhatsApp fallback. Returns formatted contact info with display-ready phone numbers.
-
-#### `src/lib/shipping-label/generate-pdf.ts`
-**Exports:** `generateShippingLabelPdf(data)`, `generateCombinedShippingLabelsPdf(labels[])`
-
-jsPDF A5 portrait PDF generation with:
-- Business header (logo, name, address, phone, date, courier)
-- Code 128 barcode (jsbarcode + svg2pdf.js) with quiet zones
-- Receiver section (name, address, contact)
-- COD highlighted box ("COD TO COLLECT")
-- Handling instruction icons (horizontal with wrapping)
-- Optional note
-- Order number footer
-- Combined multi-page PDF support (one label per page)
-
-### UI Components
-
-#### `ShippingLabelDialog` — `src/components/orders/shipping-label-dialog.tsx`
-**Props:** `{ open, onOpenChange, labelData, initialDataUrl }`
-
-Modal dialog with:
-- PDF preview via iframe (responsive height: calc(60vh - 4px))
-- Print Label button (A5-optimized print CSS)
-- Download PDF button
-- Generating/error/ready states
-- Light/dark/system theme support
-
-### Settings Integration
-
-#### `CourierSettings` — `src/components/delivery/courier-settings.tsx`
-Now includes a **Shipping Label Defaults** card with:
-- Handling instruction toggle buttons (Fragile, Keep Dry, This Side Up, Glass, Do Not Bend)
-- Optional note text input
-- Date on label preference (Dispatch Date vs Current Date)
-- Save Defaults button (saves to `business_settings`)
-
-### Integration Points
-
-| Entry Point | Trigger | Component |
-|---|---|---|
-| Courier dispatch (auto waybill) | `handleDispatch("courier")` | `orders/page.tsx` |
-| Order Preview | "Shipping Label" button | `order-preview.tsx` |
-| Shipment Status Panel | "Label" button | `shipment-status-panel.tsx` |
-| Orders table row actions | Truck icon | `orders/page.tsx` |
-| Orders table bulk actions | "Labels" button | `orders/page.tsx` |
-
 ## 6. Dialog System (UI Primitives)
 
 Premium dialog/modal system built on `@base-ui/react/dialog` with a standardized size system, consistent layout, and polished animations.
@@ -339,7 +256,8 @@ Data Mapping
 
 Tab content for Settings → WhatsApp Templates. Features:
 - Three-context segmented control (Order Table, Order Preview, Quotation Preview) with per-context template counts
-- Three-column layout: saved templates + placeholders (left) | editor (middle) | live preview (right)
+- **Desktop layout**: Saved Templates (full-width row) + Placeholders (full-width row) stacked above Editor + Live Preview (two-column row)
+- **Mobile layout**: Sequential sections — Saved Templates card → Editor (with inline searchable placeholder chips) → Live Preview
 - Saved template list with selection indicator dot, title, Default badge, relative timestamp, and vertical 3-dots action menu (Duplicate, Set as Default, Rename, Delete with confirmation)
 - Template Title input (max 80 chars, duplicate title validation, minimum 2 chars)
 - Large message content textarea with character count

@@ -1,6 +1,6 @@
 # Bizravana — Database Schema
 
-> Last updated: 2026-07-22
+> Last updated: 2026-07-23
 > Database: PostgreSQL (Supabase)
 > RLS: Enabled on all business-scoped tables
 > Migrations: 25 total (001 through 025)
@@ -71,6 +71,8 @@
 | 26 | `notification_broadcasts` | Admin-created/system notification broadcasts | Admin + Business read |
 | 27 | `notification_recipients` | Delivery tracking per business/user | Business-scoped |
 | 28 | `notification_rules` | Configuration for automated notifications | Admin only |
+
+> **Note:** 3 additional tables exist in Supabase but have **no migration coverage** — `courier_cities`, `courier_districts`, `courier_waybills` — all defaulting to `koombiyo_delivery` provider. These are orphaned and not referenced by any application code.
 
 ---
 

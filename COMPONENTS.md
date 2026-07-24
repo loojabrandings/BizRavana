@@ -1,6 +1,6 @@
 # Bizravana — Component Documentation
 
-> Last updated: 2026-07-22
+> Last updated: 2026-07-23
 
 ---
 
@@ -161,6 +161,16 @@ All admin pages are now mobile-responsive using shared Admin components:
 | File | Purpose |
 |------|---------|
 | `customer-parser.ts` | Smart Customer Parser — extracts structured customer details (name, phone, address, district, city) from unstructured pasted text (WhatsApp, SMS, etc.). Supports WhatsApp header stripping, Sri Lankan phone detection, district matching with Sinhala transliteration normalization, and two-phase city matching (forward match + reverse lookup via courier city data). |
+| `settings-sync.ts` | Settings Sync — persists operational settings (orders, quotations, expenses, preferences) to the `business_settings` table. `hydrateStoresFromServer()` fetches settings from Supabase and merges into Zustand stores on mount. `setupAutoSync()` subscribes to store changes and debounced-upserts to Supabase. Enables cross-device settings persistence. |
+
+### WhatsApp Templates (`src/components/whatsapp/`)
+
+| Component | Purpose |
+|-----------|---------|
+| `WhatsAppTemplatesSettings` | Main settings tab for managing WhatsApp message templates. Three-context segmented control. **Desktop layout**: Saved Templates (full-width row) + Placeholders (full-width row) stacked above Editor + Preview (two-column row). Mobile layout: sequential sections. |
+| `useWhatsAppAction` | React hook managing template selection flow (0 templates → create dialog, 1 → send directly, >1 → picker dialog). |
+| `TemplateSelectionDialog` | Compact radio-style picker for selecting between multiple templates with Default badge and preview. |
+| `NoTemplateDialog` | Empty-state dialog with create template navigation. |
 
 ## Order Components (`src/components/orders/`)
 

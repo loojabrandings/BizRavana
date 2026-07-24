@@ -987,8 +987,8 @@ export function WhatsAppTemplatesSettings() {
                     <FileText className="size-3 text-muted-foreground/30" />
                   </div>
                   <p className="mt-2 text-xxs text-muted-foreground/40">No templates yet</p>
-                  <Button variant="ghost" size="xs" onClick={startNewTemplate} className="mt-2 gap-1 h-6 text-xxs rounded-md">
-                    <Plus className="size-2.5" /> Create your first template
+                  <Button variant="outline" size="sm" onClick={startNewTemplate} className="mt-2 gap-1.5 h-8 text-xs rounded-md border-primary/20 text-primary/80 hover:text-primary hover:border-primary/40">
+                    <Plus className="size-3" /> Create your first template
                   </Button>
                 </div>
               ) : (
@@ -1005,15 +1005,10 @@ export function WhatsAppTemplatesSettings() {
                       onDelete={() => handleDelete(tpl.id)}
                     />
                   ))}
-                  {!isNewTemplate && (
-                    <button
-                      type="button"
-                      onClick={startNewTemplate}
-                      className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-border/20 py-2.5 text-xxs text-muted-foreground/40 transition-all hover:border-primary/30 hover:bg-primary/[0.02] hover:text-primary/60 mt-1"
-                    >
-                      <Plus className="size-3" />
-                      <span>New Template</span>
-                    </button>
+                  {!isNewTemplate && (                        <button type="button" onClick={startNewTemplate} className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-primary/20 bg-primary/[0.03] py-2.5 text-xs font-medium text-primary/70 transition-all hover:border-primary/40 hover:bg-primary/[0.06] hover:text-primary mt-1">
+                          <Plus className="size-3.5" />
+                          <span>New Template</span>
+                        </button>
                   )}
                 </>
               )}
@@ -1171,10 +1166,10 @@ export function WhatsAppTemplatesSettings() {
           </div>
         </div>
       ) : (
-        /* ═══ Desktop Three-Column Layout ═════════════════════════════ */
-        <div className="grid gap-5" style={{ gridTemplateColumns: "1fr 2fr 2fr", minHeight: "calc(100vh - 260px)" }}>
-          {/* ─── LEFT COLUMN: Template List + Placeholders ─────────── */}
-          <div className="min-w-0 flex flex-col gap-3">
+        /* ═══ Desktop Layout: Saved Templates (full width), Placeholders (full width), Editor + Preview (two columns) ══ */
+        <div className="flex flex-col gap-5" style={{ minHeight: "calc(100vh - 260px)" }}>
+          {/* ─── Saved Templates (full width) ── */}
+          <div className="min-w-0">
             <div className="rounded-xl border border-border/30 bg-card/50 p-0 overflow-hidden">
               <div className="flex items-center justify-between px-3.5 pt-3 pb-2">
                 <div className="flex items-center gap-2">
@@ -1192,8 +1187,8 @@ export function WhatsAppTemplatesSettings() {
                       <FileText className="size-3 text-muted-foreground/30" />
                     </div>
                     <p className="mt-2 text-xxs text-muted-foreground/40">No templates yet</p>
-                    <Button variant="ghost" size="xs" onClick={startNewTemplate} className="mt-2 gap-1 h-6 text-xxs rounded-md">
-                      <Plus className="size-2.5" /> Create your first template
+                    <Button variant="outline" size="sm" onClick={startNewTemplate} className="mt-2 gap-1.5 h-8 text-xs rounded-md border-primary/20 text-primary/80 hover:text-primary hover:border-primary/40">
+                      <Plus className="size-3" /> Create your first template
                     </Button>
                   </div>
                 ) : (
@@ -1211,104 +1206,108 @@ export function WhatsAppTemplatesSettings() {
                       />
                     ))}
                     {!isNewTemplate && (
-                      <button type="button" onClick={startNewTemplate} className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-border/20 py-2.5 text-xxs text-muted-foreground/40 transition-all hover:border-primary/30 hover:bg-primary/[0.02] hover:text-primary/60 mt-1">
-                        <Plus className="size-3" />
-                        <span>New Template</span>
-                      </button>
+                    <button type="button" onClick={startNewTemplate} className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-primary/20 bg-primary/[0.03] py-2.5 text-xs font-medium text-primary/70 transition-all hover:border-primary/40 hover:bg-primary/[0.06] hover:text-primary mt-1">
+                      <Plus className="size-3.5" />
+                      <span>New Template</span>
+                    </button>
                     )}
                   </>
                 )}
               </div>
             </div>
-
-            <div className="flex-1 rounded-xl border border-border/30 bg-card/30 p-3 pt-2.5 overflow-hidden flex flex-col min-h-0">
-              <div className="h-px bg-border/10 -mx-3 mb-3" />
-              <PlaceholderChips groups={groups} onInsert={insertPlaceholder} />
-            </div>
           </div>
 
-          {/* ─── MIDDLE COLUMN: Editor ─────────────────────────────── */}
-          <div className="min-w-0 flex flex-col">
-            <div className="flex flex-col h-full rounded-xl border border-border/30 bg-card/50 overflow-hidden">
-              <div className="border-b border-border/20 px-4 py-3 space-y-2">
-                <div className="flex items-center justify-between">
-                  <label className="text-xxs font-semibold uppercase tracking-wider text-foreground/60">
-                    Template Title <span className="text-destructive">*</span>
-                  </label>
-                  {editTitle.length > 60 && (
-                    <span className={cn("text-nano tabular-nums", editTitle.length > 75 ? "text-destructive/70" : "text-muted-foreground/40")}>
-                      {editTitle.length}/80
-                    </span>
+          {/* ─── Placeholders (full width) ── */}
+          <div className="min-w-0 rounded-xl border border-border/30 bg-card/30 p-3 pt-2.5 overflow-hidden flex flex-col">
+            <div className="h-px bg-border/10 -mx-3 mb-3" />
+            <PlaceholderChips groups={groups} onInsert={insertPlaceholder} />
+          </div>
+
+          {/* ─── BOTTOM ROW: Editor + Preview (two-column full width) ─ */}
+          <div className="grid flex-1 gap-5" style={{ gridTemplateColumns: "1fr 1fr" }}>
+            {/* Editor */}
+            <div className="min-w-0 flex flex-col">
+              <div className="flex flex-col h-full rounded-xl border border-border/30 bg-card/50 overflow-hidden">
+                <div className="border-b border-border/20 px-4 py-3 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xxs font-semibold uppercase tracking-wider text-foreground/60">
+                      Template Title <span className="text-destructive">*</span>
+                    </label>
+                    {editTitle.length > 60 && (
+                      <span className={cn("text-nano tabular-nums", editTitle.length > 75 ? "text-destructive/70" : "text-muted-foreground/40")}>
+                        {editTitle.length}/80
+                      </span>
+                    )}
+                  </div>
+                  <Input ref={titleInputRef} value={editTitle} onChange={(e) => setEditTitle(e.target.value)} placeholder="Example: Order Confirmation" className="h-9 text-sm font-medium" maxLength={80} />
+                </div>
+
+                <div className="flex-1 flex flex-col px-4 py-3 gap-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xxs font-semibold uppercase tracking-wider text-foreground/60">
+                      Message Content <span className="text-destructive">*</span>
+                    </label>
+                    <span className="text-nano text-muted-foreground/35 tabular-nums">{editContent.length} chars</span>
+                  </div>
+                  <Textarea ref={textareaRef} value={editContent} onChange={(e) => setEditContent(e.target.value)} placeholder="Type your message here... Use {{placeholders}} to insert dynamic content." className="flex-1 min-h-[300px] resize-y font-mono text-xs leading-relaxed" />
+
+                  {placeholderWarnings.length > 0 && (
+                    <div className="space-y-1">
+                      {placeholderWarnings.slice(0, 3).map((w, i) => (
+                        <div key={i} className={cn("flex items-start gap-1.5 rounded-md px-2.5 py-1.5", w.type === "unknown" && "bg-info/5 text-info/70", w.type === "malformed" && "bg-warning/5 text-warning/70", w.type === "unsupported" && "bg-destructive/5 text-destructive/70")}>
+                          <AlertTriangle className="size-2.5 shrink-0 mt-0.5" />
+                          <span className="text-xxs leading-relaxed">{w.message}</span>
+                        </div>
+                      ))}
+                      {placeholderWarnings.length > 3 && (
+                        <p className="text-xxs text-muted-foreground/30 pl-1">+{placeholderWarnings.length - 3} more warning{placeholderWarnings.length - 3 > 1 ? "s" : ""}</p>
+                      )}
+                    </div>
                   )}
                 </div>
-                <Input ref={titleInputRef} value={editTitle} onChange={(e) => setEditTitle(e.target.value)} placeholder="Example: Order Confirmation" className="h-9 text-sm font-medium" maxLength={80} />
-              </div>
 
-              <div className="flex-1 flex flex-col px-4 py-3 gap-2">
-                <div className="flex items-center justify-between">
-                  <label className="text-xxs font-semibold uppercase tracking-wider text-foreground/60">
-                    Message Content <span className="text-destructive">*</span>
-                  </label>
-                  <span className="text-nano text-muted-foreground/35 tabular-nums">{editContent.length} chars</span>
-                </div>
-                <Textarea ref={textareaRef} value={editContent} onChange={(e) => setEditContent(e.target.value)} placeholder="Type your message here... Use {{placeholders}} to insert dynamic content." className="flex-1 min-h-[300px] resize-y font-mono text-xs leading-relaxed" />
-
-                {placeholderWarnings.length > 0 && (
-                  <div className="space-y-1">
-                    {placeholderWarnings.slice(0, 3).map((w, i) => (
-                      <div key={i} className={cn("flex items-start gap-1.5 rounded-md px-2.5 py-1.5", w.type === "unknown" && "bg-info/5 text-info/70", w.type === "malformed" && "bg-warning/5 text-warning/70", w.type === "unsupported" && "bg-destructive/5 text-destructive/70")}>
-                        <AlertTriangle className="size-2.5 shrink-0 mt-0.5" />
-                        <span className="text-xxs leading-relaxed">{w.message}</span>
-                      </div>
-                    ))}
-                    {placeholderWarnings.length > 3 && (
-                      <p className="text-xxs text-muted-foreground/30 pl-1">+{placeholderWarnings.length - 3} more warning{placeholderWarnings.length - 3 > 1 ? "s" : ""}</p>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              <div className="border-t border-border/20 px-4 py-2.5">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-1">
-                    {selectedTemplate && (
-                      <>
-                        <Button variant="ghost" size="xs" onClick={() => handleDelete(selectedTemplate.id)} className="text-destructive/50 hover:text-destructive gap-1 h-7 text-xxs">
-                          <Trash2 className="size-2.5" /> Delete
-                        </Button>
-                        {!selectedTemplate.isDefault && (
-                          <Button variant="ghost" size="xs" onClick={() => handleSetDefault(selectedTemplate.id)} className="gap-1 h-7 text-muted-foreground/50 text-xxs">
-                            <Star className="size-2.5" /> Default
+                <div className="border-t border-border/20 px-4 py-2.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-1">
+                      {selectedTemplate && (
+                        <>
+                          <Button variant="ghost" size="xs" onClick={() => handleDelete(selectedTemplate.id)} className="text-destructive/50 hover:text-destructive gap-1 h-7 text-xxs">
+                            <Trash2 className="size-2.5" /> Delete
                           </Button>
-                        )}
-                      </>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-1">
-                    {hasUnsavedChanges && lastSavedRef.current.title && (
-                      <Button variant="ghost" size="xs" onClick={handleReset} className="gap-1 h-7 text-muted-foreground/50 text-xxs">
-                        <RotateCcw className="size-2.5" /> Reset
+                          {!selectedTemplate.isDefault && (
+                            <Button variant="ghost" size="xs" onClick={() => handleSetDefault(selectedTemplate.id)} className="gap-1 h-7 text-muted-foreground/50 text-xxs">
+                              <Star className="size-2.5" /> Default
+                            </Button>
+                          )}
+                        </>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1">
+                      {hasUnsavedChanges && lastSavedRef.current.title && (
+                        <Button variant="ghost" size="xs" onClick={handleReset} className="gap-1 h-7 text-muted-foreground/50 text-xxs">
+                          <RotateCcw className="size-2.5" /> Reset
+                        </Button>
+                      )}
+                      <Button variant="gradient" size="sm" disabled={!editTitle.trim() || !editContent.trim() || saving} onClick={handleSave} className="gap-1.5 h-8 text-xs">
+                        {saving ? <Loader2 className="size-3 animate-spin" /> : <Save className="size-3" />}
+                        {saving ? "Saving..." : isNewTemplate ? "Create" : "Save"}
                       </Button>
-                    )}
-                    <Button variant="gradient" size="sm" disabled={!editTitle.trim() || !editContent.trim() || saving} onClick={handleSave} className="gap-1.5 h-8 text-xs">
-                      {saving ? <Loader2 className="size-3 animate-spin" /> : <Save className="size-3" />}
-                      {saving ? "Saving..." : isNewTemplate ? "Create" : "Save"}
-                    </Button>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
-          </div>
 
-          {/* ─── RIGHT COLUMN: Live Preview ────────────────────────── */}
-          <div className="min-w-0">
-            <WhatsAppPreview
-              title={editTitle || "WhatsApp Preview"}
-              rawContent={editContent}
-              renderedContent={renderSamplePreview(editContent, dateFormat)}
-              contextLabel={`via ${contextInfo.label}`}
-              hasUnsaved={hasUnsavedChanges}
-            />
+            {/* Preview */}
+            <div className="min-w-0">
+              <WhatsAppPreview
+                title={editTitle || "WhatsApp Preview"}
+                rawContent={editContent}
+                renderedContent={renderSamplePreview(editContent, dateFormat)}
+                contextLabel={`via ${contextInfo.label}`}
+                hasUnsaved={hasUnsavedChanges}
+              />
+            </div>
           </div>
         </div>
       )}

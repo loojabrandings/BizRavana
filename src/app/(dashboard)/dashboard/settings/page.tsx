@@ -12,11 +12,11 @@ import {
   ChevronDown,
   DollarSign,
   FileText,
-
   Package,
   Pipette,
   ReceiptText,
   Save,
+  Search,
   Settings2,
   Shield,
   ShoppingCart,
@@ -48,7 +48,7 @@ import {
 import { createClient } from "@/lib/supabase/client";
 import { cn, formatEnumLabel } from "@/lib/utils";
 import { PageHeader } from "@/components/shared/page-header";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -74,8 +74,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { SRI_LANKA_DISTRICTS } from "@/constants/districts";
 import { ImageCropDialog } from "@/components/shared/image-crop-dialog";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
-import { CollapsibleCard } from "@/components/shared/collapsible-card";
-import {
+import { CollapsibleCard } from "@/components/shared/collapsible-card";import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -83,8 +82,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Sheet,
+  SheetClose,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { CourierSettings } from "@/components/delivery/courier-settings";
 import { WhatsAppTemplatesSettings } from "@/components/whatsapp/whatsapp-templates-settings";
+import { TeamSettings } from "@/components/team/team-settings";
 
 import { toast } from "sonner";
 
@@ -404,7 +411,7 @@ function ImageUploadOverlay({
 // GENERAL TAB
 // ═══════════════════════════════════════════════════════════════════════
 
-function GeneralSettings() {
+function GeneralSettings({ activeSection }: { activeSection: string | null }) {
   const { setTheme: setNextTheme } = useTheme();
   const customColorInputRef = useRef<HTMLInputElement>(null);
   const { theme, accent, accentCustom, fontFamily, fontSize, currency, dateFormat, backgroundStyle, setAccent, setAccentCustom, setFontFamily, setFontSize, setCurrency, setDateFormat, setBackgroundStyle, setTheme: setPreferencesTheme } = usePreferences();
@@ -416,205 +423,208 @@ function GeneralSettings() {
 
   return (
     <div className="space-y-4">
-      <CollapsibleCard icon={Sun} title="Theme & Style" description="Choose your color scheme and design personality.">
-        <div className="space-y-0.5">
-          <div>
-            <SectionHeader title="Interface Theme" />
-            <div className="grid grid-cols-3 gap-3">
-              {THEME_OPTIONS.map((opt) => {
-                const Icon = opt.icon;
-                const selected = theme === opt.value;
-                return (
-                  <motion.button
-                    key={opt.value} type="button" onClick={() => handleThemeChange(opt.value)}
-                    whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-                    className={cn(
-                      "relative flex flex-col items-center gap-2.5 rounded-xl border p-4.5 transition-all duration-200",
-                      selected ? "border-primary/30 bg-primary/[0.04] shadow-sm" : "border-border/30 bg-transparent hover:border-border/60 hover:bg-muted/20 hover:shadow-sm",
-                    )}
-                  >
-                    {selected && <motion.div layoutId="theme-indicator" className="absolute inset-0 rounded-xl ring-1 ring-primary/15" transition={{ type: "spring", stiffness: 400, damping: 30 }} />}
-                    <div className={cn("flex size-11 items-center justify-center rounded-xl transition-all duration-200", selected ? "bg-primary text-primary-foreground shadow-sm shadow-primary/20" : "bg-muted/60 text-muted-foreground/70")}>
-                      <Icon className="size-5" />
-                    </div>
-                    <span className={cn("text-sm font-semibold", selected ? "text-foreground" : "text-muted-foreground/60")}>{opt.label}</span>
-                    <span className="text-[11px] text-muted-foreground/40 text-center leading-tight">{opt.description}</span>
-                  </motion.button>
-                );
-              })}
+      {activeSection === "theme-style" && (
+        <CollapsibleCard id="settings-theme-style" collapsible={false} icon={Sun} title="Theme & Style" description="Choose your color scheme and design personality.">
+          <div className="space-y-0.5">
+            <div>
+              <SectionHeader title="Interface Theme" />
+              <div className="grid grid-cols-3 gap-3">
+                {THEME_OPTIONS.map((opt) => {
+                  const Icon = opt.icon;
+                  const selected = theme === opt.value;
+                  return (
+                    <motion.button
+                      key={opt.value} type="button" onClick={() => handleThemeChange(opt.value)}
+                      whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                      className={cn(
+                        "relative flex flex-col items-center gap-2.5 rounded-xl border p-4.5 transition-all duration-200",
+                        selected ? "border-primary/30 bg-primary/[0.04] shadow-sm" : "border-border/30 bg-transparent hover:border-border/60 hover:bg-muted/20 hover:shadow-sm",
+                      )}
+                    >
+                      {selected && <motion.div layoutId="theme-indicator" className="absolute inset-0 rounded-xl ring-1 ring-primary/15" transition={{ type: "spring", stiffness: 400, damping: 30 }} />}
+                      <div className={cn("flex size-11 items-center justify-center rounded-xl transition-all duration-200", selected ? "bg-primary text-primary-foreground shadow-sm shadow-primary/20" : "bg-muted/60 text-muted-foreground/70")}>
+                        <Icon className="size-5" />
+                      </div>
+                      <span className={cn("text-sm font-semibold", selected ? "text-foreground" : "text-muted-foreground/60")}>{opt.label}</span>
+                      <span className="text-[11px] text-muted-foreground/40 text-center leading-tight">{opt.description}</span>
+                    </motion.button>
+                  );
+                })}
+              </div>
             </div>
-          </div>
 
-          <SectionDivider />
+            <SectionDivider />
 
-          <div>
-            <SectionHeader title="Design Personality" />
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              {PALETTE_OPTIONS.map((palette) => {
-                const selected = accent === palette.value;
-                return (
-                  <motion.button
-                    key={palette.value} type="button" onClick={() => setAccent(palette.value)}
-                    whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-                    className={cn(
-                      "relative group rounded-xl border p-4 transition-all duration-200",
-                      selected ? "border-primary/30 bg-primary/[0.04] shadow-sm" : "border-border/30 hover:border-border/60 hover:bg-muted/20 hover:shadow-sm",
-                    )}
-                  >
-                    {selected && <motion.div layoutId="palette-indicator" className="absolute inset-0 rounded-xl ring-1 ring-primary/15" transition={{ type: "spring", stiffness: 400, damping: 30 }} />}
-                    <div className="mb-3 flex gap-1 overflow-hidden rounded-lg">
-                      {palette.colors.map((color, i) => <div key={i} className={cn("h-8 flex-1 transition-all duration-200 group-hover:scale-y-110 group-hover:rounded-sm", color)} />)}
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className={cn("text-sm font-semibold", selected ? "text-foreground" : "text-muted-foreground/70")}>{palette.label}</span>
-                      {selected && <Badge variant="info">Active</Badge>}
-                    </div>
-                  </motion.button>
-                );
-              })}
+            <div>
+              <SectionHeader title="Design Personality" />
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {PALETTE_OPTIONS.map((palette) => {
+                  const selected = accent === palette.value;
+                  return (
+                    <motion.button
+                      key={palette.value} type="button" onClick={() => setAccent(palette.value)}
+                      whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                      className={cn(
+                        "relative group rounded-xl border p-4 transition-all duration-200",
+                        selected ? "border-primary/30 bg-primary/[0.04] shadow-sm" : "border-border/30 hover:border-border/60 hover:bg-muted/20 hover:shadow-sm",
+                      )}
+                    >
+                      {selected && <motion.div layoutId="palette-indicator" className="absolute inset-0 rounded-xl ring-1 ring-primary/15" transition={{ type: "spring", stiffness: 400, damping: 30 }} />}
+                      <div className="mb-3 flex gap-1 overflow-hidden rounded-lg">
+                        {palette.colors.map((color, i) => <div key={i} className={cn("h-8 flex-1 transition-all duration-200 group-hover:scale-y-110 group-hover:rounded-sm", color)} />)}
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className={cn("text-sm font-semibold", selected ? "text-foreground" : "text-muted-foreground/70")}>{palette.label}</span>
+                        {selected && <Badge variant="info">Active</Badge>}
+                      </div>
+                    </motion.button>
+                  );
+                })}
 
-              <motion.button
-                type="button" onClick={() => customColorInputRef.current?.click()}
-                whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-                className={cn(
-                  "group rounded-xl border p-4 transition-all duration-200",
-                  accent === "custom" ? "border-primary/30 bg-primary/[0.04] shadow-sm" : "border-border/30 hover:border-border/60 hover:bg-muted/20 hover:shadow-sm",
-                )}
-              >
-                {accent === "custom" && <motion.div layoutId="palette-indicator" className="absolute inset-0 rounded-xl ring-1 ring-primary/15" transition={{ type: "spring", stiffness: 400, damping: 30 }} />}
-                <div className="mb-3 flex gap-1 overflow-hidden rounded-lg">
-                  <div className="h-8 flex-1 transition-transform group-hover:scale-y-110" style={{ backgroundColor: accentCustom || "#6366f1" }} />
-                  <div className="h-8 flex-1 bg-gradient-to-r from-transparent to-muted" />
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Pipette className="size-3.5 text-muted-foreground/60" />
-                    <span className={cn("text-sm font-semibold", accent === "custom" ? "text-foreground" : "text-muted-foreground/70")}>Custom</span>
+                <motion.button
+                  type="button" onClick={() => customColorInputRef.current?.click()}
+                  whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                  className={cn(
+                    "group rounded-xl border p-4 transition-all duration-200",
+                    accent === "custom" ? "border-primary/30 bg-primary/[0.04] shadow-sm" : "border-border/30 hover:border-border/60 hover:bg-muted/20 hover:shadow-sm",
+                  )}
+                >
+                  {accent === "custom" && <motion.div layoutId="palette-indicator" className="absolute inset-0 rounded-xl ring-1 ring-primary/15" transition={{ type: "spring", stiffness: 400, damping: 30 }} />}
+                  <div className="mb-3 flex gap-1 overflow-hidden rounded-lg">
+                    <div className="h-8 flex-1 transition-transform group-hover:scale-y-110" style={{ backgroundColor: accentCustom || "#6366f1" }} />
+                    <div className="h-8 flex-1 bg-gradient-to-r from-transparent to-muted" />
                   </div>
-                  <ChevronDown className="size-3.5 text-muted-foreground/40" />
-                </div>
-                <input ref={customColorInputRef} type="color" value={accentCustom || "#6366f1"}
-                  onChange={(e) => { setAccentCustom(e.target.value); setAccent("custom"); }}
-                  className="sr-only" tabIndex={-1} />
-              </motion.button>
-            </div>
-          </div>
-
-          <SectionDivider />
-
-          <div>
-            <SectionHeader title="Background Style" />
-            <div className="grid grid-cols-2 gap-3">
-              <motion.button
-                type="button" onClick={() => setBackgroundStyle("blobs")}
-                whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-                className={cn(
-                  "relative flex flex-col items-center gap-2.5 rounded-xl border p-4.5 transition-all duration-200",
-                  backgroundStyle === "blobs" ? "border-primary/30 bg-primary/[0.04] shadow-sm" : "border-border/30 bg-transparent hover:border-border/60 hover:bg-muted/20 hover:shadow-sm",
-                )}
-              >
-                {backgroundStyle === "blobs" && <motion.div layoutId="bg-indicator" className="absolute inset-0 rounded-xl ring-1 ring-primary/15" transition={{ type: "spring", stiffness: 400, damping: 30 }} />}
-                <div className={cn("flex size-11 items-center justify-center rounded-xl transition-all duration-200", backgroundStyle === "blobs" ? "bg-primary text-primary-foreground shadow-sm shadow-primary/20" : "bg-muted/60 text-muted-foreground/70")}>
-                  <span className="text-xl">✨</span>
-                </div>
-                <span className={cn("text-sm font-semibold", backgroundStyle === "blobs" ? "text-foreground" : "text-muted-foreground/60")}>Blobs</span>
-                <span className="text-[11px] text-muted-foreground/40 text-center leading-tight">Gradient blobs</span>
-              </motion.button>
-
-              <motion.button
-                type="button" onClick={() => setBackgroundStyle("solid")}
-                whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-                className={cn(
-                  "relative flex flex-col items-center gap-2.5 rounded-xl border p-4.5 transition-all duration-200",
-                  backgroundStyle === "solid" ? "border-primary/30 bg-primary/[0.04] shadow-sm" : "border-border/30 bg-transparent hover:border-border/60 hover:bg-muted/20 hover:shadow-sm",
-                )}
-              >
-                {backgroundStyle === "solid" && <motion.div layoutId="bg-indicator" className="absolute inset-0 rounded-xl ring-1 ring-primary/15" transition={{ type: "spring", stiffness: 400, damping: 30 }} />}
-                <div className={cn("flex size-11 items-center justify-center rounded-xl transition-all duration-200", backgroundStyle === "solid" ? "bg-primary text-primary-foreground shadow-sm shadow-primary/20" : "bg-muted/60 text-muted-foreground/70")}>
-                  <span className="text-xl">●</span>
-                </div>
-                <span className={cn("text-sm font-semibold", backgroundStyle === "solid" ? "text-foreground" : "text-muted-foreground/60")}>Solid</span>
-                <span className="text-[11px] text-muted-foreground/40 text-center leading-tight">Clean solid background</span>
-              </motion.button>
-            </div>
-          </div>
-        </div>
-      </CollapsibleCard>
-
-      <CollapsibleCard icon={Type} title="Typography" description="Choose your font and size with a live preview.">
-        <div className="space-y-0.5">
-          <div>
-            <SectionHeader title="Font Personality" />
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-              {FONT_OPTIONS.map((opt) => {
-                const selected = fontFamily === opt.value;
-                return (
-                  <OptionCard key={opt.value} selected={selected} onClick={() => setFontFamily(opt.value)}>
-                    <div className="min-w-0 flex-1">
-                      <span className={cn("block text-lg font-medium", selected ? "text-foreground" : "text-foreground/80")} style={{ fontFamily: `'${opt.label}', sans-serif` }}>{opt.preview}</span>
-                      <span className="mt-0.5 block text-xs text-muted-foreground/60">{opt.description}</span>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Pipette className="size-3.5 text-muted-foreground/60" />
+                      <span className={cn("text-sm font-semibold", accent === "custom" ? "text-foreground" : "text-muted-foreground/70")}>Custom</span>
                     </div>
-                  </OptionCard>
-                );
-              })}
+                    <ChevronDown className="size-3.5 text-muted-foreground/40" />
+                  </div>
+                  <input ref={customColorInputRef} type="color" value={accentCustom || "#6366f1"}
+                    onChange={(e) => { setAccentCustom(e.target.value); setAccent("custom"); }}
+                    className="sr-only" tabIndex={-1} />
+                </motion.button>
+              </div>
+            </div>
+
+            <SectionDivider />
+
+            <div>
+              <SectionHeader title="Background Style" />
+              <div className="grid grid-cols-2 gap-3">
+                <motion.button
+                  type="button" onClick={() => setBackgroundStyle("blobs")}
+                  whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                  className={cn(
+                    "relative flex flex-col items-center gap-2.5 rounded-xl border p-4.5 transition-all duration-200",
+                    backgroundStyle === "blobs" ? "border-primary/30 bg-primary/[0.04] shadow-sm" : "border-border/30 bg-transparent hover:border-border/60 hover:bg-muted/20 hover:shadow-sm",
+                  )}
+                >
+                  {backgroundStyle === "blobs" && <motion.div layoutId="bg-indicator" className="absolute inset-0 rounded-xl ring-1 ring-primary/15" transition={{ type: "spring", stiffness: 400, damping: 30 }} />}
+                  <div className={cn("flex size-11 items-center justify-center rounded-xl transition-all duration-200", backgroundStyle === "blobs" ? "bg-primary text-primary-foreground shadow-sm shadow-primary/20" : "bg-muted/60 text-muted-foreground/70")}>
+                    <span className="text-xl">✨</span>
+                  </div>
+                  <span className={cn("text-sm font-semibold", backgroundStyle === "blobs" ? "text-foreground" : "text-muted-foreground/60")}>Blobs</span>
+                  <span className="text-[11px] text-muted-foreground/40 text-center leading-tight">Gradient blobs</span>
+                </motion.button>
+
+                <motion.button
+                  type="button" onClick={() => setBackgroundStyle("solid")}
+                  whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                  className={cn(
+                    "relative flex flex-col items-center gap-2.5 rounded-xl border p-4.5 transition-all duration-200",
+                    backgroundStyle === "solid" ? "border-primary/30 bg-primary/[0.04] shadow-sm" : "border-border/30 bg-transparent hover:border-border/60 hover:bg-muted/20 hover:shadow-sm",
+                  )}
+                >
+                  {backgroundStyle === "solid" && <motion.div layoutId="bg-indicator" className="absolute inset-0 rounded-xl ring-1 ring-primary/15" transition={{ type: "spring", stiffness: 400, damping: 30 }} />}
+                  <div className={cn("flex size-11 items-center justify-center rounded-xl transition-all duration-200", backgroundStyle === "solid" ? "bg-primary text-primary-foreground shadow-sm shadow-primary/20" : "bg-muted/60 text-muted-foreground/70")}>
+                    <span className="text-xl">●</span>
+                  </div>
+                  <span className={cn("text-sm font-semibold", backgroundStyle === "solid" ? "text-foreground" : "text-muted-foreground/60")}>Solid</span>
+                  <span className="text-[11px] text-muted-foreground/40 text-center leading-tight">Clean solid background</span>
+                </motion.button>
+              </div>
             </div>
           </div>
+        </CollapsibleCard>
+      )}
 
-          <SectionDivider />
-
-          <div>
-            <SectionHeader title="Font Size" />
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-              {FONT_SIZE_OPTIONS.map((opt) => {
-                const selected = fontSize === opt.value;
-                const sizeMap: Record<FontSize, string> = { small: "text-sm", medium: "text-base", large: "text-lg" };
-                return (
-                  <OptionCard key={opt.value} selected={selected} onClick={() => setFontSize(opt.value)}>
-                    <div className="min-w-0 flex-1">
-                      <span className={cn("block font-medium", selected ? "text-foreground" : "text-foreground/80", sizeMap[opt.value])}>{opt.preview} — {opt.label}</span>
-                      <span className="mt-0.5 block text-xs text-muted-foreground/60">{opt.description}</span>
-                    </div>
-                  </OptionCard>
-                );
-              })}
+      {activeSection === "typography" && (
+        <CollapsibleCard id="settings-typography" collapsible={false} icon={Type} title="Typography" description="Choose your font and size with a live preview.">
+          <div className="space-y-0.5">
+            <div>
+              <SectionHeader title="Font Personality" />
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                {FONT_OPTIONS.map((opt) => {
+                  const selected = fontFamily === opt.value;
+                  return (
+                    <OptionCard key={opt.value} selected={selected} onClick={() => setFontFamily(opt.value)}>
+                      <div className="min-w-0 flex-1">
+                        <span className={cn("block text-lg font-medium", selected ? "text-foreground" : "text-foreground/80")} style={{ fontFamily: `'${opt.label}', sans-serif` }}>{opt.preview}</span>
+                        <span className="mt-0.5 block text-xs text-muted-foreground/60">{opt.description}</span>
+                      </div>
+                    </OptionCard>
+                  );
+                })}
+              </div>
             </div>
+
+            <SectionDivider />
+
+            <div>
+              <SectionHeader title="Font Size" />
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                {FONT_SIZE_OPTIONS.map((opt) => {
+                  const selected = fontSize === opt.value;
+                  const sizeMap: Record<FontSize, string> = { small: "text-sm", medium: "text-base", large: "text-lg" };
+                  return (
+                    <OptionCard key={opt.value} selected={selected} onClick={() => setFontSize(opt.value)}>
+                      <div className="min-w-0 flex-1">
+                        <span className={cn("block font-medium", selected ? "text-foreground" : "text-foreground/80", sizeMap[opt.value])}>{opt.preview} — {opt.label}</span>
+                        <span className="mt-0.5 block text-xs text-muted-foreground/60">{opt.description}</span>
+                      </div>
+                    </OptionCard>
+                  );
+                })}
+              </div>
+            </div>
+
           </div>
+        </CollapsibleCard>
+      )}
 
-        </div>
-      </CollapsibleCard>
-
-
-      {/* ── Currency & Date Format ── */}
-      <CollapsibleCard icon={DollarSign} title="Currency & Date Format" description="Set your preferred currency and date display format." >
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <FormField label="Currency">
-            <Select value={currency} onValueChange={(v) => v && setCurrency(v)}>
-              <SelectTrigger className="h-9 w-full"><SelectValue /></SelectTrigger>
-              <SelectContent>{CURRENCIES.map((c) => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}</SelectContent>
-            </Select>
-          </FormField>
-          <FormField label="Date Format">
-            <Select value={dateFormat} onValueChange={(v) => v && setDateFormat(v)}>
-              <SelectTrigger className="h-9 w-full">
-                <SelectValue>
-                  <span>{dateFormat}</span>
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                {DATE_FORMATS.map((df) => (
-                  <SelectItem key={df.value} value={df.value}>
-                    <span className="flex w-full items-center justify-between gap-4">
-                      <span className="font-medium">{df.label}</span>
-                      <span className="text-xs text-muted-foreground/50 tabular-nums">{df.example}</span>
-                    </span>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </FormField>
-        </div>
-      </CollapsibleCard>
-
+      {activeSection === "currency-date" && (
+        <CollapsibleCard id="settings-currency-date" collapsible={false} icon={DollarSign} title="Currency & Date Format" description="Set your preferred currency and date display format." >
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <FormField label="Currency">
+              <Select value={currency} onValueChange={(v) => v && setCurrency(v)}>
+                <SelectTrigger className="h-9 w-full"><SelectValue /></SelectTrigger>
+                <SelectContent>{CURRENCIES.map((c) => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}</SelectContent>
+              </Select>
+            </FormField>
+            <FormField label="Date Format">
+              <Select value={dateFormat} onValueChange={(v) => v && setDateFormat(v)}>
+                <SelectTrigger className="h-9 w-full">
+                  <SelectValue>
+                    <span>{dateFormat}</span>
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {DATE_FORMATS.map((df) => (
+                    <SelectItem key={df.value} value={df.value}>
+                      <span className="flex w-full items-center justify-between gap-4">
+                        <span className="font-medium">{df.label}</span>
+                        <span className="text-xs text-muted-foreground/50 tabular-nums">{df.example}</span>
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </FormField>
+          </div>
+        </CollapsibleCard>
+      )}
     </div>
   );
 }
@@ -623,7 +633,7 @@ function GeneralSettings() {
 // PROFILE TAB
 // ═══════════════════════════════════════════════════════════════════════
 
-function ProfileSettings() {
+function ProfileSettings({ activeSection }: { activeSection: string | null }) {
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
   const [businessId, setBusinessId] = useState<string | null>(null);
@@ -915,24 +925,25 @@ function ProfileSettings() {
             </div>
           </motion.div>
 
-          {/* ── Personal Information ── */}
-          <CollapsibleCard icon={User} title="Personal Information" description="Your personal details and contact information.">
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <FormField label="First Name"><Input value={firstName} onChange={(e) => setFirstName(e.target.value)} className="h-10" /></FormField>
-              <FormField label="Last Name"><Input value={lastName} onChange={(e) => setLastName(e.target.value)} className="h-10" /></FormField>
-            </div>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <FormField label="Email Address">
-                <div className="flex h-10 items-center rounded-xl border border-border/40 bg-muted/20 px-3 text-sm text-muted-foreground">
-                  <Mail className="mr-2 size-3.5 text-muted-foreground/40" />{email}
-                </div>
-              </FormField>
-              <FormField label="Phone Number"><Input value={phone} onChange={(e) => setPhone(e.target.value)} className="h-10" /></FormField>
-            </div>
-          </CollapsibleCard>
+          {activeSection === "personal-info" && (
+            <CollapsibleCard id="settings-personal-info" collapsible={false} icon={User} title="Personal Information" description="Your personal details and contact information.">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <FormField label="First Name"><Input value={firstName} onChange={(e) => setFirstName(e.target.value)} className="h-10" /></FormField>
+                <FormField label="Last Name"><Input value={lastName} onChange={(e) => setLastName(e.target.value)} className="h-10" /></FormField>
+              </div>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <FormField label="Email Address">
+                  <div className="flex h-10 items-center rounded-xl border border-border/40 bg-muted/20 px-3 text-sm text-muted-foreground">
+                    <Mail className="mr-2 size-3.5 text-muted-foreground/40" />{email}
+                  </div>
+                </FormField>
+                <FormField label="Phone Number"><Input value={phone} onChange={(e) => setPhone(e.target.value)} className="h-10" /></FormField>
+              </div>
+            </CollapsibleCard>
+          )}
 
-          {/* ── Branding (Business Profile) ── */}
-          <CollapsibleCard icon={ImageIcon} title="Business Profile" description="Your business identity, contact, address, and online presence — all in one place.">
+          {activeSection === "business-profile" && (
+          <CollapsibleCard id="settings-business-profile" collapsible={false} icon={ImageIcon} title="Business Profile" description="Your business identity, contact, address, and online presence — all in one place.">
             {/* ── Live Business Card Preview ── */}
             <div className="relative overflow-hidden rounded-2xl border border-border/30 bg-gradient-to-br from-card via-card to-muted/10 shadow-lg">
               {/* Decorative top accent bar */}
@@ -1126,6 +1137,7 @@ function ProfileSettings() {
               </div>
             </div>
           </CollapsibleCard>
+          )}
 
 
           {/* ── Save All ── */}
@@ -1146,7 +1158,7 @@ function ProfileSettings() {
 // OPERATIONAL TAB
 // ═══════════════════════════════════════════════════════════════════════
 
-function OperationalSettings() {
+function OperationalSettings({ activeSection }: { activeSection: string | null }) {
   const [newPaymentMethod, setNewPaymentMethod] = useState("");
   const ordersSettings = useOrdersSettings();
   const quotationSettings = useQuotationSettings();
@@ -1169,7 +1181,8 @@ function OperationalSettings() {
   return (
     <div className="space-y-4">
       {/* Order Settings */}
-      <CollapsibleCard icon={Package} title="Order Settings" description="Configure order numbering, defaults, and workflow.">
+      {activeSection === "order-settings" && (
+      <CollapsibleCard id="settings-order-settings" collapsible={false} icon={Package} title="Order Settings" description="Configure order numbering, defaults, and workflow.">
         <div>
           <SectionHeader title="Order Numbering" />
           <div className="flex flex-col sm:flex-row items-stretch sm:items-end gap-3">
@@ -1291,9 +1304,11 @@ function OperationalSettings() {
         </SettingsRow>
 
         <SectionDivider />      </CollapsibleCard>
+      )}
 
       {/* Quotation Settings */}
-      <CollapsibleCard icon={FileText} title="Quotation Settings" description="Configure quotation numbering and default expiry.">
+      {activeSection === "quotation-settings" && (
+      <CollapsibleCard id="settings-quotation-settings" collapsible={false} icon={FileText} title="Quotation Settings" description="Configure quotation numbering and default expiry.">
         <div>
           <SectionHeader title="Quotation Numbering" />
           <div className="flex flex-col sm:flex-row items-stretch sm:items-end gap-3">
@@ -1336,9 +1351,11 @@ function OperationalSettings() {
           </SettingsRow>
         </div>
       </CollapsibleCard>
+      )}
 
       {/* Expense Settings */}
-      <CollapsibleCard icon={Settings2} title="Expense Settings" description="Configure payment methods and defaults for new expenses." >
+      {activeSection === "expense-settings" && (
+      <CollapsibleCard id="settings-expense-settings" collapsible={false} icon={Settings2} title="Expense Settings" description="Configure payment methods and defaults for new expenses." >
         <div>
           <SectionHeader title="Payment Methods" />
           <div className="space-y-2.5">
@@ -1418,10 +1435,8 @@ function OperationalSettings() {
           <div className="py-1">
             <Switch id="add-to-inventory" checked={expenseAddToInventory} onCheckedChange={setExpenseAddToInventory} />
           </div>
-        </SettingsRow>
-      </CollapsibleCard>
-
-
+        </SettingsRow>      </CollapsibleCard>
+      )}
     </div>
   );
 }
@@ -1499,7 +1514,7 @@ function EntityCheckbox({
 
 // ─── Data Security Settings ──────────────────────────────────────
 
-function DataSecuritySettings() {
+function DataSecuritySettings({ activeSection }: { activeSection: string | null }) {
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [backingUp, setBackingUp] = useState(false);
@@ -2014,7 +2029,8 @@ function DataSecuritySettings() {
       </Dialog>
 
       {/* Manual Backup — simple card with two action buttons */}
-      <CollapsibleCard icon={Download} title="Manual Backup & Restore" description="Export your business data as JSON or restore from a previous backup.">
+      {activeSection === "manual-backup" && (
+      <CollapsibleCard id="settings-manual-backup" collapsible={false} icon={Download} title="Manual Backup & Restore" description="Export your business data as JSON or restore from a previous backup.">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <motion.button
             type="button"
@@ -2056,9 +2072,11 @@ function DataSecuritySettings() {
           </motion.button>
         </div>
       </CollapsibleCard>
+      )}
 
       {/* Cloud Backup */}
-      <CollapsibleCard icon={Database} title="Cloud Backup & Restore" description="Automatically backup your data to the cloud." badge="Coming Soon">
+      {activeSection === "cloud-backup" && (
+      <CollapsibleCard id="settings-cloud-backup" collapsible={false} icon={Database} title="Cloud Backup & Restore" description="Automatically backup your data to the cloud." badge="Coming Soon">
         <div className="flex items-center gap-4 rounded-xl bg-muted/10 border border-border/10 p-4">
           <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-muted/30">
             <Database className="size-5 text-muted-foreground/40" />
@@ -2074,9 +2092,11 @@ function DataSecuritySettings() {
           </div>
         </div>
       </CollapsibleCard>
+      )}
 
       {/* Danger Zone — Reset System Data */}
-      <CollapsibleCard icon={AlertTriangle} title="Danger Zone" description="Irreversible actions that permanently delete data.">
+      {activeSection === "danger-zone" && (
+      <CollapsibleCard id="settings-danger-zone" collapsible={false} icon={AlertTriangle} title="Danger Zone" description="Irreversible actions that permanently delete data.">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0 flex-1">
             <p className="text-sm font-semibold text-foreground">
@@ -2110,75 +2130,599 @@ function DataSecuritySettings() {
           </p>
         </div>
       </CollapsibleCard>
+      )}
     </div>
   );
 }
 
-// ═══════════════════════════════════════════════════════════════════════
-// COURIER TAB — Component imported from @/components/delivery/courier-settings
+
 // ═══════════════════════════════════════════════════════════════════════
 // TAB DEFINITIONS
 // ═══════════════════════════════════════════════════════════════════════
+
+// ═══════════════════════════════════════════════════════════════════════
+// SETTINGS SEARCH INDEX
+// ═══════════════════════════════════════════════════════════════════════
+
+interface SettingsSearchEntry {
+  keywords: string[];
+  tab: string;
+  sectionId: string;
+  path: string;
+  description: string;
+}
+
+const SETTINGS_SEARCH_INDEX: SettingsSearchEntry[] = [
+  // ── General
+  { keywords: ["theme", "style", "color", "accent", "appearance", "palette", "personality"], tab: "general", sectionId: "theme-style", path: "General > Theme & Style", description: "Customize color palette and design personality" },
+  { keywords: ["interface", "theme", "light", "dark", "system", "mode", "appearance"], tab: "general", sectionId: "theme-style", path: "General > Theme & Style > Interface Theme", description: "Switch between light, dark, or system theme" },
+  { keywords: ["design", "personality", "color", "accent", "ocean", "forest", "twilight", "blush", "sunset", "custom", "palette"], tab: "general", sectionId: "theme-style", path: "General > Theme & Style > Design Personality", description: "Choose accent color and palette" },
+  { keywords: ["background", "style", "blobs", "solid", "gradient", "bg", "wallpaper"], tab: "general", sectionId: "theme-style", path: "General > Theme & Style > Background Style", description: "Select between gradient blobs or solid background" },
+  { keywords: ["font", "typography", "text", "typeface", "poppins", "lora", "caveat", "letter"], tab: "general", sectionId: "typography", path: "General > Typography", description: "Font family and typeface settings" },
+  { keywords: ["font", "personality", "poppins", "lora", "caveat", "serif", "sans", "script"], tab: "general", sectionId: "typography", path: "General > Typography > Font Personality", description: "Choose between Poppins, Lora, or Caveat font" },
+  { keywords: ["font", "size", "small", "medium", "large", "text", "zoom"], tab: "general", sectionId: "typography", path: "General > Typography > Font Size", description: "Set text size to small, medium, or large" },
+  { keywords: ["currency", "symbol", "lkr", "usd", "eur", "gbp", "inr", "aed", "money", "price", "payment"], tab: "general", sectionId: "currency-date", path: "General > Currency & Date Format > Currency", description: "Set your preferred currency (LKR, USD, EUR, etc.)" },
+  { keywords: ["date", "format", "display", "yyyy", "mm", "dd", "timezone", "locale"], tab: "general", sectionId: "currency-date", path: "General > Currency & Date Format > Date Format", description: "Choose date display format (YYYY-MM-DD, DD-MM-YYYY, etc.)" },
+
+  // ── Profile
+  { keywords: ["profile", "personal", "information", "name", "detail", "identity"], tab: "profile", sectionId: "personal-info", path: "Profile > Personal Information", description: "Your personal details and contact information" },
+  { keywords: ["first", "name", "given"], tab: "profile", sectionId: "personal-info", path: "Profile > Personal Information > First Name", description: "Your first name" },
+  { keywords: ["last", "name", "surname", "family"], tab: "profile", sectionId: "personal-info", path: "Profile > Personal Information > Last Name", description: "Your last name" },
+  { keywords: ["email", "address", "mail"], tab: "profile", sectionId: "personal-info", path: "Profile > Personal Information > Email Address", description: "Your email address" },
+  { keywords: ["phone", "mobile", "contact", "number", "telephone", "cell"], tab: "profile", sectionId: "personal-info", path: "Profile > Personal Information > Phone Number", description: "Your phone number" },
+  { keywords: ["avatar", "photo", "picture", "profile", "image", "upload", "crop"], tab: "profile", sectionId: "personal-info", path: "Profile > Personal Information > Avatar", description: "Upload or remove your profile photo" },
+  { keywords: ["business", "branding", "identity", "company", "store", "shop", "organization"], tab: "profile", sectionId: "business-profile", path: "Profile > Business Profile", description: "Business name, logo, contact info, and brand identity" },
+  { keywords: ["business", "logo", "brand", "icon"], tab: "profile", sectionId: "business-profile", path: "Profile > Business Profile > Logo & Identity", description: "Upload your business logo" },
+  { keywords: ["business", "name", "company"], tab: "profile", sectionId: "business-profile", path: "Profile > Business Profile > Business Name", description: "Your business name" },
+  { keywords: ["tagline", "slogan", "motto", "catchphrase"], tab: "profile", sectionId: "business-profile", path: "Profile > Business Profile > Tagline", description: "A short tagline for your business" },
+  { keywords: ["business", "phone", "contact"], tab: "profile", sectionId: "business-profile", path: "Profile > Business Profile > Business Phone", description: "Business phone number" },
+  { keywords: ["whatsapp", "number", "wa", "chat"], tab: "profile", sectionId: "business-profile", path: "Profile > Business Profile > WhatsApp Number", description: "WhatsApp number for customer contact" },
+  { keywords: ["business", "email", "mail"], tab: "profile", sectionId: "business-profile", path: "Profile > Business Profile > Email Address", description: "Business email address" },
+  { keywords: ["website", "url", "web", "site", "domain", "online"], tab: "profile", sectionId: "business-profile", path: "Profile > Business Profile > Website", description: "Your business website URL" },
+  { keywords: ["address", "location", "street"], tab: "profile", sectionId: "business-profile", path: "Profile > Business Profile > Address", description: "Business street address" },
+  { keywords: ["city", "town"], tab: "profile", sectionId: "business-profile", path: "Profile > Business Profile > City", description: "Business city" },
+  { keywords: ["district", "region", "area", "province"], tab: "profile", sectionId: "business-profile", path: "Profile > Business Profile > District", description: "Business district" },
+  { keywords: ["social", "media", "facebook", "instagram", "tiktok", "linkedin", "social media"], tab: "profile", sectionId: "business-profile", path: "Profile > Business Profile > Social Media", description: "Link your social media profiles" },
+
+  // ── Operational
+  { keywords: ["order", "orders", "selling", "sale", "sales"], tab: "operational", sectionId: "order-settings", path: "Operational > Order Settings", description: "Configure order numbering, defaults, and workflow" },
+  { keywords: ["order", "prefix", "numbering", "invoice", "number", "id", "sequence"], tab: "operational", sectionId: "order-settings", path: "Operational > Order Settings > Order Numbering", description: "Set order number prefix and starting number" },
+  { keywords: ["order", "prefix", "inv", "ord", "format"], tab: "operational", sectionId: "order-settings", path: "Operational > Order Settings > Order Numbering > Prefix", description: "Order number prefix (e.g. INV-)" },
+  { keywords: ["order", "starting", "number", "start", "begin", "counter"], tab: "operational", sectionId: "order-settings", path: "Operational > Order Settings > Order Numbering > Starting Number", description: "First order number in the sequence" },
+  { keywords: ["order", "preview", "sample", "example", "format"], tab: "operational", sectionId: "order-settings", path: "Operational > Order Settings > Order Numbering > Preview", description: "Preview of how order numbers will look" },
+  { keywords: ["order", "default", "defaults"], tab: "operational", sectionId: "order-settings", path: "Operational > Order Settings > Defaults", description: "Default order settings and preferences" },
+  { keywords: ["payment", "method", "cod", "cash", "card", "bank", "transfer", "online", "payment method"], tab: "operational", sectionId: "order-settings", path: "Operational > Order Settings > Defaults > Payment Methods", description: "Set default and available payment methods" },
+  { keywords: ["delivery", "charge", "shipping", "courier", "charge", "fee", "cost", "delivery charge"], tab: "operational", sectionId: "order-settings", path: "Operational > Order Settings > Defaults > Default Delivery Charge", description: "Pre-filled delivery charge for new orders (LKR)" },
+  { keywords: ["landing", "page", "redirect", "default", "home", "dashboard"], tab: "operational", sectionId: "order-settings", path: "Operational > Order Settings > Defaults > Default Landing Page", description: "Redirect to orders page on login" },
+  { keywords: ["quotation", "quote", "estimates"], tab: "operational", sectionId: "quotation-settings", path: "Operational > Quotation Settings", description: "Configure quotation numbering and default expiry" },
+  { keywords: ["quotation", "prefix", "numbering", "number", "id", "format", "sequence"], tab: "operational", sectionId: "quotation-settings", path: "Operational > Quotation Settings > Quotation Numbering", description: "Set quotation number prefix and starting number" },
+  { keywords: ["quotation", "prefix", "quot", "format"], tab: "operational", sectionId: "quotation-settings", path: "Operational > Quotation Settings > Quotation Numbering > Prefix", description: "Quotation number prefix" },
+  { keywords: ["quotation", "starting", "number", "start", "counter"], tab: "operational", sectionId: "quotation-settings", path: "Operational > Quotation Settings > Quotation Numbering > Starting Number", description: "First quotation number in the sequence" },
+  { keywords: ["quotation", "preview", "sample", "example"], tab: "operational", sectionId: "quotation-settings", path: "Operational > Quotation Settings > Quotation Numbering > Preview", description: "Preview of how quotation numbers will look" },
+  { keywords: ["quotation", "expiry", "expire", "days", "valid", "expiration"], tab: "operational", sectionId: "quotation-settings", path: "Operational > Quotation Settings > Expiry > Expire After", description: "Number of days until a quotation expires" },
+  { keywords: ["expense", "expenses", "spending", "cost"], tab: "operational", sectionId: "expense-settings", path: "Operational > Expense Settings", description: "Configure payment methods and defaults for expenses" },
+  { keywords: ["expense", "payment", "method", "default", "expense payment"], tab: "operational", sectionId: "expense-settings", path: "Operational > Expense Settings > Payment Methods", description: "Set default payment method for new expenses" },
+  { keywords: ["inventory", "expense", "auto", "add", "tracking", "stock"], tab: "operational", sectionId: "expense-settings", path: "Operational > Expense Settings > Add to Inventory", description: "Auto-add expenses to inventory tracking" },
+
+  // ── Courier
+  { keywords: ["courier", "delivery", "shipping", "shipment", "parcel", "logistics"], tab: "courier", sectionId: "courier-provider", path: "Courier > Courier Provider", description: "Select courier company and configure API credentials" },
+  { keywords: ["courier", "service", "provider", "royal", "express", "royal express"], tab: "courier", sectionId: "courier-provider", path: "Courier > Courier Provider > Choose Courier Service", description: "Select a courier company (Royal Express, etc.)" },
+  { keywords: ["royal", "express", "api", "credentials", "tenant", "login", "password", "email"], tab: "courier", sectionId: "courier-provider", path: "Courier > Courier Provider > Royal Express API Credentials", description: "Enter Royal Express API login details" },
+  { keywords: ["tenant", "name", "merchant"], tab: "courier", sectionId: "courier-provider", path: "Courier > Courier Provider > Tenant Name", description: "Auto-filled tenant name for Royal Express" },
+  { keywords: ["api", "email", "royal", "express"], tab: "courier", sectionId: "courier-provider", path: "Courier > Courier Provider > API Email", description: "Royal Express API email address" },
+  { keywords: ["api", "password", "royal", "express"], tab: "courier", sectionId: "courier-provider", path: "Courier > Courier Provider > API Password", description: "Royal Express API password" },
+  { keywords: ["test", "connection", "verify", "credentials", "connect"], tab: "courier", sectionId: "courier-provider", path: "Courier > Courier Provider > Test Connection", description: "Verify your courier API credentials" },
+  { keywords: ["save", "credentials", "courier", "sync", "locations"], tab: "courier", sectionId: "courier-provider", path: "Courier > Courier Provider > Save Credentials", description: "Save courier credentials and sync district data" },
+  { keywords: ["waybill", "tracking", "id", "number", "shipment"], tab: "courier", sectionId: "waybill-settings", path: "Courier > Waybill Settings", description: "Configure waybill ID management and assignment" },
+
+  // ── Team
+  { keywords: ["team", "member", "members", "people", "staff", "employee"], tab: "team", sectionId: "team-management", path: "Team > Team Management", description: "Manage team members, roles, and invitations" },
+  { keywords: ["invite", "invitation", "add", "member", "collaborator"], tab: "team", sectionId: "team-management", path: "Team > Team Management > Invite Members", description: "Invite new team members to your business" },
+  { keywords: ["role", "permission", "owner", "admin", "member", "access"], tab: "team", sectionId: "team-management", path: "Team > Team Management > Roles", description: "Manage team member roles and permissions" },
+
+  // ── Data & Security
+  { keywords: ["data", "backup", "export", "import", "restore", "json"], tab: "data-security", sectionId: "manual-backup", path: "Data & Security > Manual Backup & Restore", description: "Export business data as JSON or restore from backup" },
+  { keywords: ["export", "download", "backup", "json", "file"], tab: "data-security", sectionId: "manual-backup", path: "Data & Security > Manual Backup & Restore > Export Data", description: "Download your data as a JSON file" },
+  { keywords: ["import", "restore", "backup", "json", "upload", "file"], tab: "data-security", sectionId: "manual-backup", path: "Data & Security > Manual Backup & Restore > Import Backup", description: "Restore from a JSON backup file" },
+  { keywords: ["cloud", "backup", "auto", "automatic", "scheduled", "online"], tab: "data-security", sectionId: "cloud-backup", path: "Data & Security > Cloud Backup & Restore", description: "Automatic cloud backups (coming soon)" },
+  { keywords: ["danger", "zone", "delete", "reset", "wipe", "clear", "destroy", "irreversible"], tab: "data-security", sectionId: "danger-zone", path: "Data & Security > Danger Zone", description: "Irreversible actions that permanently delete data" },
+  { keywords: ["reset", "system", "data", "clear", "delete", "all", "permanently"], tab: "data-security", sectionId: "danger-zone", path: "Data & Security > Danger Zone > Reset System Data", description: "Permanently delete all orders, expenses, products, and more" },
+
+  // ── WhatsApp Templates
+  { keywords: ["whatsapp", "template", "message", "sms", "chat", "notification", "wa"], tab: "whatsapp-templates", sectionId: "whatsapp-templates", path: "WhatsApp Templates", description: "Configure WhatsApp message templates" },
+  { keywords: ["whatsapp", "template", "create", "add", "new", "customize"], tab: "whatsapp-templates", sectionId: "whatsapp-templates", path: "WhatsApp Templates > Create Template", description: "Create and customize WhatsApp message templates" },
+];
 
 const TABS = [
   { value: "general", label: "General", icon: TabPalette, component: GeneralSettings },
   { value: "profile", label: "Profile", icon: UserCog, component: ProfileSettings },
   { value: "operational", label: "Operational", icon: SlidersHorizontal, component: OperationalSettings },
   { value: "courier", label: "Courier", icon: Truck, component: CourierSettings },
+  { value: "team", label: "Team", icon: Users, component: TeamSettings },
   { value: "data-security", label: "Data & Security", icon: Lock, component: DataSecuritySettings },
   { value: "whatsapp-templates", label: "WhatsApp Templates", icon: MessageCircle, component: WhatsAppTemplatesSettings },
 ] as const;
 
 // ═══════════════════════════════════════════════════════════════════════
-// MAIN PAGE
+// SETTINGS SIDEBAR NAVIGATION
+// ═══════════════════════════════════════════════════════════════════════
+
+// ═══════════════════════════════════════════════════════════════════════
+// SETTINGS SIDEBAR NAVIGATION
+// ═══════════════════════════════════════════════════════════════════════
+
+interface SidebarSubItem {
+  label: string;
+  sectionId: string;
+}
+
+const SIDEBAR_SUB_ITEMS: Record<string, SidebarSubItem[]> = {
+  general: [
+    { label: "Theme & Style", sectionId: "theme-style" },
+    { label: "Typography", sectionId: "typography" },
+    { label: "Currency & Date Format", sectionId: "currency-date" },
+  ],
+  profile: [
+    { label: "Personal Information", sectionId: "personal-info" },
+    { label: "Business Profile", sectionId: "business-profile" },
+  ],
+  operational: [
+    { label: "Order Settings", sectionId: "order-settings" },
+    { label: "Quotation Settings", sectionId: "quotation-settings" },
+    { label: "Expense Settings", sectionId: "expense-settings" },
+  ],
+  courier: [
+    { label: "Courier Provider", sectionId: "courier-provider" },
+    { label: "Waybill Settings", sectionId: "waybill-settings" },
+  ],
+  team: [
+    { label: "Team Management", sectionId: "team-management" },
+  ],
+  "data-security": [
+    { label: "Manual Backup & Restore", sectionId: "manual-backup" },
+    { label: "Cloud Backup & Restore", sectionId: "cloud-backup" },
+    { label: "Danger Zone", sectionId: "danger-zone" },
+  ],
+  "whatsapp-templates": [
+    { label: "Message Templates", sectionId: "whatsapp-templates" },
+  ],
+};
+
+function SettingsSidebar({ activeTab, activeSection, onTabChange }: { activeTab: string; activeSection: string | null; onTabChange: (tab: string, sectionId?: string) => void }) {
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [expandedTabs, setExpandedTabs] = useState<Set<string>>(new Set(["general", "profile", "operational"]));
+  const isMobile = useIsMobile();
+
+  const toggleExpanded = (value: string) => {
+    setExpandedTabs((prev) => {
+      const next = new Set(prev);
+      if (next.has(value)) {
+        next.delete(value);
+      } else {
+        next.add(value);
+      }
+      return next;
+    });
+  };
+
+  const sidebarContent = (
+    <nav className="flex flex-col gap-0.5" role="navigation" aria-label="Settings sections">
+      {TABS.map((tab) => {
+        const subItems = SIDEBAR_SUB_ITEMS[tab.value] || [];
+        const expanded = expandedTabs.has(tab.value);
+        const isSelected = activeTab === tab.value;
+
+        // Single-section tabs: direct navigation, no sub-items/chevron
+        if (subItems.length === 1) {
+          const isActive = isSelected && activeSection === subItems[0].sectionId;
+          return (
+            <button
+              key={tab.value}
+              type="button"
+              onClick={() => {
+                onTabChange(tab.value, subItems[0].sectionId);
+                setMobileOpen(false);
+              }}
+              className={cn(
+                "flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm transition-all duration-200",
+                isActive ? "font-semibold" : "text-foreground/80 hover:bg-muted/20",
+              )}
+            >
+              <span className="flex-1">{tab.label}</span>
+            </button>
+          );
+        }
+
+        // Multi-section tabs: collapsible with sub-items
+        return (
+          <div key={tab.value} className="flex flex-col">
+            <button
+              type="button"
+              onClick={() => {
+                toggleExpanded(tab.value);
+                setMobileOpen(false);
+              }}
+              className={cn(
+                "flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm transition-all duration-200",
+                isSelected ? "font-semibold" : "text-foreground/80 hover:bg-muted/20",
+              )}
+            >
+              <span className="flex-1">{tab.label}</span>
+              <ChevronDown
+                className={cn(
+                  "ml-auto size-3.5 shrink-0 transition-transform duration-200",
+                  expanded ? "rotate-0" : "-rotate-90",
+                  "text-foreground/40",
+                )}
+              />
+            </button>
+
+            {expanded && (
+              <div className="ml-4 mt-0.5 flex flex-col border-l border-border/10 pl-2.5 space-y-0.5">
+                {subItems.map((sub) => {
+                  const isSubActive = isSelected && activeSection === sub.sectionId;
+                  return (
+                    <button
+                      key={sub.sectionId}
+                      type="button"
+                      onClick={() => {
+                        onTabChange(tab.value, sub.sectionId);
+                        setMobileOpen(false);
+                      }}
+                      className={cn(
+                        "flex items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-sm transition-all duration-150",
+                        isSubActive ? "font-semibold" : "text-foreground/80 hover:bg-muted/20",
+                      )}
+                    >
+                      <span>{sub.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </nav>
+  );
+
+  // Mobile: trigger button + sheet drawer
+  if (isMobile) {
+    const activeLabel = TABS.find((t) => t.value === activeTab)?.label ?? "Settings";
+
+    return (
+      <>
+        <Button
+          variant="outline"
+          onClick={() => setMobileOpen(true)}
+          className="flex w-full items-center gap-2.5 border-border/30 bg-muted/20"
+          aria-label="Open settings categories"
+        >
+          <span className="flex-1 text-left text-sm font-medium">{activeLabel}</span>
+          <ChevronDown className="size-3.5 text-muted-foreground/40" />
+        </Button>
+
+        <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
+          <SheetContent side="left" className="w-[280px] p-0" showCloseButton={false}>
+            <SheetHeader className="border-b border-border/10 px-4 py-3.5">
+              <div className="flex items-center justify-between">
+                <SheetTitle className="text-sm font-semibold">Settings</SheetTitle>
+                <SheetClose
+                  render={
+                    <Button variant="ghost" size="icon-sm" className="-mr-1.5">
+                      <X className="size-4" />
+                    </Button>
+                  }
+                />
+              </div>
+            </SheetHeader>
+            <div className="px-3 py-3 overflow-y-auto max-h-[80vh]">
+              {sidebarContent}
+            </div>
+          </SheetContent>
+        </Sheet>
+      </>
+    );
+  }
+
+  // Desktop: persistent sidebar
+  return (
+    <aside className="w-[240px] shrink-0" aria-label="Settings sections">
+      <div className="sticky top-0">
+        {sidebarContent}
+      </div>
+    </aside>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// SETTINGS SEARCH BAR
+// ═══════════════════════════════════════════════════════════════════════
+
+function SettingsSearchBar({ onNavigate }: { onNavigate: (tab: string) => void }) {
+  const [query, setQuery] = useState("");
+  const [open, setOpen] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(-1);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
+
+  const results = useMemo(() => {
+    if (!query.trim()) return [];
+    const q = query.toLowerCase().trim();
+    const matched: { tab: string; path: string; sectionId: string; description: string; score: number }[] = [];
+    for (const entry of SETTINGS_SEARCH_INDEX) {
+      const exactMatch = entry.keywords.some((k) => k === q || k.includes(q));
+      const partialMatch = entry.keywords.some((k) => k.includes(q) || q.includes(k));
+      const tabLabel = TABS.find((t) => t.value === entry.tab)?.label.toLowerCase() || "";
+      const sectionLabel = entry.path.toLowerCase();
+      const tabMatch = tabLabel.includes(q) || sectionLabel.includes(q);
+      if (exactMatch || partialMatch || tabMatch) {
+        let score = 0;
+        if (exactMatch) score = 3;
+        else if (tabLabel === q || sectionLabel === q) score = 2;
+        else score = 1;
+        matched.push({ ...entry, score });
+      }
+    }
+    // Deduplicate by path within the same tab
+    const seen = new Set<string>();
+    return matched
+      .sort((a, b) => b.score - a.score)
+      .filter((item) => {
+        const key = `${item.tab}-${item.path}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      })
+      .slice(0, 8);
+  }, [query]);
+
+  const handleSelect = useCallback((tab: string, sectionId?: string) => {
+    onNavigate(tab);
+    setQuery("");
+    setOpen(false);
+    setActiveIndex(-1);
+    inputRef.current?.blur();
+    // Scroll to the specific section after tab switch (wait for render)
+    if (sectionId) {
+      requestAnimationFrame(() => {
+        const el = document.getElementById(`settings-${sectionId}`);
+        el?.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+    }
+  }, [onNavigate]);
+
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (!open || results.length === 0) return;
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setActiveIndex((prev) => (prev < results.length - 1 ? prev + 1 : 0));
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setActiveIndex((prev) => (prev > 0 ? prev - 1 : results.length - 1));
+    } else if (e.key === "Enter" && activeIndex >= 0) {
+      e.preventDefault();
+      handleSelect(results[activeIndex].tab, results[activeIndex].sectionId);
+    } else if (e.key === "Escape") {
+      setOpen(false);
+      setActiveIndex(-1);
+      inputRef.current?.blur();
+    }
+  }, [open, results, activeIndex, handleSelect]);
+
+  // Scroll active item into view
+  useEffect(() => {
+    if (activeIndex >= 0 && listRef.current) {
+      const items = listRef.current.querySelectorAll<HTMLElement>("[data-result-index]");
+      items[activeIndex]?.scrollIntoView({ block: "nearest" });
+    }
+  }, [activeIndex]);
+
+  // Close on click outside
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (inputRef.current && !inputRef.current.parentElement?.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
+
+  const tabLabels: Record<string, string> = Object.fromEntries(
+    TABS.map((t) => [t.value, t.label]),
+  );
+
+  return (
+    <div className="relative">
+      <div className="relative">
+        <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground/40" />
+        <input
+          ref={inputRef}
+          type="text"
+          value={query}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            setOpen(e.target.value.trim().length > 0);
+            setActiveIndex(-1);
+          }}
+          onFocus={() => { if (query.trim()) setOpen(true); }}
+          onKeyDown={handleKeyDown}
+          placeholder="Search settings…"
+          className="h-10 w-full rounded-xl border border-border/40 bg-muted/30 pl-9 pr-3 text-sm text-foreground outline-none transition-all placeholder:text-muted-foreground/40 focus:border-primary/30 focus:bg-muted/50 focus:ring-[3px] focus:ring-primary/10"
+          aria-label="Search settings"
+          aria-expanded={open}
+          aria-haspopup="listbox"
+          aria-autocomplete="list"
+          role="combobox"
+        />
+        {query && (
+          <button
+            type="button"
+            onClick={() => { setQuery(""); setOpen(false); setActiveIndex(-1); inputRef.current?.focus(); }}
+            className="absolute right-2 top-1/2 flex size-5 -translate-y-1/2 items-center justify-center rounded-full text-muted-foreground/30 transition-colors hover:text-muted-foreground/60"
+            aria-label="Clear search"
+          >
+            <X className="size-3" />
+          </button>
+        )}
+      </div>
+
+      {open && results.length > 0 && (
+        <div
+          ref={listRef}
+          className="absolute left-0 right-0 top-full z-50 mt-1.5 overflow-hidden rounded-xl border border-border/30 bg-popover shadow-lg backdrop-blur-xl"
+          role="listbox"
+        >
+          <div className="max-h-[320px] overflow-y-auto py-1.5">
+            {results.map((result, i) => {
+              const isActive = i === activeIndex;
+              const IconComponent = TABS.find((t) => t.value === result.tab)?.icon;
+              const tabLabel = tabLabels[result.tab] || result.tab;
+              return (
+                <button
+                  key={`${result.tab}-${result.path}`}
+                  data-result-index={i}
+                  type="button"
+                  role="option"
+                  aria-selected={isActive}
+                  onClick={() => handleSelect(result.tab, result.sectionId)}
+                  onMouseEnter={() => setActiveIndex(i)}
+                  className={cn(
+                    "flex w-full items-start gap-3 px-3.5 py-2.5 text-left transition-colors",
+                    isActive ? "bg-primary/[0.06]" : "hover:bg-muted/30",
+                  )}
+                >
+                  <span className={cn(
+                    "mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-lg",
+                    isActive ? "bg-primary/10 text-primary" : "bg-muted/50 text-muted-foreground/60",
+                  )}>
+                    {IconComponent && <IconComponent className="size-3.5" />}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    {/* Breadcrumb path */}
+                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground/50">
+                      {result.path.split(" > ").map((segment, segIdx) => (
+                        <span key={segIdx} className="flex items-center gap-1.5">
+                          {segIdx > 0 && (
+                            <ChevronDown className="size-2.5 -rotate-90 text-muted-foreground/25" />
+                          )}
+                          <span className={cn(
+                            segIdx === result.path.split(" > ").length - 1
+                              ? "font-medium text-foreground/80"
+                              : "text-muted-foreground/40",
+                          )}>
+                            {segment}
+                          </span>
+                        </span>
+                      ))}
+                    </div>
+                    <p className="mt-0.5 text-xs text-muted-foreground/60 leading-snug">
+                      {result.description}
+                    </p>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+          <div className="border-t border-border/10 px-3.5 py-1.5">
+            <p className="text-[10px] text-muted-foreground/40">
+              <kbd className="rounded border border-border/20 bg-muted/50 px-1 py-0.5 text-[9px] font-medium">↑↓</kbd> Navigate
+              <kbd className="ml-2 rounded border border-border/20 bg-muted/50 px-1 py-0.5 text-[9px] font-medium">↵</kbd> Select
+              <kbd className="ml-2 rounded border border-border/20 bg-muted/50 px-1 py-0.5 text-[9px] font-medium">Esc</kbd> Close
+            </p>
+          </div>
+        </div>
+      )}
+
+      {open && query.trim() && results.length === 0 && (
+        <div className="absolute left-0 right-0 top-full z-50 mt-1.5 rounded-xl border border-border/30 bg-popover p-4 text-center shadow-lg backdrop-blur-xl">
+          <p className="text-sm text-muted-foreground/60">No settings found for "{query}"</p>
+          <p className="mt-0.5 text-xs text-muted-foreground/40">Try a different keyword like "theme", "email", or "backup"</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// SETTINGS PAGE
 // ═══════════════════════════════════════════════════════════════════════
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState("general");
+  const [activeSection, setActiveSection] = useState<string | null>("theme-style");
   const isMobile = useIsMobile();
 
+  const ActiveComponent = TABS.find((t) => t.value === activeTab)?.component ?? GeneralSettings;
+
+  // ── Handle sidebar tab/section selection ─────────────────────
+  const handleSidebarSelect = useCallback((tab: string, sectionId?: string) => {
+    setActiveTab(tab);
+    if (sectionId) {
+      setActiveSection(sectionId);
+    } else {
+      // Default to first sub-item of the tab
+      const subItems = SIDEBAR_SUB_ITEMS[tab];
+      if (subItems && subItems.length > 0) {
+        setActiveSection(subItems[0].sectionId);
+      }
+    }
+  }, []);
+
+  // ── Handle search bar tab navigation ────────────────────────
+  const handleSearchNavigate = useCallback((tab: string) => {
+    setActiveTab(tab);
+    const subItems = SIDEBAR_SUB_ITEMS[tab];
+    if (subItems && subItems.length > 0) {
+      setActiveSection(subItems[0].sectionId);
+    }
+  }, []);
+
   return (
-    <div className="space-y-4 sm:space-y-6">
-      <PageHeader
-        title="Settings & Configuration"
-        description={isMobile ? undefined : "Manage your account, business, preferences, and system settings."}
-      />
-
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
-          <TabsList variant="line" className="w-full justify-start flex-nowrap gap-1">
-          {TABS.map((tab) => {
-            const Icon = tab.icon;
-            const isActive = activeTab === tab.value;
-            return (
-              <TabsTrigger
-                key={tab.value} value={tab.value}
-                className={cn(
-                  "flex items-center gap-2 px-4 py-2.5 whitespace-nowrap text-sm font-medium transition-all duration-200",
-                  isActive ? "text-foreground" : "text-muted-foreground/60 hover:text-foreground/80",
-                )}
-              >
-                <Icon className={cn("size-4 transition-colors duration-200", isActive ? "text-primary" : "text-muted-foreground/40")} />
-                {tab.label}
-              </TabsTrigger>
-            );
-          })}
-        </TabsList>
+    <div className="flex h-full flex-col overflow-hidden">
+      {/* Fixed Header Area — page header, search bar, mobile tabs */}
+      <div className="flex-shrink-0 space-y-4 pb-4 sm:space-y-6 sm:pb-6">
+        {/* Page Header */}
+        <div className="pb-2">
+          <PageHeader
+            title="Settings"
+            description="Manage your business preferences and account settings."
+          />
         </div>
 
-        <div className="mt-4 sm:mt-6">
-          {TABS.map((tab) => {
-            const Component = tab.component;
-            return (
-              <TabsContent key={tab.value} value={tab.value}>
-                <motion.div key={tab.value} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 8 }} transition={{ duration: 0.2, ease: "easeOut" }}>
-                  <Component />
-                </motion.div>
-              </TabsContent>
-            );
-          })}
+        {/* Settings Search Bar */}
+        <div className="md:max-w-md">
+          <SettingsSearchBar onNavigate={handleSearchNavigate} />
         </div>
-      </Tabs>
+
+        {/* Mobile category selector */}
+        <div className="md:hidden">
+          <SettingsSidebar activeTab={activeTab} activeSection={activeSection} onTabChange={handleSidebarSelect} />
+        </div>
+      </div>
+
+      {/* Scrollable Content Area — sidebar + active settings panel */}
+      <div className="flex flex-1 min-h-0 gap-6 md:flex-row md:gap-8">
+        {/* Desktop sidebar (fixed, scrolls independently if needed) */}
+        <div className="hidden flex-shrink-0 overflow-y-auto md:block">
+          <SettingsSidebar activeTab={activeTab} activeSection={activeSection} onTabChange={handleSidebarSelect} />
+        </div>
+
+        {/* Scrollable settings content */}
+        <div className="min-w-0 flex-1 overflow-y-auto" id="settings-content">
+          <motion.div
+            key={activeTab}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.2, ease: "easeInOut" }}
+          >
+            <ActiveComponent activeSection={activeSection} />
+          </motion.div>
+        </div>
+      </div>
     </div>
   );
 }

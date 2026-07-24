@@ -19,8 +19,6 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { syncCourierLocations } from "@/lib/delivery/courier-utils";
 import { WaybillSettings } from "@/components/delivery/waybill-settings";
-import type { HandlingInstruction } from "@/lib/shipping-label/types";
-import { HANDLING_INSTRUCTION_LABELS } from "@/lib/shipping-label/types";
 
 // ─── Constants ──────────────────────────────────────────────────────
 
@@ -38,7 +36,7 @@ const SETTINGS_KEYS = {
 
 // ─── Component ──────────────────────────────────────────────────────
 
-export function CourierSettings() {
+export function CourierSettings({ activeSection }: { activeSection?: string | null }) {
   const [businessId, setBusinessId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -52,27 +50,6 @@ export function CourierSettings() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [savedCredentials, setSavedCredentials] = useState(false);
-
-  // ── Shipping Label Defaults State ─────────────────────────────
-  const [handlingInstructions, setHandlingInstructions] = useState<HandlingInstruction[]>([]);
-  const [optionalNote, setOptionalNote] = useState("");
-  const [labelDateOption, setLabelDateOption] = useState("dispatch"); // "dispatch" | "generated"
-
-  const ALL_HANDLING_OPTIONS: HandlingInstruction[] = [
-    "fragile",
-    "keep_dry",
-    "this_side_up",
-    "glass",
-    "do_not_bend",
-  ];
-
-  const toggleHandling = useCallback((instruction: HandlingInstruction) => {
-    setHandlingInstructions((prev) =>
-      prev.includes(instruction)
-        ? prev.filter((h) => h !== instruction)
-        : [...prev, instruction],
-    );
-  }, []);
 
   // ── Load existing settings ─────────────────────────────────────
   useEffect(() => {
@@ -105,24 +82,6 @@ export function CourierSettings() {
 
           const provider = map[SETTINGS_KEYS.selected_courier];
           if (provider) setSelectedCourier(provider);
-
-          // ── Load shipping label defaults ───────────────────
-          const handlingRaw = map["shipping_label_handling"];
-          if (handlingRaw) {
-            try {
-              const parsed = JSON.parse(handlingRaw);
-              if (Array.isArray(parsed)) {
-                setHandlingInstructions(
-                  parsed.filter(
-                    (h: string): h is HandlingInstruction =>
-                      ["fragile", "keep_dry", "this_side_up", "glass", "do_not_bend"].includes(h),
-                  ),
-                );
-              }
-            } catch { /* ignore */ }
-          }
-          setOptionalNote(map["shipping_label_optional_note"] || "");
-          setLabelDateOption(map["shipping_label_date_option"] || "dispatch");
 
           if (provider === "royal_express") {
             setTenant("royalexpress"); // auto-filled, readonly
@@ -208,58 +167,6 @@ export function CourierSettings() {
     }
   }, [businessId, selectedCourier, tenant, email, password]);
 
-  // ── Save handler: Shipping Label Defaults ─────────────────────
-  const [savingLabels, setSavingLabels] = useState(false);
-
-  const handleSaveLabelDefaults = useCallback(async () => {
-    if (!businessId) {
-      toast.error("No business found");
-      return;
-    }
-    setSavingLabels(true);
-    try {
-      const supabase = createClient();
-
-      // Save handling instructions
-      await supabase.from("business_settings").upsert(
-        {
-          business_id: businessId,
-          key: "shipping_label_handling",
-          value: JSON.stringify(handlingInstructions),
-        },
-        { onConflict: "business_id, key" },
-      );
-
-      // Save optional note
-      await supabase.from("business_settings").upsert(
-        {
-          business_id: businessId,
-          key: "shipping_label_optional_note",
-          value: optionalNote,
-        },
-        { onConflict: "business_id, key" },
-      );
-
-      // Save date option
-      await supabase.from("business_settings").upsert(
-        {
-          business_id: businessId,
-          key: "shipping_label_date_option",
-          value: labelDateOption,
-        },
-        { onConflict: "business_id, key" },
-      );
-
-      toast.success("Shipping label defaults saved");
-    } catch (err) {
-      toast.error("Failed to save shipping label defaults", {
-        description: err instanceof Error ? err.message : undefined,
-      });
-    } finally {
-      setSavingLabels(false);
-    }
-  }, [businessId, handlingInstructions, optionalNote, labelDateOption]);
-
   // ── Test connection ────────────────────────────────────────────
   const handleTestConnection = useCallback(async () => {
     if (!tenant.trim() || !email.trim() || !password.trim()) {
@@ -319,7 +226,8 @@ export function CourierSettings() {
 
   return (
     <div className="space-y-4">
-      <CollapsibleCard icon={Truck} title="Courier Provider" description="Select a courier company to enable delivery tracking and shipment management. More couriers will be added in future updates.">
+      {(!activeSection || activeSection === "courier-provider") && (
+        <CollapsibleCard id="settings-courier-provider" collapsible={false} icon={Truck} title="Courier Provider" description="Select a courier company to enable delivery tracking and shipment management. More couriers will be added in future updates.">
         {/* ── Courier Selector ── */}
         <div>
             <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/50">
@@ -460,124 +368,13 @@ export function CourierSettings() {
             </motion.div>
           )}
       </CollapsibleCard>
+      )}
 
-      <CollapsibleCard icon={Truck} title="Shipping Label Defaults" description="Configure default settings for generated shipping labels. These values can be overridden per shipment before printing.">
-        {/* ── Handling Instructions ── */}
-        <div>
-            <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/50">
-              Handling Instructions
-            </Label>
-            <p className="mt-0.5 text-xs text-muted-foreground/50">
-              Select handling icons to print on shipping labels.
-            </p>
-            <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
-              {ALL_HANDLING_OPTIONS.map((opt) => {
-                const isEnabled = handlingInstructions.includes(opt);
-                return (
-                  <button
-                    key={opt}
-                    type="button"
-                    onClick={() => toggleHandling(opt)}
-                    className={cn(
-                      "flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-medium transition-all duration-150 text-left",
-                      isEnabled
-                        ? "border-primary/30 bg-primary/[0.04] text-foreground"
-                        : "border-border/20 text-muted-foreground/60 hover:border-border/40 hover:text-foreground/70",
-                    )}
-                  >
-                    <div
-                      className={cn(
-                        "flex size-4 shrink-0 items-center justify-center rounded border transition-colors",
-                        isEnabled
-                          ? "border-primary bg-primary text-primary-foreground"
-                          : "border-border/40",
-                      )}
-                    >
-                      {isEnabled && <Check className="size-2.5" />}
-                    </div>
-                    {HANDLING_INSTRUCTION_LABELS[opt]}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* ── Optional Note ── */}
-          <div className="space-y-1.5">
-            <Label className="text-xs font-medium text-foreground/70">
-              Optional Note
-            </Label>
-            <Input
-              value={optionalNote}
-              onChange={(e) => setOptionalNote(e.target.value)}
-              placeholder="e.g. Handle with care, leave at front door"
-              className="h-10 text-sm"
-            />
-            <p className="text-xs text-muted-foreground/50">
-              This note will appear on the shipping label below the COD section.
-            </p>
-          </div>
-
-          {/* ── Date Preference ── */}
-          <div className="space-y-1.5">
-            <Label className="text-xs font-medium text-foreground/70">
-              Date on Label
-            </Label>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => setLabelDateOption("dispatch")}
-                className={cn(
-                  "flex-1 rounded-lg border px-3 py-2 text-xs font-medium transition-all duration-150 text-left",
-                  labelDateOption === "dispatch"
-                    ? "border-primary/30 bg-primary/[0.04] text-foreground"
-                    : "border-border/20 text-muted-foreground/60 hover:border-border/40",
-                )}
-              >
-                <span className="block text-xs font-semibold">Dispatch Date</span>
-                <span className="block text-[10px] text-muted-foreground/50 mt-0.5">
-                  Use the order&apos;s dispatch date
-                </span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setLabelDateOption("generated")}
-                className={cn(
-                  "flex-1 rounded-lg border px-3 py-2 text-xs font-medium transition-all duration-150 text-left",
-                  labelDateOption === "generated"
-                    ? "border-primary/30 bg-primary/[0.04] text-foreground"
-                    : "border-border/20 text-muted-foreground/60 hover:border-border/40",
-                )}
-              >
-                <span className="block text-xs font-semibold">Current Date</span>
-                <span className="block text-[10px] text-muted-foreground/50 mt-0.5">
-                  Use today&apos;s date when printing
-                </span>
-              </button>
-            </div>
-          </div>
-
-          {/* ── Save Button ── */}
-          <div className="flex justify-end pt-1">
-            <Button
-              variant="gradient"
-              size="sm"
-              onClick={handleSaveLabelDefaults}
-              disabled={savingLabels}
-            >
-              {savingLabels ? (
-                <Loader2 className="size-3.5 animate-spin" />
-              ) : (
-                <Save className="size-3.5" />
-              )}
-              {savingLabels ? "Saving..." : "Save Defaults"}
-            </Button>
-          </div>
-      </CollapsibleCard>
-
-      <CollapsibleCard icon={Truck} title="Waybill Settings" description="Configure how waybill IDs are managed and assigned to orders.">
+      {(!activeSection || activeSection === "waybill-settings") && (
+      <CollapsibleCard id="settings-waybill-settings" collapsible={false} icon={Truck} title="Waybill Settings" description="Configure how waybill IDs are managed and assigned to orders.">
         <WaybillSettings businessId={businessId} />
       </CollapsibleCard>
+      )}
     </div>
   );
 }

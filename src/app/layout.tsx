@@ -26,10 +26,26 @@ const caveat = Caveat({
 });
 
 export const metadata: Metadata = {
-  title: "BizRavana - Business Dashboard",
+  title: {
+    template: "%s | BizRavana",
+    default: "BizRavana - Business Dashboard",
+  },
   description: "Multi-tenant SaaS dashboard for small and medium businesses",
   icons: {
-    icon: "/darkmode-logo.png",
+    icon: [
+      { url: "/favicon.ico", sizes: "16x16 32x32 48x48", type: "image/x-icon" },
+      { url: "/favicon-16.png", sizes: "16x16", type: "image/png" },
+      { url: "/favicon-32.png", sizes: "32x32", type: "image/png" },
+      { url: "/favicon-48.png", sizes: "48x48", type: "image/png" },
+      { url: "/icon-192x192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icon-512x512.png", sizes: "512x512", type: "image/png" },
+    ],
+    apple: [{ url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
+  },
+  appleWebApp: {
+    capable: true,
+    title: "BizRavana",
+    statusBarStyle: "default",
   },
 };
 

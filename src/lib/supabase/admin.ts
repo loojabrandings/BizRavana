@@ -1,8 +1,9 @@
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import type { Database } from "@/types/database";
 
-let adminClient: ReturnType<typeof createClient> | null = null;
+let adminClient: SupabaseClient<Database> | null = null;
 
-export function getAdminClient() {
+export function getAdminClient(): SupabaseClient<Database> {
   if (adminClient) return adminClient;
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -12,7 +13,7 @@ export function getAdminClient() {
     throw new Error("Missing Supabase admin credentials");
   }
 
-  adminClient = createClient(url, serviceRoleKey, {
+  adminClient = createClient<Database>(url, serviceRoleKey, {
     auth: {
       autoRefreshToken: false,
       persistSession: false,

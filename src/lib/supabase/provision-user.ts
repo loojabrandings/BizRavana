@@ -3,19 +3,78 @@ import type { createClient } from "./client";
 
 type BrowserClient = ReturnType<typeof createClient>;
 
+/**
+ * Check for and accept any pending team invitations for this user's email.
+ * Returns the business_id if an invitation was accepted, or null.
+ */
+async function acceptPendingInvitations(
+  supabase: BrowserClient,
+  user: User,
+): Promise<string | null> {
+  const email = user.email?.toLowerCase().trim();
+  if (!email) return null;
+
+  try {
+    // Use the SECURITY DEFINER RPC to bypass RLS — a non-member user
+    // cannot query team_invitations directly (RLS requires owner/admin role).
+    const { data: invitations, error } = await supabase.rpc(
+      "get_pending_invitations",
+      { target_email: email },
+    );
+
+    if (error || !invitations || invitations.length === 0) return null;
+
+    const invitation = invitations[0];
+
+    // Call the accept_invitation RPC via the API to bypass RLS
+    const response = await fetch("/api/invitations/accept", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token: invitation.token }),
+    });
+
+    if (!response.ok) {
+      const err = await response.json();
+      console.error("Failed to accept invitation:", err.error);
+      return null;
+    }
+
+    const { data } = await response.json();
+    return data?.business_id || null;
+  } catch (err) {
+    console.error("Error checking invitations:", err);
+    return null;
+  }
+}
+
 export async function provisionUser(
   supabase: BrowserClient,
   user: User,
 ): Promise<string | null> {
   const { data: existingProfile, error: profileLookupError } = await supabase
     .from("profiles")
-    .select("business_id")
+    .select("business_id, role")
     .eq("user_id", user.id)
     .maybeSingle();
 
   if (profileLookupError) return profileLookupError.message;
-  if (existingProfile?.business_id) return null;
+  
+  // If user already has a business, check for pending invitations
+  // (they might have been invited to another business after sign-up)
+  if (existingProfile?.business_id) {
+    // Still check for pending invitations — they might accept another one later
+    // For now, skip since the user is already provisioned
+    return null;
+  }
 
+  // ── Check for pending team invitations first ──
+  const invitedBusinessId = await acceptPendingInvitations(supabase, user);
+  if (invitedBusinessId) {
+    // Invitation accepted — profile was created by the RPC
+    return null;
+  }
+
+  // ── No invitation — proceed with normal provision (new business) ──
   const metadata = user.user_metadata;
   const businessName = String(metadata.business_name || "").trim();
   const fullName = String(metadata.full_name || "").trim();
@@ -75,3 +134,4 @@ export async function provisionUser(
 
   return error?.message || null;
 }
+

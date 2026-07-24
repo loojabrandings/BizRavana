@@ -529,10 +529,54 @@ export interface Database {
         };
         Relationships: [];
       };
+      team_invitations: {
+        Row: {
+          id: string; business_id: string; email: string;
+          role: "admin" | "member";
+          token: string; status: "pending" | "accepted" | "expired" | "cancelled";
+          invited_by: string; expires_at: string; accepted_at: string | null;
+          created_at: string; updated_at: string;
+        };
+        Insert: {
+          id?: string; business_id: string; email: string;
+          role?: "admin" | "member";
+          token?: string; status?: "pending" | "accepted" | "expired" | "cancelled";
+          invited_by: string; expires_at?: string; accepted_at?: string | null;
+          created_at?: string; updated_at?: string;
+        };
+        Update: {
+          id?: string; business_id?: string; email?: string;
+          role?: "admin" | "member";
+          token?: string; status?: "pending" | "accepted" | "expired" | "cancelled";
+          invited_by?: string; expires_at?: string; accepted_at?: string | null;
+          created_at?: string; updated_at?: string;
+        };
         Relationships: [];
+      };
     };
     Views: Record<string, never>;
-    Functions: Record<string, never>;
+    Functions: {
+      get_user_emails: {
+        Args: Record<string, never>;
+        Returns: Array<{ id: string; email: string }>;
+      };
+      get_pending_invitations: {
+        Args: { target_email: string };
+        Returns: Array<{
+          id: string;
+          business_id: string;
+          business_name: string;
+          role: string;
+          token: string;
+          expires_at: string;
+          created_at: string;
+        }>;
+      };
+      accept_invitation: {
+        Args: { invitation_token: string; accepting_user_id: string };
+        Returns: string;
+      };
+    };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;
   };

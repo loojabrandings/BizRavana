@@ -47,9 +47,7 @@ import { orderPreviewToTemplateData } from "@/components/whatsapp/whatsapp-actio
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { Separator } from "@/components/ui/separator";
-import { fetchLabelData } from "@/lib/shipping-label/fetch-data";
-import { generateShippingLabelPdf } from "@/lib/shipping-label/generate-pdf";
-import { validateLabelData } from "@/lib/shipping-label/validate";
+
 
 // ─── Props ─────────────────────────────────────────────────────────
 
@@ -226,14 +224,12 @@ function OrderPreviewHeader({
   onBack,
   onEdit,
   onWhatsApp,
-  onPrintLabel,
   isMobile,
 }: {
   data: OrderFormData;
   onBack: () => void;
   onEdit?: () => void;
   onWhatsApp?: () => void;
-  onPrintLabel?: () => void;
   isMobile?: boolean;
 }) {
   if (isMobile) {
@@ -289,15 +285,7 @@ function OrderPreviewHeader({
                 <FileText className="size-4" />
                 Invoice
               </DropdownMenuItem>
-              {data.waybill_id && (
-                <>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => onPrintLabel?.()}>
-                    <Truck className="size-4" />
-                    Shipping Label
-                  </DropdownMenuItem>
-                </>
-              )}
+
             </DropdownMenuContent>
           </DropdownMenu>
           {onEdit && (
@@ -340,17 +328,7 @@ function OrderPreviewHeader({
           <MessageCircle className="size-3.5" />
           WhatsApp
         </Button>
-        {data.waybill_id && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onPrintLabel}
-            className="gap-1.5 text-sm font-medium"
-          >
-            <Truck className="size-3.5" />
-            Shipping Label
-          </Button>
-        )}
+
         <Button
           variant="outline"
           size="sm"
@@ -963,45 +941,6 @@ export function OrderPreview({
   const { handleAction, renderDialogs } = useWhatsAppAction();
   const { guard } = useReadOnlyMode();
 
-  const handlePrintLabel = useCallback(async () => {
-    if (guard("printing shipping labels")) return;
-    if (!data.waybill_id || !data.id) return;
-    try {
-      const { data: fetchedData, error } = await fetchLabelData(data.id);
-      if (fetchedData && !error) {
-        // Override waybillId from the order snapshot
-        fetchedData.waybillId = data.waybill_id;
-        // Validate data before generating
-        const validation = validateLabelData(fetchedData);
-        if (!validation.valid) {
-          toast.error("Cannot generate shipping label", {
-            description: `Missing: ${validation.missingFields.join(", ")}`,
-          });
-          return;
-        }
-        const result = await generateShippingLabelPdf(fetchedData);
-        // Auto-download without showing a preview dialog
-        const link = document.createElement("a");
-        link.href = result.dataUrl;
-        link.download = `shipping-label-${data.order_number || "label"}.pdf`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        toast.success("Shipping label downloaded", {
-          description: `Order #${data.order_number}`,
-        });
-      } else {
-        console.error("Failed to fetch label data:", error);
-        toast.error("Failed to generate shipping label", {
-          description: error || "Unable to load order data.",
-        });
-      }
-    } catch (err) {
-      console.error("Failed to generate shipping label:", err);
-      toast.error("Failed to generate shipping label");
-    }
-  }, [data.id, data.waybill_id, data.order_number]);
-
   const handleWhatsApp = useCallback(() => {
     const phone = data.whatsapp || data.phone;
     if (!phone) return;
@@ -1037,7 +976,7 @@ export function OrderPreview({
       >
         {/* ═══════ Header (sticky on mobile) ═════════════════════ */}
         <div className={isMobile ? "sticky top-0 z-10 bg-card px-4 pt-4 pb-3" : "px-8 pt-7 pb-6"}>
-          <OrderPreviewHeader data={data} onBack={onBack} onEdit={onEdit} onWhatsApp={handleWhatsApp} onPrintLabel={handlePrintLabel} isMobile={isMobile} />
+          <OrderPreviewHeader data={data} onBack={onBack} onEdit={onEdit} onWhatsApp={handleWhatsApp} isMobile={isMobile} />
         </div>
 
       <div className="border-t border-border/40" />

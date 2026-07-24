@@ -133,6 +133,7 @@ export async function shipWithCourier(
     customer_district: string | null;
     total: number;
     advance_paid: number;
+    waybill_id: string | null;
     items: { product_name: string; quantity: number; unit_price: number }[];
   },
   config: CourierConfig,
@@ -153,6 +154,7 @@ async function shipViaRoyalExpress(
     customer_district: string | null;
     total: number;
     advance_paid: number;
+    waybill_id: string | null;
     items: { product_name: string; quantity: number; unit_price: number }[];
   },
   credentials: Record<string, string>,
@@ -183,37 +185,45 @@ async function shipViaRoyalExpress(
 
   const merchantBusinessId = String(defaultBusiness.id);
 
+  const requestBody = {
+    general_data: {
+      merchant_business_id: merchantBusinessId,
+      origin_city_name: credentials.origin_city || "Kotte",
+      origin_state_name: credentials.origin_state || "Colombo",
+    },
+    order_data: [{
+      ...(order.waybill_id ? { waybill_number: order.waybill_id } : {}),
+      order_no: order.order_number,
+      customer_name: order.customer_name,
+      customer_address: order.customer_address || "",
+      customer_phone: order.customer_phone || "",
+      destination_city_name: order.customer_city || "Colombo 01",
+      destination_state_name: order.customer_district || "Colombo",
+      cod,
+      description: description.slice(0, 255),
+      weight: 1,
+      remark: "",
+    }],
+  };
+
+  console.log("🔍 [RoyalExpress] Request body:", JSON.stringify(requestBody, null, 2));
+
   const shipRes = await fetch("https://v1.api.curfox.com/api/public/merchant/order/single", {
     method: "POST",
     headers: {
       Accept: "application/json", "Content-Type": "application/json",
       Authorization: `Bearer ${token}`, "X-tenant": credentials.tenant || "royalexpress",
     },
-    body: JSON.stringify({
-      general_data: {
-        merchant_business_id: merchantBusinessId,
-        origin_city_name: credentials.origin_city || "Kotte",
-        origin_state_name: credentials.origin_state || "Colombo",
-      },
-      order_data: [{
-        order_no: order.order_number,
-        customer_name: order.customer_name,
-        customer_address: order.customer_address || "",
-        customer_phone: order.customer_phone || "",
-        destination_city_name: order.customer_city || "Colombo 01",
-        destination_state_name: order.customer_district || "Colombo",
-        cod,
-        description: description.slice(0, 255),
-        weight: 1,
-        remark: "",
-      }],
-    }),
+    body: JSON.stringify(requestBody),
   });
 
   if (!shipRes.ok) {
     let errorMsg = "Failed to create shipment with courier";
     try {
-      const errData = await shipRes.json();
+      console.error("🔍 [RoyalExpress] Response status:", shipRes.status, shipRes.statusText);
+      const responseText = await shipRes.text();
+      console.error("🔍 [RoyalExpress] Response body:", responseText);
+      const errData = JSON.parse(responseText);
       if (errData.errors && typeof errData.errors === "object") {
         const fieldErrors: string[] = [];
         for (const [, messages] of Object.entries(errData.errors)) {

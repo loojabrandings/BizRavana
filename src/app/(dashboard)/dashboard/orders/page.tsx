@@ -12,7 +12,6 @@ import {
   Pencil,
   Plus,
   ShoppingCart,
-  FileImage,
   Paperclip,
   Star,
   Trash2,
@@ -47,14 +46,6 @@ import { TrackShipmentDialog } from "@/components/orders/track-shipment-dialog";
 import { EnterWaybillDialog } from "@/components/orders/enter-waybill-dialog";
 import { useOrdersSettings } from "@/stores/orders-settings-store";
 import { loadCourierConfig, shipWithCourier, type CourierConfig } from "@/lib/delivery/courier-utils";
-import { ShippingLabelDialog } from "@/components/orders/shipping-label-dialog";
-import { fetchLabelData } from "@/lib/shipping-label/fetch-data";
-import {
-  generateShippingLabelPdf,
-  generateCombinedShippingLabelsPdf,
-} from "@/lib/shipping-label/generate-pdf";
-import { validateLabelData } from "@/lib/shipping-label/validate";
-import type { ShippingLabelData } from "@/lib/shipping-label/types";
 import { HoverPopover } from "@/components/shared/hover-popover";
 import { useIsMobile } from "@/hooks/use-media-query";
 import { useReadOnlyMode } from "@/providers/readonly-mode-provider";
@@ -431,11 +422,6 @@ function OrdersPageInner() {
   const [trackingWaybill, setTrackingWaybill] = useState<string | null>(null);
   const [trackingDialogOpen, setTrackingDialogOpen] = useState(false);
 
-  // ─── Shipping Label Dialog State ──────────────────────
-  const [shippingLabelDialogOpen, setShippingLabelDialogOpen] = useState(false);
-  const [shippingLabelData, setShippingLabelData] = useState<ShippingLabelData | null>(null);
-  const [shippingLabelDataUrl, setShippingLabelDataUrl] = useState<string | null>(null);
-
   // ─── Mobile detection ────────────────────────────────────────
   const isMobile = useIsMobile();
 
@@ -449,41 +435,6 @@ function OrdersPageInner() {
     const templateData = orderRowToTemplateData(order);
     handleWhatsAppAction("order_table_whatsapp", templateData, phone);
   }, [handleWhatsAppAction]);
-
-  // ─── Handle Print Shipping Label from table row ─────────
-  const handleRowPrintLabel = useCallback(async (orderId: string, waybillId: string) => {
-    try {
-      const { data: fetchedData, error } = await fetchLabelData(orderId);
-      if (fetchedData && !error) {
-        fetchedData.waybillId = waybillId;
-        // Validate data before generating
-        const { valid, missingFields } = validateLabelData(fetchedData);
-        if (!valid) {
-          toast.error("Cannot generate shipping label", {
-            description: `Missing: ${missingFields.join(", ")}`,
-          });
-          return;
-        }
-        const result = await generateShippingLabelPdf(fetchedData);
-        // Auto-download without showing a preview dialog
-        const orderNumber = fetchedData.orderNumber || waybillId;
-        const link = document.createElement("a");
-        link.href = result.dataUrl;
-        link.download = `shipping-label-${orderNumber}.pdf`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        toast.success("Shipping label downloaded");
-      } else {
-        toast.error("Failed to load label data", {
-          description: error || "Unable to fetch order or business info.",
-        });
-      }
-    } catch (err) {
-      console.error("Print label error:", err);
-      toast.error("Failed to generate shipping label");
-    }
-  }, []);
 
   // ─── Available Manual Waybills State ────────────────────
   const [availableWaybills, setAvailableWaybills] = useState<ManualWaybill[]>([]);
@@ -620,6 +571,7 @@ const handleStatusChange = useCallback(async (orderId: string, newStatus: string
           customer_district: order.customer_district,
           total: order.total,
           advance_paid: order.advance_paid,
+          waybill_id: order.waybill_id,
           items: order.items.map((i) => ({
             product_name: i.product_name,
             quantity: i.quantity,
@@ -652,24 +604,6 @@ const handleStatusChange = useCallback(async (orderId: string, newStatus: string
       markWaybillAsUsed(waybill).catch((err) =>
         console.warn("Failed to mark waybill as used:", err),
       );
-
-      // Generate shipping label for courier dispatch
-      try {
-        const { data: labelData, error: fetchError } =
-          await fetchLabelData(orderId);
-        if (labelData && !fetchError) {
-          // Set label data first so dialog can auto-retry if PDF gen fails
-          setShippingLabelData(labelData);
-          const result = await generateShippingLabelPdf(labelData);
-          setShippingLabelDataUrl(result.dataUrl);
-        }
-      } catch (labelErr) {
-        // Don't block dispatch success — label generation is secondary
-        console.error("Failed to generate shipping label:", labelErr);
-      }
-
-      // Open shipping label dialog
-      setShippingLabelDialogOpen(true);
 
       toast.success(
         `Order dispatched via ${courierConfig.providerLabel || "Courier"}`,
@@ -1270,73 +1204,6 @@ const handleStatusChange = useCallback(async (orderId: string, newStatus: string
     [selectedIds],
   );
 
-  // ─── Bulk Print Shipping Labels ──────────────────────────
-  const handleBulkPrintLabels = useCallback(async () => {
-    const ids = [...selectedIds].filter((id): id is string => typeof id === "string");
-    if (ids.length === 0) return;
-
-    // Find orders with waybills among selected
-    const ordersToPrint = orders.filter(
-      (o) => ids.includes(o.id) && o.waybill_id,
-    );
-
-    if (ordersToPrint.length === 0) {
-      toast.error("No selected orders have a waybill assigned");
-      return;
-    }
-
-    toast.info(`Preparing ${ordersToPrint.length} shipping label${ordersToPrint.length > 1 ? "s" : ""}...`);
-
-    // Fetch and validate all label data first
-    const validLabels: ShippingLabelData[] = [];
-    let failCount = 0;
-
-    for (const order of ordersToPrint) {
-      try {
-        const { data: fetchedData, error } = await fetchLabelData(order.id);
-        if (fetchedData && !error) {
-          fetchedData.waybillId = order.waybill_id!;
-          const { valid, missingFields } = validateLabelData(fetchedData);
-          if (!valid) {
-            console.error(`Label validation failed for ${order.order_number}:`, missingFields);
-            failCount++;
-            continue;
-          }
-          validLabels.push(fetchedData);
-        } else {
-          failCount++;
-        }
-      } catch (err) {
-        console.error(`Print label error for ${order.order_number}:`, err);
-        failCount++;
-      }
-    }
-
-    if (validLabels.length === 0) {
-      toast.error("Failed to generate any shipping labels");
-      return;
-    }
-
-    // Generate a single combined PDF with all labels
-    try {
-      toast.info(`Generating combined PDF with ${validLabels.length} label${validLabels.length > 1 ? "s" : ""}...`);
-      const result = await generateCombinedShippingLabelsPdf(validLabels);
-
-      toast.success(
-        `${result.successCount} label${result.successCount > 1 ? "s" : ""} generated` +
-          (result.failCount > 0 ? `, ${result.failCount} failed` : ""),
-      );
-
-      // Open dialog with combined PDF (null labelData shows generic title)
-      setShippingLabelData(null);
-      setShippingLabelDataUrl(result.dataUrl);
-      setShippingLabelDialogOpen(true);
-    } catch (err) {
-      console.error("Combined PDF generation error:", err);
-      toast.error("Failed to generate combined shipping labels PDF");
-    }
-  }, [orders, selectedIds]);
-
   // ─── Sorting ───────────────────────────────────────────────────
   const handleSortToggle = (key: string) => setActiveSort((prev) =>
     prev?.key === key ? { key, direction: prev.direction === "asc" ? "desc" : "asc" } : { key, direction: "asc" }
@@ -1547,19 +1414,6 @@ const handleStatusChange = useCallback(async (orderId: string, newStatus: string
             >
               <MessageCircle className="size-4" />
             </button>
-            {order.waybill_id && (
-              <button
-                type="button"
-              className="flex size-9 items-center justify-center rounded-xl text-accent-foreground/70 hover:bg-accent hover:text-accent-foreground transition-colors"
-              title="Print Label"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleRowPrintLabel(order.id, order.waybill_id!);
-                }}
-              >
-                <FileImage className="size-4" />
-              </button>
-            )}
             <button
               type="button"
               className="flex size-9 items-center justify-center rounded-xl text-destructive/70 hover:bg-status-danger-bg hover:text-destructive transition-colors"
@@ -1587,7 +1441,6 @@ const handleStatusChange = useCallback(async (orderId: string, newStatus: string
       handleStatusChange,
       handlePaymentChange,
       handleWhatsAppClick,
-      handleRowPrintLabel,
       setTrackingWaybill,
       setTrackingDialogOpen,
       setDeleteTargetId,
@@ -1790,23 +1643,9 @@ const handleStatusChange = useCallback(async (orderId: string, newStatus: string
           <FileDown className="size-3.5" />
           XLSX
         </Button>
-
-        {/* Print Labels */}
-        <Button
-          variant="gradient"
-          size="sm"
-          onClick={() => {
-              if (guard("bulk printing")) return;
-              handleBulkPrintLabels();
-            }}
-          className="gap-1.5"
-        >
-          <Truck className="size-3.5" />
-          Labels
-        </Button>
       </>
     ),
-    [handleSelectByStatus, handleSelectByPayment, handleBulkStatusChange, handleBulkPaymentChange, handleExportXlsx, handleBulkPrintLabels],
+    [handleSelectByStatus, handleSelectByPayment, handleBulkStatusChange, handleBulkPaymentChange, handleExportXlsx],
   );
 
   const activeFilterCount =
@@ -2129,8 +1968,7 @@ const handleStatusChange = useCallback(async (orderId: string, newStatus: string
                     className="rounded-lg text-sm gap-2 py-1.5"
                     onClick={(e) => {
                       e.stopPropagation();
-                      handleRowPrintLabel(order.id, order.waybill_id!);
-                    }}
+                                    }}
                   >
                     <Truck className="size-3.5 text-purple-500" />
                     Print Shipping Label
@@ -2491,12 +2329,7 @@ const handleStatusChange = useCallback(async (orderId: string, newStatus: string
       />
 
       {/* ─── Shipping Label Dialog ──────────────────────────────── */}
-      <ShippingLabelDialog
-        open={shippingLabelDialogOpen}
-        onOpenChange={setShippingLabelDialogOpen}
-        labelData={shippingLabelData}
-        initialDataUrl={shippingLabelDataUrl || undefined}
-      />
+
 
       {/* ─── Enter Waybill Dialog ──────────────────────────────── */}
       <EnterWaybillDialog

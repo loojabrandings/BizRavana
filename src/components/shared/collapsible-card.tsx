@@ -26,41 +26,45 @@ function CardBadge({ children, variant = "default" }: { children: React.ReactNod
   );
 }
 
-// ─── CollapsibleCard ───────────────────────────────────────────────
+// ─── Accordion Section ─────────────────────────────────────────────
 
 export function CollapsibleCard({
-  icon: Icon, title, description, badge, defaultOpen = false, children,
+  icon: Icon, title, description, badge, defaultOpen = false, children, id, collapsible = true,
 }: {
   icon: React.ComponentType<{ className?: string }>;
   title: string; description?: string; badge?: string; defaultOpen?: boolean; children: React.ReactNode;
+  id?: string; collapsible?: boolean;
 }) {
-  const [open, setOpen] = useState(defaultOpen);
-  const [hovered, setHovered] = useState(false);
+  const [open, setOpen] = useState(collapsible ? defaultOpen : true);
+
+  const handleToggle = collapsible ? () => setOpen((v) => !v) : undefined;
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 12 }}
+      id={id}
+      initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ type: "spring", stiffness: 300, damping: 25 }}
-      className={cn(
-        "group/card rounded-2xl border transition-all duration-300 overflow-hidden glass-card relative",
-        open ? "border-border/50 shadow-sm" : "border-border/20",
-        !open && hovered ? "shadow-xl -translate-y-1 scale-[1.005] border-primary/30 bg-primary/[0.02] ring-1 ring-primary/20" : "",
-      )}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
+      className="group/card"
     >
       <button
         type="button"
-        onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center gap-3 sm:gap-4 px-4 sm:px-6 py-3 sm:py-4.5 text-left transition-colors hover:bg-muted/10"
+        onClick={handleToggle}
+        className={cn(
+          "flex w-full items-center gap-3 sm:gap-4 px-0 py-3 sm:py-4 text-left transition-colors duration-200 rounded-xl",
+          collapsible && "hover:bg-muted/[0.03] cursor-pointer",
+          !collapsible && "cursor-default",
+        )}
+        tabIndex={collapsible ? 0 : -1}
       >
         <motion.div
-          animate={{ scale: open ? 1.1 : 1 }}
+          animate={collapsible ? { scale: open ? 1.1 : 1 } : { scale: 1.1 }}
           transition={{ type: "spring", stiffness: 400, damping: 20 }}
           className={cn(
-            "flex size-9 sm:size-10 shrink-0 items-center justify-center rounded-lg sm:rounded-xl transition-all duration-300",
-            open ? "bg-primary text-primary-foreground shadow-sm shadow-primary/20" : "bg-muted text-muted-foreground/50",
+            "flex size-9 sm:size-10 shrink-0 items-center justify-center rounded-xl transition-all duration-300",
+            (collapsible && open) || !collapsible
+              ? "bg-primary text-primary-foreground shadow-sm shadow-primary/20"
+              : "bg-muted/40 text-muted-foreground/40",
           )}
         >
           <Icon className="size-4 sm:size-4.5" />
@@ -68,46 +72,63 @@ export function CollapsibleCard({
 
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            <h3 className="text-sm font-semibold text-foreground transition-colors duration-200">
+            <h3 className={cn(
+              "text-sm font-semibold transition-colors duration-200",
+              (collapsible && open) || !collapsible ? "text-foreground" : "text-foreground/80",
+            )}>
               {title}
             </h3>
             {badge && <CardBadge>{badge}</CardBadge>}
           </div>
-          {description && <p className="mt-0.5 text-xs sm:text-sm text-muted-foreground/60 leading-snug">{description}</p>}
+          {description && <p className="mt-0.5 text-xs sm:text-sm text-muted-foreground/50 leading-snug">{description}</p>}
         </div>
 
-        <motion.div
-          animate={{ rotate: open ? 180 : 0 }}
-          transition={{ type: "spring", stiffness: 300, damping: 20 }}
-          className="flex size-7 sm:size-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground/30 transition-colors group-hover/card:text-muted-foreground/60"
-        >
-          <ChevronDown className="size-3.5 sm:size-4" />
-        </motion.div>
-      </button>
-
-      <AnimatePresence initial={false}>
-        {open && (
+        {collapsible && (
           <motion.div
-            key="card-content"
-            variants={collapseVariants}
-            initial="collapsed"
-            animate="expanded"
-            exit="collapsed"
-            transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
-            className="overflow-hidden will-change-[height,opacity]"
+            animate={{ rotate: open ? 180 : 0 }}
+            transition={{ type: "spring", stiffness: 300, damping: 20 }}
+            className={cn(
+              "flex size-7 sm:size-8 shrink-0 items-center justify-center rounded-lg transition-colors duration-200",
+              open ? "text-primary/50" : "text-muted-foreground/20 group-hover/card:text-muted-foreground/40",
+            )}
           >
-            <div className="mx-4 sm:mx-6 border-t border-border/20" />
-            <motion.div
-              className="px-4 sm:px-6 py-4 sm:py-5 space-y-4"
-              variants={{ visible: { transition: { staggerChildren: 0.04 } } }}
-              initial="hidden"
-              animate="visible"
-            >
-              {children}
-            </motion.div>
+            <ChevronDown className="size-3.5 sm:size-4" />
           </motion.div>
         )}
-      </AnimatePresence>
+      </button>
+
+      {collapsible ? (
+        <AnimatePresence initial={false}>
+          {open && (
+            <motion.div
+              key="card-content"
+              variants={collapseVariants}
+              initial="collapsed"
+              animate="expanded"
+              exit="collapsed"
+              transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
+              className="overflow-hidden will-change-[height,opacity]"
+            >
+              <div className="ml-[52px] border-t border-border/10" />
+              <motion.div
+                className="ml-[52px] pb-2 pt-4 sm:pb-3 sm:pt-5 space-y-4"
+                variants={{ visible: { transition: { staggerChildren: 0.04 } } }}
+                initial="hidden"
+                animate="visible"
+              >
+                {children}
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      ) : (
+        <div>
+          <div className="ml-[52px] border-t border-border/10" />
+          <div className="ml-[52px] pb-2 pt-4 sm:pb-3 sm:pt-5 space-y-4">
+            {children}
+          </div>
+        </div>
+      )}
     </motion.div>
   );
 }
