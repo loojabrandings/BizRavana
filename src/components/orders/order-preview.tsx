@@ -6,7 +6,6 @@ import {
   ArrowLeft,
   FileText,
   ImageIcon,
-  Printer,
   Mail,
   MessageCircle,
   Pencil,
@@ -15,13 +14,6 @@ import {
   X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu";
 import {
   Select,
   SelectContent,
@@ -44,9 +36,11 @@ import {
 } from "@/components/ui/dialog";
 import { useWhatsAppAction } from "@/components/whatsapp/use-whatsapp-action";
 import { orderPreviewToTemplateData } from "@/components/whatsapp/whatsapp-actions";
-import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
-import { Separator } from "@/components/ui/separator";
+import {
+  InvoiceTemplate,
+  fetchBusinessProfile,
+  type BusinessProfile,
+} from "./invoice-template";
 
 
 // ─── Props ─────────────────────────────────────────────────────────
@@ -86,129 +80,6 @@ function formatDate(dateStr: string) {
   return formatDatePref(dateStr);
 }
 
-// ─── PDF Generation ────────────────────────────────────────────────
-
-function generateInvoicePdf(data: OrderFormData) {
-  const doc = new jsPDF("p", "mm", "a4");
-  const pageWidth = doc.internal.pageSize.getWidth();
-
-  doc.setFontSize(22);
-  doc.setFont("helvetica", "bold");
-  doc.text("INVOICE", pageWidth / 2, 25, { align: "center" });
-
-  doc.setFontSize(10);
-  doc.setFont("helvetica", "normal");
-  doc.text(`Order #${data.order_number}`, pageWidth / 2, 33, { align: "center" });
-  doc.text(`Date: ${formatDate(data.created_date)}`, pageWidth / 2, 39, { align: "center" });
-
-  doc.setDrawColor(200, 200, 200);
-  doc.line(15, 44, pageWidth - 15, 44);
-
-  let y = 52;
-  doc.setFontSize(11);
-  doc.setFont("helvetica", "bold");
-  doc.text("Customer Information", 15, y);
-  y += 6;
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(9);
-
-  const customerInfo = [
-    ["Name", data.customer_name],
-    ["Phone", formatPhoneNumber(data.phone)],
-    ["WhatsApp", formatPhoneNumber(data.whatsapp) || "—"],
-    ["Email", data.email || "—"],
-    ["Address", data.address],
-    ["District", data.district || "—"],
-    ["City", data.nearest_city || "—"],
-  ];
-
-  customerInfo.forEach(([label, value]) => {
-    doc.text(`${label}:`, 20, y);
-    doc.text(String(value), 55, y);
-    y += 5;
-  });
-
-  y += 4;
-  const tableBody = data.items.map((item, i) => [
-    String(i + 1),
-    item.category || "—",
-    item.product_name,
-    String(item.quantity),
-    `${formatCurrency(item.unit_price)}`,
-    `${formatCurrency(item.quantity * item.unit_price)}`,
-  ]);
-
-  autoTable(doc, {
-    startY: y,
-    head: [["#", "Category", "Product", "Qty", "Unit Price", "Total"]],
-    body: tableBody,
-    theme: "grid",
-    headStyles: { fillColor: [59, 130, 246], textColor: 255, fontStyle: "bold", fontSize: 9 },
-    bodyStyles: { fontSize: 8 },
-    columnStyles: {
-      0: { cellWidth: 8 }, 1: { cellWidth: 28 }, 2: { cellWidth: 50 },
-      3: { cellWidth: 14, halign: "center" }, 4: { cellWidth: 28, halign: "right" },
-      5: { cellWidth: 28, halign: "right" },
-    },
-    margin: { left: 15, right: 15 },
-  });
-
-  y = (doc as any).lastAutoTable.finalY + 10;
-  doc.setFontSize(11);
-  doc.setFont("helvetica", "bold");
-  doc.text("Payment Summary", 15, y);
-  y += 7;
-  doc.setFontSize(9);
-  doc.setFont("helvetica", "normal");
-
-  const paymentLines = [
-    { label: "Subtotal", value: data.subtotal },
-    { label: "Discount", value: data.discount, suffix: data.discount_type === "percentage" ? ` (${data.discount}%)` : "" },
-    { label: "Delivery Charge", value: data.delivery_charge },
-    { label: "Grand Total", value: data.total, bold: true },
-    { label: "Advance Paid", value: data.advance_paid },
-    { label: "Balance", value: data.balance_remaining, bold: true },
-  ];
-
-  const rightX = pageWidth - 15;
-  const leftX = rightX - 70;
-  paymentLines.forEach((line) => {
-    if (line.bold) doc.setFont("helvetica", "bold");
-    else doc.setFont("helvetica", "normal");
-    doc.text(`${line.label}${line.suffix || ""}:`, leftX, y);
-    doc.text(`Rs. ${formatCurrency(line.value)}`, rightX, y, { align: "right" });
-    y += 6;
-  });
-
-  y += 4;
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(9);
-  doc.text(`Payment Method: ${formatEnumLabel(data.payment_method)}`, 15, y);
-  y += 5;
-  doc.text(`Status: ${formatEnumLabel(data.status)}`, 15, y);
-  y += 5;
-  doc.text(`Payment Status: ${formatEnumLabel(data.payment_status)}`, 15, y);
-  y += 5;
-  doc.text(`Order Source: ${formatEnumLabel(data.order_source)}`, 15, y);
-
-  if (data.expected_delivery_date) {
-    y += 5;
-    doc.text(`Expected Delivery: ${formatDate(data.expected_delivery_date)}`, 15, y);
-  }
-
-  if (data.remarks) {
-    y += 8;
-    doc.setFont("helvetica", "bold");
-    doc.text("Remarks:", 15, y);
-    y += 5;
-    doc.setFont("helvetica", "normal");
-    const splitRemarks = doc.splitTextToSize(data.remarks, pageWidth - 30);
-    splitRemarks.forEach((line: string) => { doc.text(line, 15, y); y += 5; });
-  }
-
-  doc.save(`invoice-${data.order_number}.pdf`);
-}
-
 // ─── WhatsApp Share ────────────────────────────────────────────────
 
 // Replaced by useWhatsAppAction hook and orderPreviewToTemplateData mapper
@@ -225,12 +96,14 @@ function OrderPreviewHeader({
   onEdit,
   onWhatsApp,
   isMobile,
+  onViewInvoice,
 }: {
   data: OrderFormData;
   onBack: () => void;
   onEdit?: () => void;
   onWhatsApp?: () => void;
   isMobile?: boolean;
+  onViewInvoice: () => void;
 }) {
   if (isMobile) {
     return (
@@ -267,27 +140,15 @@ function OrderPreviewHeader({
             <MessageCircle className="size-3.5" />
             WhatsApp
           </Button>
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              render={
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="flex-1 gap-1.5 text-sm font-medium h-9"
-                >
-                  <Printer className="size-3.5" />
-                  Print
-                </Button>
-              }
-            />
-            <DropdownMenuContent align="start" className="min-w-[140px]">
-              <DropdownMenuItem onClick={() => generateInvoicePdf(data)}>
-                <FileText className="size-4" />
-                Invoice
-              </DropdownMenuItem>
-
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onViewInvoice}
+            className="flex-1 gap-1.5 text-sm font-medium h-9"
+          >
+            <FileText className="size-3.5" />
+            Invoice
+          </Button>
           {onEdit && (
             <Button
               variant="outline"
@@ -332,7 +193,7 @@ function OrderPreviewHeader({
         <Button
           variant="outline"
           size="sm"
-          onClick={() => generateInvoicePdf(data)}
+          onClick={onViewInvoice}
           className="gap-1.5 text-sm font-medium"
         >
           <FileText className="size-3.5" />
@@ -940,6 +801,22 @@ export function OrderPreview({
   const isMobile = useIsMobile();
   const { handleAction, renderDialogs } = useWhatsAppAction();
   const { guard } = useReadOnlyMode();
+  const [invoiceOpen, setInvoiceOpen] = useState(false);
+  const [business, setBusiness] = useState<BusinessProfile | null>(null);
+
+
+  // ─── Handle View Invoice ─────────────────────────────────────
+  const handleViewInvoice = useCallback(async () => {
+    setInvoiceOpen(true);
+    if (!business) {
+      try {
+        const profile = await fetchBusinessProfile();
+        setBusiness(profile);
+      } catch (err) {
+        console.error("Failed to fetch business profile:", err);
+      }
+    }
+  }, [business]);
 
   const handleWhatsApp = useCallback(() => {
     const phone = data.whatsapp || data.phone;
@@ -953,16 +830,38 @@ export function OrderPreview({
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         e.preventDefault();
+        if (invoiceOpen) {
+          setInvoiceOpen(false);
+          return;
+        }
         onBack();
       }
     };
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
-  }, [onBack]);
+  }, [onBack, invoiceOpen]);
 
   return (
     <>
       {renderDialogs()}
+
+      {/* ═══ Invoice Dialog ═══════════════════════════════════ */}
+      <Dialog open={invoiceOpen} onOpenChange={(open) => {
+        setInvoiceOpen(open);
+
+      }}>
+        <DialogContent
+          className="max-w-[210mm] w-full max-h-[90vh] overflow-auto p-2"
+          showCloseButton={true}
+        >
+          <div className="p-4 sm:p-6">
+            <InvoiceTemplate
+              data={data}
+              businessProfile={business || undefined}
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -976,7 +875,15 @@ export function OrderPreview({
       >
         {/* ═══════ Header (sticky on mobile) ═════════════════════ */}
         <div className={isMobile ? "sticky top-0 z-10 bg-card px-4 pt-4 pb-3" : "px-8 pt-7 pb-6"}>
-          <OrderPreviewHeader data={data} onBack={onBack} onEdit={onEdit} onWhatsApp={handleWhatsApp} isMobile={isMobile} />
+          <OrderPreviewHeader
+            data={data}
+            onBack={onBack}
+            onEdit={onEdit}
+            onWhatsApp={handleWhatsApp}
+            isMobile={isMobile}
+            onViewInvoice={handleViewInvoice}
+
+          />
         </div>
 
       <div className="border-t border-border/40" />

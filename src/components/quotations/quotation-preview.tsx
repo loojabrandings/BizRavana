@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import {
   ArrowLeft,
@@ -13,8 +13,6 @@ import {
   X,
   CheckCircle2,
 } from "lucide-react";
-import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -23,6 +21,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+} from "@/components/ui/dialog";
 import { cn, formatEnumLabel } from "@/lib/utils";
 import { formatPhoneNumber } from "@/lib/formatters";
 import type { QuotationFormData } from "./types";
@@ -30,6 +32,11 @@ import { formatCurrency, formatDate } from "./utils";
 import { useWhatsAppAction } from "@/components/whatsapp/use-whatsapp-action";
 import { quotationPreviewToTemplateData } from "@/components/whatsapp/whatsapp-actions";
 import { useIsMobile } from "@/hooks/use-media-query";
+import {
+  QuotationTemplate,
+  fetchBusinessProfile,
+} from "@/components/invoices/quotation-template";
+import type { BusinessProfile } from "@/components/invoices/quotation-document";
 
 // ─── Props ─────────────────────────────────────────────────────────
 
@@ -40,128 +47,6 @@ interface QuotationPreviewProps {
   onStatusChange?: (status: string) => void;
   onConvertToOrder?: () => void;
   convertedOrderId?: string | null;
-}
-
-// ─── Helpers ───────────────────────────────────────────────────────
-
-// WhatsApp share handled by useWhatsAppAction hook + quotationPreviewToTemplateData mapper
-
-function generateQuotationPdf(data: QuotationFormData) {
-  const doc = new jsPDF("p", "mm", "a4");
-  const pageWidth = doc.internal.pageSize.getWidth();
-
-  doc.setFontSize(22);
-  doc.setFont("helvetica", "bold");
-  doc.text("QUOTATION", pageWidth / 2, 25, { align: "center" });
-
-  doc.setFontSize(10);
-  doc.setFont("helvetica", "normal");
-  doc.text(`Quotation #${data.quotation_number}`, pageWidth / 2, 33, { align: "center" });
-  doc.text(`Date: ${formatDate(data.created_date)}`, pageWidth / 2, 39, { align: "center" });
-
-  doc.setDrawColor(200, 200, 200);
-  doc.line(15, 44, pageWidth - 15, 44);
-
-  let y = 52;
-  doc.setFontSize(11);
-  doc.setFont("helvetica", "bold");
-  doc.text("Customer Information", 15, y);
-  y += 6;
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(9);
-
-  const customerInfo = [
-    ["Name", data.customer_name],
-    ["Phone", formatPhoneNumber(data.phone)],
-    ["WhatsApp", formatPhoneNumber(data.whatsapp) || "—"],
-    ["Email", data.email || "—"],
-    ["Address", data.address],
-    ["District", data.district || "—"],
-    ["City", data.nearest_city || "—"],
-  ];
-
-  customerInfo.forEach(([label, value]) => {
-    doc.text(`${label}:`, 20, y);
-    doc.text(String(value), 55, y);
-    y += 5;
-  });
-
-  y += 4;
-  const tableBody = data.items.map((item, i) => [
-    String(i + 1),
-    item.category || "—",
-    item.product_name,
-    String(item.quantity),
-    `${formatCurrency(item.unit_price)}`,
-    `${formatCurrency(item.quantity * item.unit_price)}`,
-  ]);
-
-  autoTable(doc, {
-    startY: y,
-    head: [["#", "Category", "Product", "Qty", "Unit Price", "Total"]],
-    body: tableBody,
-    theme: "grid",
-    headStyles: { fillColor: [59, 130, 246], textColor: 255, fontStyle: "bold", fontSize: 9 },
-    bodyStyles: { fontSize: 8 },
-    columnStyles: {
-      0: { cellWidth: 8 }, 1: { cellWidth: 28 }, 2: { cellWidth: 50 },
-      3: { cellWidth: 14, halign: "center" }, 4: { cellWidth: 28, halign: "right" },
-      5: { cellWidth: 28, halign: "right" },
-    },
-    margin: { left: 15, right: 15 },
-  });
-
-  y = (doc as any).lastAutoTable.finalY + 10;
-  doc.setFontSize(11);
-  doc.setFont("helvetica", "bold");
-  doc.text("Summary", 15, y);
-  y += 7;
-  doc.setFontSize(9);
-  doc.setFont("helvetica", "normal");
-
-  const discountVal =
-    data.discount_type === "percentage"
-      ? data.subtotal * (Math.min(data.discount, 100) / 100)
-      : data.discount;
-
-  const summaryLines = [
-    { label: "Subtotal", value: data.subtotal },
-    { label: "Discount", value: discountVal, suffix: data.discount_type === "percentage" ? ` (${data.discount}%)` : "" },
-    { label: "Delivery Charge", value: data.delivery_charge },
-    { label: "Grand Total", value: data.grand_total, bold: true },
-  ];
-
-  const rightX = pageWidth - 15;
-  const leftX = rightX - 70;
-  summaryLines.forEach((line) => {
-    if (line.bold) doc.setFont("helvetica", "bold");
-    else doc.setFont("helvetica", "normal");
-    doc.text(`${line.label}${line.suffix || ""}:`, leftX, y);
-    doc.text(`${formatCurrency(line.value)}`, rightX, y, { align: "right" });
-    y += 6;
-  });
-
-  y += 4;
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(9);
-  doc.text(`Status: ${formatEnumLabel(data.status)}`, 15, y);
-  y += 5;
-  if (data.expiry_date) {
-    doc.text(`Valid Until: ${formatDate(data.expiry_date)}`, 15, y);
-    y += 5;
-  }
-
-  if (data.remarks) {
-    y += 8;
-    doc.setFont("helvetica", "bold");
-    doc.text("Remarks:", 15, y);
-    y += 5;
-    doc.setFont("helvetica", "normal");
-    const splitRemarks = doc.splitTextToSize(data.remarks, pageWidth - 30);
-    (splitRemarks as string[]).forEach((line: string) => { doc.text(line, 15, y); y += 5; });
-  }
-
-  doc.save(`quotation-${data.quotation_number}.pdf`);
 }
 
 // ─── Constants ─────────────────────────────────────────────────────
@@ -187,6 +72,7 @@ function QuotationPreviewHeader({
   onConvertToOrder,
   convertedOrderId,
   onWhatsApp,
+  onViewQuotation,
   isMobile,
 }: {
   data: QuotationFormData;
@@ -195,6 +81,7 @@ function QuotationPreviewHeader({
   onConvertToOrder?: () => void;
   convertedOrderId?: string | null;
   onWhatsApp?: () => void;
+  onViewQuotation?: () => void;
   isMobile?: boolean;
 }) {
   if (isMobile) {
@@ -255,11 +142,11 @@ function QuotationPreviewHeader({
           <Button
             variant="outline"
             size="sm"
-            onClick={() => generateQuotationPdf(data)}
+            onClick={onViewQuotation}
             className="flex-1 gap-1.5 text-sm font-medium h-9"
           >
             <FileText className="size-3.5" />
-            Invoice
+            PDF
           </Button>
           {onEdit && (
             <Button
@@ -320,15 +207,15 @@ function QuotationPreviewHeader({
           <MessageCircle className="size-3.5" />
           WhatsApp
         </Button>
-        {/* PDF download */}
+        {/* View Quotation */}
         <Button
           variant="outline"
           size="sm"
-          onClick={() => generateQuotationPdf(data)}
+          onClick={onViewQuotation}
           className="gap-1.5 text-sm font-medium"
         >
           <FileText className="size-3.5" />
-          Invoice
+          PDF
         </Button>
         {/* Edit */}
         {onEdit && (
@@ -807,6 +694,21 @@ export function QuotationPreview({
 }: QuotationPreviewProps) {
   const { handleAction, renderDialogs } = useWhatsAppAction();
   const isMobile = useIsMobile();
+  const [quotationOpen, setQuotationOpen] = useState(false);
+  const [business, setBusiness] = useState<BusinessProfile | null>(null);
+
+  // ─── Handle View Quotation ────────────────────────────────────
+  const handleViewQuotation = useCallback(async () => {
+    setQuotationOpen(true);
+    if (!business) {
+      try {
+        const profile = await fetchBusinessProfile();
+        setBusiness(profile);
+      } catch (err) {
+        console.error("Failed to fetch business profile:", err);
+      }
+    }
+  }, [business]);
 
   const handleWhatsApp = useCallback(() => {
     const phone = data.whatsapp || data.phone;
@@ -830,6 +732,21 @@ export function QuotationPreview({
   return (
     <>
       {renderDialogs()}
+
+      {/* ═══ Quotation Document Dialog ════════════════════════════ */}
+      <Dialog open={quotationOpen} onOpenChange={setQuotationOpen}>
+        <DialogContent
+          className="max-w-[210mm] w-full max-h-[90vh] overflow-auto p-2"
+          showCloseButton={true}
+        >
+          <div className="p-4 sm:p-6">
+            <QuotationTemplate
+              data={data}
+              businessProfile={business || undefined}
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
@@ -845,6 +762,7 @@ export function QuotationPreview({
             onConvertToOrder={onConvertToOrder}
             convertedOrderId={convertedOrderId}
             onWhatsApp={handleWhatsApp}
+            onViewQuotation={handleViewQuotation}
             isMobile={isMobile}
           />
         </div>
