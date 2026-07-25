@@ -31,19 +31,10 @@ export async function updateSession(request: NextRequest) {
 
   const pathname = request.nextUrl.pathname;
 
-  // ── Root path redirects ────────────────────────────────────────
-  // Handle / server-side so mobile / cross-origin access doesn't
-  // rely solely on client-side router.replace (which can stall).
-  if (pathname === "/") {
-    const url = request.nextUrl.clone();
-    url.pathname = user ? "/dashboard" : "/login";
-    // Query params (e.g. ?error=...) are preserved through the clone
-    return NextResponse.redirect(url);
-  }
-
+  // ── Landing page ──────────────────────────────────────────────
+  // The root path (/) now serves the public landing page (Hero section).
+  // Auth callback hash handling is done client-side in page.tsx.
   // Keep only routes that need an early server-side check here.
-  // The dashboard verifies auth in the browser because local Supabase auth
-  // cookies can be visible to the browser client before Proxy sees them.
   const protectedPaths = ["/admin"];
   const isProtected = protectedPaths.some((path) =>
     pathname.startsWith(path),

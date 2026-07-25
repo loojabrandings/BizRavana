@@ -59,6 +59,9 @@
   --color-hero-muted: var(--hero-muted);
   --color-brand-accent: var(--brand-accent);
   --color-brand-accent-foreground: var(--brand-accent-foreground);
+  --color-brand-from: var(--brand-from);
+  --color-brand-via: var(--brand-via);
+  --color-brand-to: var(--brand-to);
   --color-status-info: var(--status-info);
   --color-status-info-foreground: var(--status-info-foreground);
   --color-status-info-bg: var(--status-info-bg);
@@ -76,6 +79,16 @@
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
+  --animate-marquee: marquee var(--duration, 40s) linear infinite;
+  --animate-marquee-vertical: marquee-vertical var(--duration, 40s) linear infinite;
+  --animate-shimmer: shimmer 2.5s linear infinite;
+  --animate-gradient: gradient 6s ease infinite;
+  --animate-orbit: orbit calc(var(--duration) * 1s) linear infinite;
+  --animate-aurora-1: aurora-1 14s ease-in-out infinite alternate;
+  --animate-aurora-2: aurora-2 18s ease-in-out infinite alternate;
+  --animate-aurora-3: aurora-3 22s ease-in-out infinite alternate;
+  --animate-meteor: meteor 5s linear infinite;
+  --animate-retro-grid: retro-grid 18s linear infinite;
 }
 
 /* ============================
@@ -111,6 +124,9 @@
   --hero-muted: oklch(0.556 0 0);
   --brand-accent: oklch(0.623 0.214 259.815);
   --brand-accent-foreground: oklch(0.205 0 0);
+  --brand-from: oklch(0.546 0.245 262.881);
+  --brand-via: oklch(0.623 0.214 259.815);
+  --brand-to: oklch(0.685 0.169 237);
 
   --status-info: oklch(0.623 0.214 259.815);
   --status-info-foreground: oklch(0.205 0 0);
@@ -182,6 +198,9 @@
   --hero-muted: oklch(81.406% 0.00009 271.152);
   --brand-accent: oklch(0.546 0.245 262.881);
   --brand-accent-foreground: oklch(0.985 0 0);
+  --brand-from: oklch(0.623 0.214 260);
+  --brand-via: oklch(0.707 0.165 255);
+  --brand-to: oklch(0.746 0.16 233);
 
   --status-info: oklch(0.623 0.214 259.815);
   --status-info-foreground: oklch(0.985 0 0);
@@ -387,7 +406,7 @@ html[data-font-size="large"] {
     @apply bg-background text-foreground;
   }
   html {
-    @apply font-sans;
+    @apply font-sans scroll-smooth;
   }
   h1 {
     @apply text-2xl font-semibold tracking-tightest;
@@ -609,6 +628,87 @@ body:has([data-slot="dialog-overlay"][data-open]) [data-main-content] {
 
 body:has([data-slot="dialog-overlay"][data-closed]) [data-main-content] {
   filter: blur(0px);
+}
+
+/* ============================
+   Velora-style Animation Keyframes
+   ============================ */
+
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(calc(-100% - var(--gap))); }
+}
+
+@keyframes marquee-vertical {
+  from { transform: translateY(0); }
+  to { transform: translateY(calc(-100% - var(--gap))); }
+}
+
+@keyframes gradient {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+@keyframes orbit {
+  0% {
+    transform: rotate(calc(var(--angle) * 1deg))
+      translateY(calc(var(--radius) * -1px)) rotate(calc(var(--angle) * -1deg));
+  }
+  100% {
+    transform: rotate(calc(var(--angle) * 1deg + 360deg))
+      translateY(calc(var(--radius) * -1px))
+      rotate(calc((var(--angle) * 1deg + 360deg) * -1));
+  }
+}
+
+@keyframes aurora-1 {
+  0% { transform: translate(-10%, -12%) scale(1); }
+  50% { transform: translate(12%, 8%) scale(1.25); }
+  100% { transform: translate(-6%, 14%) scale(0.95); }
+}
+
+@keyframes aurora-2 {
+  0% { transform: translate(12%, 10%) scale(1.1); }
+  50% { transform: translate(-14%, -6%) scale(0.9); }
+  100% { transform: translate(8%, -12%) scale(1.2); }
+}
+
+@keyframes aurora-3 {
+  0% { transform: translate(0%, 16%) scale(0.95); }
+  50% { transform: translate(10%, -10%) scale(1.15); }
+  100% { transform: translate(-12%, 4%) scale(1); }
+}
+
+@keyframes meteor {
+  0% {
+    transform: rotate(var(--meteor-angle, 215deg)) translateX(0);
+    opacity: 1;
+  }
+  70% { opacity: 1; }
+  100% {
+    transform: rotate(var(--meteor-angle, 215deg)) translateX(-600px);
+    opacity: 0;
+  }
+}
+
+@keyframes retro-grid {
+  from { transform: translateY(-50%); }
+  to { transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-meteor,
+  .animate-retro-grid,
+  .animate-marquee,
+  .animate-marquee-vertical,
+  .animate-shimmer,
+  .animate-gradient,
+  .animate-orbit,
+  .animate-aurora-1,
+  .animate-aurora-2,
+  .animate-aurora-3 {
+    animation: none;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
