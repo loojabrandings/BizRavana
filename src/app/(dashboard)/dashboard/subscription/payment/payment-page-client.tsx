@@ -424,6 +424,27 @@ export function PaymentPageClient({
 
       const payment = result.payment;
       const payhere = window.payhere;
+      const recordClientEvent = async (
+        event: "dismissed" | "sdk_error",
+        message?: string,
+      ) => {
+        const eventResponse = await fetch(
+          "/api/payments/payhere/client-event",
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              orderId: payment.order_id,
+              event,
+              message,
+            }),
+          },
+        );
+
+        if (!eventResponse.ok) {
+          console.error("PayHere client event could not be recorded.");
+        }
+      };
 
       payhere.onCompleted = () => {
         const loadingToast = toast.loading("Confirming your payment...", {
@@ -480,6 +501,7 @@ export function PaymentPageClient({
 
       payhere.onDismissed = () => {
         setSubmitting(false);
+        void recordClientEvent("dismissed");
         toast.info("PayHere checkout was closed.", {
           description: "No completed payment was confirmed.",
         });
@@ -487,6 +509,7 @@ export function PaymentPageClient({
 
       payhere.onError = (error) => {
         setSubmitting(false);
+        void recordClientEvent("sdk_error", error);
         toast.error("PayHere checkout could not be opened.", {
           description: error || "Please check the payment details and try again.",
         });
