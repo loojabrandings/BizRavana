@@ -46,11 +46,22 @@ import {
 // TYPES
 // ══════════════════════════════════════════════════════════════════
 
-type PaymentStatus = "pending" | "approved" | "rejected";
+type PaymentStatus =
+  | "created"
+  | "pending"
+  | "approved"
+  | "rejected"
+  | "success"
+  | "canceled"
+  | "failed"
+  | "chargedback"
+  | "invalid";
 type FilterTab = "all" | "pending" | "approved" | "rejected";
 
 interface PaymentProofRow {
   id: string;
+  source: "bank_transfer" | "payhere";
+  category: Exclude<FilterTab, "all">;
   business_id: string;
   business_name: string;
   plan_name: string;
@@ -63,6 +74,9 @@ interface PaymentProofRow {
   status: PaymentStatus;
   created_at: string;
   approved_at: string | null;
+  order_id: string | null;
+  payhere_payment_id: string | null;
+  status_message: string | null;
 }
 
 interface StatsSummary {
@@ -79,20 +93,39 @@ interface StatsSummary {
 
 function PaymentStatusBadge({ status }: { status: PaymentStatus }) {
   const styles: Record<string, string> = {
+    created: "bg-warning/10 text-warning border-warning/20",
     pending: "bg-warning/10 text-warning border-warning/20",
     approved: "bg-success/10 text-success border-success/20",
+    success: "bg-success/10 text-success border-success/20",
     rejected: "bg-destructive/10 text-destructive border-destructive/20",
+    canceled: "bg-destructive/10 text-destructive border-destructive/20",
+    failed: "bg-destructive/10 text-destructive border-destructive/20",
+    chargedback: "bg-destructive/10 text-destructive border-destructive/20",
+    invalid: "bg-destructive/10 text-destructive border-destructive/20",
   };
+  const labels: Record<PaymentStatus, string> = {
+    created: "Started",
+    pending: "Pending",
+    approved: "Approved",
+    rejected: "Rejected",
+    success: "Successful",
+    canceled: "Canceled",
+    failed: "Failed",
+    chargedback: "Charged back",
+    invalid: "Invalid",
+  };
+  const successful = ["approved", "success"].includes(status);
+  const waiting = ["created", "pending"].includes(status);
 
   return (
     <span className={cn(
       "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-semibold capitalize",
       styles[status] || "bg-muted text-muted-foreground",
     )}>
-      {status === "pending" && <Clock className="size-2.5" />}
-      {status === "approved" && <CheckCircle2 className="size-2.5" />}
-      {status === "rejected" && <XCircle className="size-2.5" />}
-      {status}
+      {waiting && <Clock className="size-2.5" />}
+      {successful && <CheckCircle2 className="size-2.5" />}
+      {!waiting && !successful && <XCircle className="size-2.5" />}
+      {labels[status]}
     </span>
   );
 }
@@ -260,7 +293,7 @@ function StatsCard({ label, value, icon: Icon, accent }: {
 export default function AdminPaymentsPage() {
   const [payments, setPayments] = useState<PaymentProofRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<FilterTab>("pending");
+  const [activeTab, setActiveTab] = useState<FilterTab>("all");
   const [searchQuery, setSearchQuery] = useState("");
 
   // Receipt preview
@@ -283,12 +316,37 @@ export default function AdminPaymentsPage() {
   const fetchPayments = useCallback(async () => {
     try {
       setLoading(true);
-      const { data: proofs, error } = await supabase
-        .from("payment_proofs").select("*").order("created_at", { ascending: false }).limit(100);
-      if (error) throw error;
+      const [proofsResult, payHereResult] = await Promise.all([
+        supabase
+          .from("payment_proofs")
+          .select("*")
+          .order("created_at", { ascending: false })
+          .limit(100),
+        supabase
+          .from("payhere_payments")
+          .select(
+            "id, business_id, plan_id, amount, status, payment_method, order_id, payhere_payment_id, status_message, created_at, paid_at",
+          )
+          .order("created_at", { ascending: false })
+          .limit(100),
+      ]);
+      if (proofsResult.error) throw proofsResult.error;
+      if (payHereResult.error) throw payHereResult.error;
 
-      const bizIds = [...new Set((proofs || []).map((p) => p.business_id))];
-      const planIds = [...new Set((proofs || []).map((p) => p.plan_id).filter(Boolean))];
+      const proofs = proofsResult.data || [];
+      const payHerePayments = payHereResult.data || [];
+      const bizIds = [
+        ...new Set(
+          [...proofs, ...payHerePayments].map((payment) => payment.business_id),
+        ),
+      ];
+      const planIds = [
+        ...new Set(
+          [...proofs, ...payHerePayments]
+            .map((payment) => payment.plan_id)
+            .filter((planId): planId is string => Boolean(planId)),
+        ),
+      ];
       const [bizRes, planRes] = await Promise.all([
         supabase.from("businesses").select("id, name").in("id", bizIds),
         supabase.from("subscription_plans").select("id, name").in("id", planIds),
@@ -296,19 +354,55 @@ export default function AdminPaymentsPage() {
       const bizMap = new Map((bizRes.data || []).map((b) => [b.id, b.name]));
       const planMap = new Map((planRes.data || []).map((p) => [p.id, p.name]));
 
-      const enriched: PaymentProofRow[] = (proofs || []).map((p) => ({
-        id: p.id, business_id: p.business_id,
+      const bankRows: PaymentProofRow[] = proofs.map((p) => ({
+        id: p.id, source: "bank_transfer", category: p.status,
+        business_id: p.business_id,
         business_name: bizMap.get(p.business_id) || "Unknown",
         plan_name: p.plan_id ? planMap.get(p.plan_id) || "—" : "—",
         amount: p.amount, payment_method: p.payment_method,
         proof_image_url: p.proof_image_url, proof_image_path: p.proof_image_path,
         notes: p.notes, admin_note: p.admin_note,
         status: p.status as PaymentStatus, created_at: p.created_at, approved_at: p.approved_at,
+        order_id: null, payhere_payment_id: null, status_message: null,
       }));
-      setPayments(enriched);
+      const payHereRows: PaymentProofRow[] = payHerePayments.map((payment) => ({
+        id: payment.id,
+        source: "payhere",
+        category:
+          payment.status === "success"
+            ? "approved"
+            : ["created", "pending"].includes(payment.status)
+              ? "pending"
+              : "rejected",
+        business_id: payment.business_id,
+        business_name: bizMap.get(payment.business_id) || "Unknown",
+        plan_name: planMap.get(payment.plan_id) || "—",
+        amount: payment.amount,
+        payment_method: payment.payment_method
+          ? `PayHere · ${payment.payment_method}`
+          : "PayHere card",
+        proof_image_url: null,
+        proof_image_path: null,
+        notes: null,
+        admin_note: null,
+        status: payment.status,
+        created_at: payment.created_at,
+        approved_at: payment.paid_at,
+        order_id: payment.order_id,
+        payhere_payment_id: payment.payhere_payment_id,
+        status_message: payment.status_message,
+      }));
+
+      setPayments(
+        [...bankRows, ...payHereRows].sort(
+          (a, b) =>
+            new Date(b.created_at).getTime() -
+            new Date(a.created_at).getTime(),
+        ),
+      );
     } catch (err) {
       console.error("Failed to fetch payments:", err);
-      toast.error("Failed to load payment proofs");
+      toast.error("Failed to load payments");
     } finally { setLoading(false); }
   }, [supabase]);
 
@@ -317,21 +411,24 @@ export default function AdminPaymentsPage() {
   // ── Stats ───────────────────────────────────────────────────
   const stats: StatsSummary = useMemo(() => ({
     total: payments.length,
-    pending: payments.filter((p) => p.status === "pending").length,
-    approved: payments.filter((p) => p.status === "approved").length,
-    rejected: payments.filter((p) => p.status === "rejected").length,
-    totalRevenue: payments.filter((p) => p.status === "approved").reduce((sum, p) => sum + p.amount, 0),
+    pending: payments.filter((p) => p.category === "pending").length,
+    approved: payments.filter((p) => p.category === "approved").length,
+    rejected: payments.filter((p) => p.category === "rejected").length,
+    totalRevenue: payments.filter((p) => p.category === "approved").reduce((sum, p) => sum + p.amount, 0),
   }), [payments]);
 
   // ── Filtered ────────────────────────────────────────────────
   const filteredPayments = useMemo(() => {
     let result = payments;
-    if (activeTab !== "all") result = result.filter((p) => p.status === activeTab);
+    if (activeTab !== "all") result = result.filter((p) => p.category === activeTab);
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       result = result.filter(
         (p) => p.business_name.toLowerCase().includes(q) || p.plan_name.toLowerCase().includes(q) ||
-          p.payment_method.toLowerCase().includes(q) || p.amount.toString().includes(q),
+          p.payment_method.toLowerCase().includes(q) ||
+          p.order_id?.toLowerCase().includes(q) ||
+          p.payhere_payment_id?.toLowerCase().includes(q) ||
+          p.amount.toString().includes(q),
       );
     }
     return result;
@@ -393,7 +490,11 @@ export default function AdminPaymentsPage() {
   }, []);
 
   const actionSheetActions: ActionSheetAction[] = useMemo(() => {
-    if (!actionSheetTarget || actionSheetTarget.status !== "pending") return [];
+    if (
+      !actionSheetTarget ||
+      actionSheetTarget.source !== "bank_transfer" ||
+      actionSheetTarget.status !== "pending"
+    ) return [];
     return [
       { label: "Approve Payment", onClick: () => { setReviewPayment(actionSheetTarget); setReviewAction("approve"); }, icon: <CheckCircle2 className="size-4" />, variant: "success" },
       { label: "Reject Payment", onClick: () => { setReviewPayment(actionSheetTarget); setReviewAction("reject"); }, icon: <XCircle className="size-4" />, variant: "destructive" },
@@ -409,13 +510,18 @@ export default function AdminPaymentsPage() {
         </div>
         <div className="min-w-0">
           <p className="text-sm font-medium text-foreground truncate max-w-[140px]">{p.business_name}</p>
-          {p.admin_note && <p className="text-[10px] text-muted-foreground/50 truncate max-w-[140px]">Note: {p.admin_note}</p>}
+          <p className="text-[10px] text-muted-foreground/50 truncate max-w-[160px]">
+            {p.source === "payhere" ? p.order_id : p.admin_note ? `Note: ${p.admin_note}` : "Bank transfer"}
+          </p>
         </div>
       </div>
     )},
     { header: "Plan", accessor: (p) => <span className="text-sm text-muted-foreground/80">{p.plan_name}</span> },
     { header: "Amount", accessor: (p) => <span className="text-sm font-semibold tabular-nums text-foreground">Rs. {p.amount.toLocaleString()}</span> },
     { header: "Method", hideBelow: "sm", accessor: (p) => <span className="text-sm text-muted-foreground/80 capitalize">{p.payment_method.replace("_", " ")}</span> },
+    { header: "Payment ID", hideBelow: "md", accessor: (p) => p.payhere_payment_id ? (
+      <span className="max-w-[130px] truncate font-mono text-xs text-muted-foreground/80" title={p.payhere_payment_id}>{p.payhere_payment_id}</span>
+    ) : <span className="text-xs text-muted-foreground/50">—</span> },
     { header: "Submitted", hideBelow: "md", accessor: (p) => <span className="text-sm text-muted-foreground/80 tabular-nums">{new Date(p.created_at).toLocaleDateString()}</span> },
     { header: "Status", accessor: (p) => <PaymentStatusBadge status={p.status} /> },
     { header: "Proof", accessor: (p) => (p.proof_image_path || p.proof_image_url) ? (
@@ -423,7 +529,7 @@ export default function AdminPaymentsPage() {
         {openingReceiptId === p.id ? <Loader2 className="size-3.5 animate-spin" /> : <Eye className="size-3.5" />}
       </Button>
     ) : <span className="text-xs text-muted-foreground/50">—</span> },
-    { header: "", className: "w-32", headerClassName: "hidden sm:table-cell", accessor: (p) => p.status === "pending" ? (
+    { header: "", className: "w-32", headerClassName: "hidden sm:table-cell", accessor: (p) => p.source === "bank_transfer" && p.status === "pending" ? (
       <div className="flex items-center gap-1">
         <Button size="sm" variant="ghost" onClick={() => { setReviewPayment(p); setReviewAction("approve"); }} className="h-8 px-2 text-success hover:text-success hover:bg-success/10 text-xs">
           <CheckCircle2 className="size-3.5 mr-1" /> Approve
@@ -432,7 +538,7 @@ export default function AdminPaymentsPage() {
           <XCircle className="size-3.5 mr-1" /> Reject
         </Button>
       </div>
-    ) : <span className="text-xs text-muted-foreground/60">{p.status === "approved" ? "Approved" : "Rejected"}{p.approved_at && <><br /><span className="text-[10px]">{new Date(p.approved_at).toLocaleDateString()}</span></>}</span> },
+    ) : <span className="text-xs text-muted-foreground/60">{p.source === "payhere" ? "Auto verified" : p.status === "approved" ? "Approved" : "Rejected"}{p.approved_at && <><br /><span className="text-[10px]">{new Date(p.approved_at).toLocaleDateString()}</span></>}</span> },
   ], [openReceipt, openingReceiptId]);
 
   // ── Mobile card renderer ────────────────────────────────────
@@ -445,6 +551,9 @@ export default function AdminPaymentsPage() {
         { label: "Amount", value: <span className="font-semibold tabular-nums">Rs. {payment.amount.toLocaleString()}</span> },
         { label: "Method", value: <span className="capitalize">{payment.payment_method.replace("_", " ")}</span> },
         { label: "Submitted", value: <span className="tabular-nums">{new Date(payment.created_at).toLocaleDateString()}</span> },
+        ...(payment.order_id ? [{ label: "Order ID", value: <span className="font-mono text-xs">{payment.order_id}</span> }] : []),
+        ...(payment.payhere_payment_id ? [{ label: "PayHere ID", value: <span className="font-mono text-xs">{payment.payhere_payment_id}</span> }] : []),
+        ...(payment.status_message ? [{ label: "Gateway Message", value: <span>{payment.status_message}</span> }] : []),
         ...(payment.admin_note ? [{ label: "Admin Note", value: <span className="italic text-muted-foreground/70">{payment.admin_note}</span> }] : []),
         ...(payment.approved_at ? [{ label: "Reviewed", value: <span className="tabular-nums">{new Date(payment.approved_at).toLocaleDateString()}</span> }] : []),
       ]}
@@ -456,14 +565,18 @@ export default function AdminPaymentsPage() {
               {openingReceiptId === payment.id ? <Loader2 className="size-3.5 animate-spin" /> : <Eye className="size-3.5" />} Receipt
             </button>
           )}
-          {payment.status === "pending" ? (
+          {payment.source === "bank_transfer" && payment.status === "pending" ? (
             <button type="button" onClick={() => handleOpenActionSheet(payment)}
               className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-primary text-primary-foreground px-3 py-2 text-xs font-medium min-h-11 hover:bg-primary/90 transition-colors">
               Review
             </button>
           ) : (
             <span className="text-xs text-muted-foreground/60 italic py-2">
-              {payment.status === "approved" ? "Approved" : "Rejected"}
+              {payment.source === "payhere"
+                ? "Automatically verified by PayHere"
+                : payment.status === "approved"
+                  ? "Approved"
+                  : "Rejected"}
             </span>
           )}
         </>
@@ -475,18 +588,18 @@ export default function AdminPaymentsPage() {
   const tabs = [
     { key: "all", label: "All", count: stats.total },
     { key: "pending", label: "Pending", count: stats.pending },
-    { key: "approved", label: "Approved", count: stats.approved },
-    { key: "rejected", label: "Rejected", count: stats.rejected },
+    { key: "approved", label: "Successful", count: stats.approved },
+    { key: "rejected", label: "Failed", count: stats.rejected },
   ];
 
   const activeFilterCount = useMemo(() => {
     let count = 0;
-    if (activeTab !== "pending") count++;
+    if (activeTab !== "all") count++;
     if (searchQuery.trim()) count++;
     return count;
   }, [activeTab, searchQuery]);
 
-  const handleClearFilters = useCallback(() => { setActiveTab("pending"); setSearchQuery(""); }, []);
+  const handleClearFilters = useCallback(() => { setActiveTab("all"); setSearchQuery(""); }, []);
 
   // ── Empty state ─────────────────────────────────────────────
   const emptyState = (
@@ -503,12 +616,12 @@ export default function AdminPaymentsPage() {
 
   return (
     <div className="space-y-6 min-w-0 max-w-full">
-      <AdminPageHeader title="Payment Proofs" subtitle="Review and manage payment submissions from businesses" />
+      <AdminPageHeader title="Payments" subtitle="Track PayHere payments and review bank-transfer submissions" />
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <StatsCard label="Pending Review" value={stats.pending} icon={Clock} accent="warning" />
-        <StatsCard label="Approved" value={stats.approved} icon={CheckCircle2} accent="success" />
-        <StatsCard label="Rejected" value={stats.rejected} icon={XCircle} accent="destructive" />
+        <StatsCard label="Successful" value={stats.approved} icon={CheckCircle2} accent="success" />
+        <StatsCard label="Failed" value={stats.rejected} icon={XCircle} accent="destructive" />
         <StatsCard label="Total Revenue" value={`Rs. ${stats.totalRevenue.toLocaleString()}`} icon={Coins} accent="default" />
       </div>
 
@@ -522,7 +635,7 @@ export default function AdminPaymentsPage() {
         mobileCard={renderMobileCard} emptyState={emptyState}
       />
 
-      {actionSheetTarget && actionSheetTarget.status === "pending" && (
+      {actionSheetTarget && actionSheetTarget.source === "bank_transfer" && actionSheetTarget.status === "pending" && (
         <AdminActionSheet
           open={actionSheetOpen} onOpenChange={(o) => { if (!o) { setActionSheetOpen(false); setActionSheetTarget(null); } }}
           title={actionSheetTarget.business_name}

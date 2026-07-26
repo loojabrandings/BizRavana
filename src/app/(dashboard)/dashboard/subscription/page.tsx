@@ -68,6 +68,33 @@ import type { Database } from "@/types/database";
 type SubscriptionPlan = Database["public"]["Tables"]["subscription_plans"]["Row"];
 type Business = Database["public"]["Tables"]["businesses"]["Row"];
 type PaymentProof = Database["public"]["Tables"]["payment_proofs"]["Row"];
+type PayHerePayment = Database["public"]["Tables"]["payhere_payments"]["Row"];
+type PayHereHistoryPayment = Pick<
+  PayHerePayment,
+  | "id"
+  | "plan_id"
+  | "amount"
+  | "status"
+  | "payment_method"
+  | "order_id"
+  | "payhere_payment_id"
+  | "status_message"
+  | "created_at"
+>;
+
+interface PaymentHistoryItem {
+  id: string;
+  planId: string | null;
+  amount: number;
+  statusLabel: string;
+  methodLabel: string;
+  reference: string | null;
+  paymentId: string | null;
+  note: string | null;
+  createdAt: string;
+  successful: boolean;
+  failed: boolean;
+}
 
 interface UsageCounts {
   orders: number;
@@ -271,6 +298,7 @@ export default function SubscriptionPage() {
   const [currentPlan, setCurrentPlan] = useState<SubscriptionPlan | null>(null);
   const [usage, setUsage] = useState<UsageCounts | null>(null);
   const [proofs, setProofs] = useState<PaymentProof[]>([]);
+  const [payHerePayments, setPayHerePayments] = useState<PayHereHistoryPayment[]>([]);
   const [businessName, setBusinessName] = useState("");
   const [adminSettings, setAdminSettings] = useState<AdminSettings>(DEFAULT_ADMIN_SETTINGS);
 
@@ -314,6 +342,54 @@ export default function SubscriptionPage() {
     () => proofs.find((proof) => proof.status === "pending") || null,
     [proofs],
   );
+  const paymentHistory = useMemo<PaymentHistoryItem[]>(() => {
+    const bankPayments: PaymentHistoryItem[] = proofs.map((proof) => ({
+      id: `bank-${proof.id}`,
+      planId: proof.plan_id,
+      amount: proof.amount,
+      statusLabel:
+        proof.status === "pending" ? "Under review" : proof.status,
+      methodLabel: "Bank transfer",
+      reference: null,
+      paymentId: null,
+      note: proof.admin_note,
+      createdAt: proof.created_at,
+      successful: proof.status === "approved",
+      failed: proof.status === "rejected",
+    }));
+    const cardPayments: PaymentHistoryItem[] = payHerePayments.map(
+      (payment) => ({
+        id: `payhere-${payment.id}`,
+        planId: payment.plan_id,
+        amount: payment.amount,
+        statusLabel:
+          payment.status === "success"
+            ? "Successful"
+            : payment.status === "created"
+              ? "Started"
+              : payment.status,
+        methodLabel: payment.payment_method
+          ? `Card · ${payment.payment_method}`
+          : "Card · PayHere",
+        reference: payment.order_id,
+        paymentId: payment.payhere_payment_id,
+        note: payment.status_message,
+        createdAt: payment.created_at,
+        successful: payment.status === "success",
+        failed: [
+          "canceled",
+          "failed",
+          "chargedback",
+          "invalid",
+        ].includes(payment.status),
+      }),
+    );
+
+    return [...bankPayments, ...cardPayments].sort(
+      (a, b) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+    );
+  }, [payHerePayments, proofs]);
 
   const openPaymentPage = useCallback(
     (planId?: string) => {
@@ -393,14 +469,25 @@ export default function SubscriptionPage() {
 
       await fetchUsage(profile.business_id);
 
-      const { data: proofsData } = await supabase
-        .from("payment_proofs")
-        .select("*")
-        .eq("business_id", profile.business_id)
-        .order("created_at", { ascending: false })
-        .limit(10);
+      const [proofsResult, payHereResult] = await Promise.all([
+        supabase
+          .from("payment_proofs")
+          .select("*")
+          .eq("business_id", profile.business_id)
+          .order("created_at", { ascending: false })
+          .limit(10),
+        supabase
+          .from("payhere_payments")
+          .select(
+            "id, plan_id, amount, status, payment_method, order_id, payhere_payment_id, status_message, created_at",
+          )
+          .eq("business_id", profile.business_id)
+          .order("created_at", { ascending: false })
+          .limit(10),
+      ]);
 
-      if (proofsData) setProofs(proofsData);
+      if (proofsResult.data) setProofs(proofsResult.data);
+      if (payHereResult.data) setPayHerePayments(payHereResult.data);
     } catch (err) {
       console.error("Error fetching subscription data:", err);
     } finally {
@@ -1348,63 +1435,75 @@ export default function SubscriptionPage() {
         <div className="flex items-center justify-between border-b border-border/20 px-5 py-4 sm:px-6">
           <div>
             <h2 className="text-lg font-semibold text-foreground">Payment History</h2>
-            <p className="mt-0.5 text-sm text-muted-foreground">Your latest bank-transfer submissions.</p>
+            <p className="mt-0.5 text-sm text-muted-foreground">Your latest card and bank-transfer payments.</p>
           </div>
           <FileText className="size-5 text-muted-foreground/50" />
         </div>
 
-        {proofs.length === 0 ? (
+        {paymentHistory.length === 0 ? (
           <div className="flex flex-col items-center px-5 py-10 text-center">
             <div className="flex size-11 items-center justify-center rounded-full bg-muted/20">
               <FileText className="size-5 text-muted-foreground/40" />
             </div>
             <p className="mt-3 text-sm font-medium text-foreground">No payments submitted yet</p>
-            <p className="mt-1 text-xs text-muted-foreground">Your payment receipts and review status will appear here.</p>
+            <p className="mt-1 text-xs text-muted-foreground">Your card payments and bank-transfer reviews will appear here.</p>
           </div>
         ) : (
           <div className="divide-y divide-border/15">
-            {proofs.slice(0, 5).map((proof) => {
-              const plan = plans.find((item) => item.id === proof.plan_id);
+            {paymentHistory.slice(0, 8).map((payment) => {
+              const plan = plans.find((item) => item.id === payment.planId);
               return (
-                <div key={proof.id} className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+                <div key={payment.id} className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
                   <div className="flex items-start gap-3">
                     <div className={cn(
                       "flex size-9 shrink-0 items-center justify-center rounded-lg",
-                      proof.status === "approved"
+                      payment.successful
                         ? "bg-success/10 text-success"
-                        : proof.status === "rejected"
+                        : payment.failed
                           ? "bg-destructive/10 text-destructive"
                           : "bg-warning/10 text-warning",
                     )}>
-                      {proof.status === "approved"
+                      {payment.successful
                         ? <CheckCircle2 className="size-4" />
-                        : proof.status === "rejected"
+                        : payment.failed
                           ? <XCircle className="size-4" />
-                          : <Clock className="size-4" />}
+                          : payment.methodLabel.startsWith("Card")
+                            ? <CreditCard className="size-4" />
+                            : <Clock className="size-4" />}
                     </div>
                     <div>
                       <p className="text-sm font-semibold text-foreground">{plan?.name || "Subscription"} plan</p>
                       <p className="mt-0.5 text-xs text-muted-foreground">
-                        {formatDate(proof.created_at)} · Bank transfer
+                        {formatDate(payment.createdAt)} · {payment.methodLabel}
                       </p>
-                      {proof.admin_note && (
+                      {payment.reference && (
+                        <p className="mt-1 font-mono text-xs text-muted-foreground">
+                          Order: {payment.reference}
+                        </p>
+                      )}
+                      {payment.paymentId && (
+                        <p className="mt-0.5 font-mono text-xs text-muted-foreground">
+                          PayHere ID: {payment.paymentId}
+                        </p>
+                      )}
+                      {payment.note && (
                         <p className="mt-1.5 text-xs text-muted-foreground">
-                          Admin note: {proof.admin_note}
+                          {payment.note}
                         </p>
                       )}
                     </div>
                   </div>
                   <div className="flex items-center justify-between gap-4 pl-12 sm:pl-0">
-                    <p className="text-sm font-bold tabular-nums text-foreground">Rs. {proof.amount.toLocaleString()}</p>
+                    <p className="text-sm font-bold tabular-nums text-foreground">Rs. {payment.amount.toLocaleString()}</p>
                     <span className={cn(
                       "rounded-full border px-2.5 py-1 text-xs font-semibold capitalize",
-                      proof.status === "approved"
+                      payment.successful
                         ? "border-success/20 bg-success/10 text-success"
-                        : proof.status === "rejected"
+                        : payment.failed
                           ? "border-destructive/20 bg-destructive/10 text-destructive"
                           : "border-warning/20 bg-warning/10 text-warning",
                     )}>
-                      {proof.status === "pending" ? "Under review" : proof.status}
+                      {payment.statusLabel}
                     </span>
                   </div>
                 </div>
