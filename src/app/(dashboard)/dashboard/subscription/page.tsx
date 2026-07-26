@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import {
   Award,
@@ -15,8 +16,6 @@ import {
   Copy,
   CreditCard,
   Crown,
-  Download,
-  ExternalLink,
   FileText,
   Gift,
   HeartHandshake,
@@ -35,7 +34,6 @@ import {
   Upload,
   X,
   XCircle,
-  Eye,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
@@ -261,13 +259,12 @@ const DEFAULT_ADMIN_SETTINGS: AdminSettings = {
 // STORAGE BUCKET
 // ══════════════════════════════════════════════════════════════════════
 
-const PAYMENT_PROOF_BUCKET = "payment-proofs";
-
 // ══════════════════════════════════════════════════════════════════════
 // SUBSCRIPTION PAGE
 // ══════════════════════════════════════════════════════════════════════
 
 export default function SubscriptionPage() {
+  const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
   const [business, setBusiness] = useState<Business | null>(null);
@@ -280,8 +277,6 @@ export default function SubscriptionPage() {
   // Payment proof upload
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [selectedPlanId, setSelectedPlanId] = useState<string>("");
-  const [amount, setAmount] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState("bank_transfer");
   const [notes, setNotes] = useState("");
   const [proofFile, setProofFile] = useState<File | null>(null);
   const [proofPreview, setProofPreview] = useState<string | null>(null);
@@ -311,6 +306,22 @@ export default function SubscriptionPage() {
 
   const isMobile = useIsMobile();
   const supabase = useMemo(() => createClient(), []);
+  const selectedPaymentPlan = useMemo(
+    () => plans.find((plan) => plan.id === selectedPlanId) || null,
+    [plans, selectedPlanId],
+  );
+  const pendingPaymentProof = useMemo(
+    () => proofs.find((proof) => proof.status === "pending") || null,
+    [proofs],
+  );
+
+  const openPaymentPage = useCallback(
+    (planId?: string) => {
+      const query = planId ? `?plan=${encodeURIComponent(planId)}` : "";
+      router.push(`/dashboard/subscription/payment${query}`);
+    },
+    [router],
+  );
 
   // ── Handle card scroll snap tracking ──
   const handleCardsScroll = useCallback(() => {
@@ -429,95 +440,84 @@ export default function SubscriptionPage() {
   }, [fetchData]);
 
   // ── Payment Proof Upload ──
+  const resetUploadForm = useCallback(() => {
+    setProofFile(null);
+    setProofPreview(null);
+    setNotes("");
+    setSelectedPlanId("");
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  }, []);
+
   const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    const allowedTypes = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
+    if (!allowedTypes.includes(file.type)) {
+      toast.error("Please upload a JPG, PNG, WEBP, or PDF receipt.");
+      e.target.value = "";
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Receipt must be smaller than 5 MB.");
+      e.target.value = "";
+      return;
+    }
     setProofFile(file);
+    if (file.type === "application/pdf") {
+      setProofPreview(null);
+      return;
+    }
     const reader = new FileReader();
     reader.onload = () => setProofPreview(reader.result as string);
     reader.readAsDataURL(file);
   }, []);
 
   const handleUploadProof = useCallback(async () => {
-    if (!proofFile || !amount || !selectedPlanId || !business?.id) {
-      toast.error("Please fill in all required fields");
+    if (!proofFile || !selectedPlanId || !selectedPaymentPlan) {
+      toast.error("Please select a plan and attach your receipt.");
+      return;
+    }
+    if (pendingPaymentProof) {
+      toast.error("You already have a payment waiting for review.");
       return;
     }
 
     setUploading(true);
     try {
-      const filePath = `proofs/${business.id}/${Date.now()}-${proofFile.name}`;
-      const { error: uploadError } = await supabase.storage
-        .from(PAYMENT_PROOF_BUCKET)
-        .upload(filePath, proofFile);
+      const payload = new FormData();
+      payload.set("planId", selectedPlanId);
+      payload.set("notes", notes);
+      payload.set("receipt", proofFile);
 
-      if (uploadError) throw uploadError;
-
-      const { data: { publicUrl } } = supabase.storage
-        .from(PAYMENT_PROOF_BUCKET)
-        .getPublicUrl(filePath);
-
-      const { error: proofError } = await supabase
-        .from("payment_proofs")
-        .insert({
-          business_id: business.id,
-          plan_id: selectedPlanId,
-          amount: parseFloat(amount),
-          payment_method: paymentMethod,
-          proof_image_url: publicUrl,
-          notes: notes || null,
-          status: "pending",
-        });
-
-      if (proofError) throw proofError;
-
-      if (business.account_status === "trial" || business.account_status === "trial_expired") {
-        await supabase
-          .from("businesses")
-          .update({ account_status: "pending_payment" })
-          .eq("id", business.id);
-        setBusiness((prev) => prev ? { ...prev, account_status: "pending_payment" } : null);
+      const response = await fetch("/api/payments/bank-transfer", {
+        method: "POST",
+        body: payload,
+      });
+      const result = await response.json() as {
+        error?: string;
+        payment?: { planName: string; amount: number };
+      };
+      if (!response.ok || !result.payment) {
+        throw new Error(result.error || "Payment submission failed.");
       }
 
-      toast.success("Payment proof submitted successfully!");
+      toast.success("Payment receipt submitted for review.");
       setUploadDialogOpen(false);
-
-      // Save plan info in preserved state before form resets
-      const selectedPlan = plans.find((p) => p.id === selectedPlanId);
-      if (selectedPlan) {
-        setUploadedPlanName(selectedPlan.name);
-        setWhatsappPlanName(selectedPlan.name);
-        setWhatsappAmount(parseFloat(amount));
-        setSuccessDialogOpen(true);
-      }
+      setUploadedPlanName(result.payment.planName);
+      setWhatsappPlanName(result.payment.planName);
+      setWhatsappAmount(result.payment.amount);
+      setSuccessDialogOpen(true);
 
       resetUploadForm();
-
-      const { data: proofsData } = await supabase
-        .from("payment_proofs")
-        .select("*")
-        .eq("business_id", business.id)
-        .order("created_at", { ascending: false })
-        .limit(10);
-      if (proofsData) setProofs(proofsData);
+      await fetchData();
     } catch (err) {
-      toast.error("Failed to upload payment proof", {
+      toast.error("Failed to submit payment", {
         description: err instanceof Error ? err.message : "Please try again.",
       });
     } finally {
       setUploading(false);
     }
-  }, [proofFile, amount, selectedPlanId, paymentMethod, notes, business, supabase, plans]);
-
-  const resetUploadForm = () => {
-    setProofFile(null);
-    setProofPreview(null);
-    setAmount("");
-    setPaymentMethod("bank_transfer");
-    setNotes("");
-    setSelectedPlanId("");
-    if (fileInputRef.current) fileInputRef.current.value = "";
-  };
+  }, [proofFile, selectedPlanId, selectedPaymentPlan, pendingPaymentProof, notes, fetchData, resetUploadForm]);
 
   const handleAdminWhatsApp = useCallback(() => {
     if (whatsappPlanName && whatsappAmount > 0) {
@@ -714,7 +714,7 @@ export default function SubscriptionPage() {
                   variant="default"
                   onClick={() => {
                     const firstPaid = paidPlans[0];
-                    if (firstPaid) setUpgradePlan(firstPaid);
+                    if (firstPaid) openPaymentPage(firstPaid.id);
                   }}
                 >
                   <Sparkles className="size-3.5 mr-1.5" />
@@ -928,14 +928,21 @@ export default function SubscriptionPage() {
                     return (
                       <div key={plan.id} className="flex items-center justify-center px-4 py-4">
                         {isCurrent ? (
-                          <Button variant="outline" className="w-full max-w-[160px]" disabled>
-                            <BadgeCheck className="size-3.5 mr-1.5" />
-                            Current
+                          <Button
+                            variant="outline"
+                            className="w-full max-w-[160px]"
+                            onClick={() => plan.name === "Enterprise"
+                              ? router.push("/contact")
+                              : openPaymentPage(plan.id)}
+                          >
+                            <CreditCard className="size-3.5 mr-1.5" />
+                            {plan.name === "Enterprise" ? "Contact Sales" : "Renew"}
                           </Button>
                         ) : plan.name === "Enterprise" ? (
                           <Button
                             variant="outline"
-                            className="w-full max-w-[160px]"                            onClick={() => window.open(`https://wa.me/${adminSettings.support_whatsapp}`, "_blank")}
+                            className="w-full max-w-[160px]"
+                            onClick={() => router.push("/contact")}
                         >
                             <MessageCircle className="size-3.5 mr-1.5" />
                             Contact Sales
@@ -944,7 +951,7 @@ export default function SubscriptionPage() {
                           <Button
                             variant="default"
                             className="w-full max-w-[160px] shadow-sm shadow-primary/20 ring-1 ring-primary/30"
-                            onClick={() => setUpgradePlan(plan)}
+                            onClick={() => openPaymentPage(plan.id)}
                           >
                             <Sparkles className="size-3.5 mr-1.5" />
                             {isUpgrade ? "Upgrade" : "Choose Plan"}
@@ -953,7 +960,7 @@ export default function SubscriptionPage() {
                           <Button
                             variant="outline"
                             className="w-full max-w-[160px]"
-                            onClick={() => setUpgradePlan(plan)}
+                            onClick={() => openPaymentPage(plan.id)}
                           >
                             {isUpgrade ? "Upgrade" : "Choose Plan"}
                           </Button>
@@ -1137,17 +1144,32 @@ export default function SubscriptionPage() {
                   {/* Action */}
                   <div className="px-5 pb-5">
                     {isCurrent ? (
-                      <Button variant="outline" className="w-full" disabled>
-                        <BadgeCheck className="size-3.5 mr-1.5" />
-                        Current Plan
+                      <Button
+                        variant="outline"
+                        className="w-full"
+                        onClick={() => plan.name === "Enterprise"
+                          ? router.push("/contact")
+                          : openPaymentPage(plan.id)}
+                      >
+                        <CreditCard className="size-3.5 mr-1.5" />
+                        {plan.name === "Enterprise" ? "Contact Sales" : "Renew Plan"}
                       </Button>
                     ) : (
                       <Button
-                        variant={plan.name === "Basic" ? "outline" : "default"}
+                        variant={["Basic", "Enterprise"].includes(plan.name) ? "outline" : "default"}
                         className="w-full"
-                        onClick={() => setUpgradePlan(plan)}
+                        onClick={() => plan.name === "Enterprise"
+                          ? router.push("/contact")
+                          : openPaymentPage(plan.id)}
                       >
-                        {isUpgrade ? "Upgrade" : "Choose Plan"}
+                        {plan.name === "Enterprise" ? (
+                          <>
+                            <MessageCircle className="size-3.5 mr-1.5" />
+                            Contact Sales
+                          </>
+                        ) : (
+                          isUpgrade ? "Upgrade" : "Choose Plan"
+                        )}
                       </Button>
                     )}
                   </div>
@@ -1322,10 +1344,82 @@ export default function SubscriptionPage() {
       {/* ═══════════════════════════════════════════════════════════════
           UPGRADE PLAN DIALOG (unchanged)
          ═══════════════════════════════════════════════════════════════ */}
+      <section className="rounded-2xl border border-border/30 bg-card overflow-hidden">
+        <div className="flex items-center justify-between border-b border-border/20 px-5 py-4 sm:px-6">
+          <div>
+            <h2 className="text-lg font-semibold text-foreground">Payment History</h2>
+            <p className="mt-0.5 text-sm text-muted-foreground">Your latest bank-transfer submissions.</p>
+          </div>
+          <FileText className="size-5 text-muted-foreground/50" />
+        </div>
+
+        {proofs.length === 0 ? (
+          <div className="flex flex-col items-center px-5 py-10 text-center">
+            <div className="flex size-11 items-center justify-center rounded-full bg-muted/20">
+              <FileText className="size-5 text-muted-foreground/40" />
+            </div>
+            <p className="mt-3 text-sm font-medium text-foreground">No payments submitted yet</p>
+            <p className="mt-1 text-xs text-muted-foreground">Your payment receipts and review status will appear here.</p>
+          </div>
+        ) : (
+          <div className="divide-y divide-border/15">
+            {proofs.slice(0, 5).map((proof) => {
+              const plan = plans.find((item) => item.id === proof.plan_id);
+              return (
+                <div key={proof.id} className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+                  <div className="flex items-start gap-3">
+                    <div className={cn(
+                      "flex size-9 shrink-0 items-center justify-center rounded-lg",
+                      proof.status === "approved"
+                        ? "bg-success/10 text-success"
+                        : proof.status === "rejected"
+                          ? "bg-destructive/10 text-destructive"
+                          : "bg-warning/10 text-warning",
+                    )}>
+                      {proof.status === "approved"
+                        ? <CheckCircle2 className="size-4" />
+                        : proof.status === "rejected"
+                          ? <XCircle className="size-4" />
+                          : <Clock className="size-4" />}
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-foreground">{plan?.name || "Subscription"} plan</p>
+                      <p className="mt-0.5 text-xs text-muted-foreground">
+                        {formatDate(proof.created_at)} · Bank transfer
+                      </p>
+                      {proof.admin_note && (
+                        <p className="mt-1.5 text-xs text-muted-foreground">
+                          Admin note: {proof.admin_note}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between gap-4 pl-12 sm:pl-0">
+                    <p className="text-sm font-bold tabular-nums text-foreground">Rs. {proof.amount.toLocaleString()}</p>
+                    <span className={cn(
+                      "rounded-full border px-2.5 py-1 text-xs font-semibold capitalize",
+                      proof.status === "approved"
+                        ? "border-success/20 bg-success/10 text-success"
+                        : proof.status === "rejected"
+                          ? "border-destructive/20 bg-destructive/10 text-destructive"
+                          : "border-warning/20 bg-warning/10 text-warning",
+                    )}>
+                      {proof.status === "pending" ? "Under review" : proof.status}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </section>
+
       <Dialog open={!!upgradePlan} onOpenChange={(open) => !open && setUpgradePlan(null)}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Upgrade to {upgradePlan?.name}</DialogTitle>
+            <DialogTitle>
+              {upgradePlan?.id === currentPlan?.id ? `Renew ${upgradePlan?.name}` : `Choose ${upgradePlan?.name}`}
+            </DialogTitle>
             <DialogDescription>
               {upgradePlan?.monthly_price && upgradePlan.monthly_price > 0
                 ? `Rs. ${upgradePlan.monthly_price.toLocaleString()}/month`
@@ -1355,7 +1449,7 @@ export default function SubscriptionPage() {
             </div>
 
             <p className="text-sm text-muted-foreground">
-              To upgrade, please make a bank transfer and upload the payment proof. Once admin approves, your plan will be activated.
+              Pay the exact amount by bank transfer and upload the receipt. The plan will be activated for 30 days after admin approval.
             </p>
           </div>
 
@@ -1367,13 +1461,12 @@ export default function SubscriptionPage() {
               onClick={() => {
                 if (!upgradePlan) return;
                 setSelectedPlanId(upgradePlan.id);
-                setAmount(upgradePlan.monthly_price > 0 ? upgradePlan.monthly_price.toString() : "");
                 setUpgradePlan(null);
                 setUploadDialogOpen(true);
               }}
             >
               <Upload className="size-3.5 mr-1.5" />
-              Upload Payment Proof
+              Continue to Payment
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1388,27 +1481,36 @@ export default function SubscriptionPage() {
       }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Upload Payment Proof</DialogTitle>
+            <DialogTitle>Pay by Bank Transfer</DialogTitle>
             <DialogDescription>
-              Transfer the amount to our bank account and upload the receipt here.
+              Transfer the exact plan amount, then attach your receipt for verification.
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-2">
+            {pendingPaymentProof && (
+              <div className="flex items-start gap-3 rounded-xl border border-warning/20 bg-warning/[0.06] p-3">
+                <Clock className="mt-0.5 size-4 shrink-0 text-warning" />
+                <div>
+                  <p className="text-sm font-semibold text-warning">Payment already under review</p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    Wait for the current payment to be approved or rejected before submitting another.
+                  </p>
+                </div>
+              </div>
+            )}
+
             {/* Plan Selection */}
             <div className="space-y-1.5">
               <label className="text-sm font-medium text-foreground/70">Select Plan</label>
               <select
                 value={selectedPlanId}
-                onChange={(e) => {
-                  setSelectedPlanId(e.target.value);
-                  const plan = plans.find((p) => p.id === e.target.value);
-                  if (plan && plan.monthly_price > 0) setAmount(plan.monthly_price.toString());
-                }}
+                onChange={(e) => setSelectedPlanId(e.target.value)}
+                disabled={!!pendingPaymentProof}
                 className="flex h-10 w-full rounded-xl border border-border/40 bg-transparent px-3 py-2 text-sm text-foreground"
               >
                 <option value="">Select a plan</option>
-                {plans.filter((p) => p.name !== "Trial").map((plan) => (
+                {plans.filter((p) => !["Trial", "Enterprise"].includes(p.name)).map((plan) => (
                   <option key={plan.id} value={plan.id}>
                     {plan.name} — Rs. {plan.monthly_price.toLocaleString()}/mo
                   </option>
@@ -1416,54 +1518,72 @@ export default function SubscriptionPage() {
               </select>
             </div>
 
-            {/* Amount */}
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium text-foreground/70">Amount (Rs.)</label>
-              <input
-                type="number"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                placeholder="1250"
-                className="flex h-10 w-full rounded-xl border border-border/40 bg-transparent px-3 py-2 text-sm text-foreground"
-              />
-            </div>
+            {selectedPaymentPlan && (
+              <div className="flex items-center justify-between rounded-xl border border-primary/20 bg-primary/[0.04] p-4">
+                <div>
+                  <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Amount to transfer</p>
+                  <p className="mt-1 text-sm font-semibold text-foreground">{selectedPaymentPlan.name} plan · 30 days</p>
+                </div>
+                <p className="text-xl font-bold tabular-nums text-primary">
+                  Rs. {selectedPaymentPlan.monthly_price.toLocaleString()}
+                </p>
+              </div>
+            )}
 
-            {/* Payment Method */}
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium text-foreground/70">Payment Method</label>
-              <select
-                value={paymentMethod}
-                onChange={(e) => setPaymentMethod(e.target.value)}
-                className="flex h-10 w-full rounded-xl border border-border/40 bg-transparent px-3 py-2 text-sm text-foreground"
-              >
-                <option value="bank_transfer">Bank Transfer</option>
-                <option value="cash">Cash Deposit</option>
-                <option value="online">Online Payment</option>
-              </select>
+            <div className="rounded-xl border border-border/30 bg-muted/10 p-4">
+              <div className="mb-3 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Building2 className="size-4 text-primary" />
+                  <p className="text-sm font-semibold text-foreground">{adminSettings.bank_name}</p>
+                </div>
+                <Button type="button" variant="ghost" size="sm" onClick={handleCopyAccountNumber}>
+                  {copied ? <CheckCircle2 className="size-3.5 text-success" /> : <Copy className="size-3.5" />}
+                  {copied ? "Copied" : "Copy"}
+                </Button>
+              </div>
+              <div className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-sm">
+                <span className="text-muted-foreground">Account name</span>
+                <span className="text-right font-medium text-foreground">{adminSettings.bank_account_name}</span>
+                <span className="text-muted-foreground">Account number</span>
+                <span className="text-right font-semibold tabular-nums text-foreground">{adminSettings.bank_account_number}</span>
+                <span className="text-muted-foreground">Branch</span>
+                <span className="text-right font-medium text-foreground">{adminSettings.bank_branch || "—"}</span>
+              </div>
+              {adminSettings.payment_instructions && (
+                <p className="mt-3 border-t border-border/20 pt-3 text-xs leading-relaxed text-muted-foreground">
+                  {adminSettings.payment_instructions}
+                </p>
+              )}
             </div>
 
             {/* File Upload */}
             <div className="space-y-1.5">
-              <label className="text-sm font-medium text-foreground/70">Payment Receipt / Screenshot</label>
+              <label className="text-sm font-medium text-foreground/70">Receipt or transfer confirmation</label>
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="flex w-full flex-col items-center gap-2 rounded-xl border-2 border-dashed border-border/40 px-4 py-6 text-sm text-muted-foreground transition-colors hover:border-primary/40 hover:bg-primary/[0.02]"
+                disabled={!!pendingPaymentProof}
+                className="flex w-full flex-col items-center gap-2 rounded-xl border-2 border-dashed border-border/40 px-4 py-6 text-sm text-muted-foreground transition-colors hover:border-primary/40 hover:bg-primary/[0.02] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {proofPreview ? (
                   <img src={proofPreview} alt="Proof preview" className="max-h-32 rounded-lg object-contain" />
+                ) : proofFile ? (
+                  <>
+                    <FileText className="size-8 text-primary/70" />
+                    <span className="font-medium text-foreground">{proofFile.name}</span>
+                  </>
                 ) : (
                   <>
                     <Upload className="size-8 text-muted-foreground/40" />
-                    <span>Click to upload receipt image</span>
-                    <span className="text-sm text-muted-foreground/40">PNG, JPG up to 5MB</span>
+                    <span>Click to attach your receipt</span>
+                    <span className="text-sm text-muted-foreground/40">JPG, PNG, WEBP, or PDF · maximum 5 MB</span>
                   </>
                 )}
               </button>
               <input
                 ref={fileInputRef}
                 type="file"
-                accept="image/*"
+                accept="image/jpeg,image/png,image/webp,application/pdf"
                 onChange={handleFileSelect}
                 className="sr-only"
               />
@@ -1493,14 +1613,14 @@ export default function SubscriptionPage() {
               />
             </div>
 
-            {/* WhatsApp notification info */}
+            {/* Review information */}
             <div className="rounded-xl border border-border/20 bg-primary/[0.03] p-3">
               <div className="flex items-start gap-2.5">
-                <MessageCircle className="size-4 text-primary/60 mt-0.5 shrink-0" />
+                <Clock className="size-4 text-primary/60 mt-0.5 shrink-0" />
                 <div>
-                  <p className="text-sm font-medium text-foreground/80">WhatsApp Notification</p>
+                  <p className="text-sm font-medium text-foreground/80">What happens next?</p>
                   <p className="text-sm text-muted-foreground/60 mt-0.5">
-                    A notification will be sent to the admin via WhatsApp with your payment details.
+                    An admin will verify the receipt. Your selected plan is activated for 30 days after approval.
                   </p>
                 </div>
               </div>
@@ -1514,12 +1634,12 @@ export default function SubscriptionPage() {
             <Button
               variant="gradient"
               onClick={handleUploadProof}
-              disabled={uploading || !proofFile || !amount || !selectedPlanId}
+              disabled={uploading || !proofFile || !selectedPlanId || !!pendingPaymentProof}
             >
               {uploading ? (
-                <><Loader2 className="size-3.5 mr-1.5 animate-spin" /> Uploading...</>
+                <><Loader2 className="size-3.5 mr-1.5 animate-spin" /> Submitting...</>
               ) : (
-                <><Upload className="size-3.5 mr-1.5" /> Submit Proof</>
+                <><Upload className="size-3.5 mr-1.5" /> Submit for Review</>
               )}
             </Button>
           </DialogFooter>

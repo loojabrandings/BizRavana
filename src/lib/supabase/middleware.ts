@@ -1,5 +1,9 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import {
+  getAuthenticatedHome,
+  isSuperAdmin,
+} from "@/lib/auth-routing";
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
@@ -35,7 +39,7 @@ export async function updateSession(request: NextRequest) {
   // The root path (/) now serves the public landing page (Hero section).
   // Auth callback hash handling is done client-side in page.tsx.
   // Keep only routes that need an early server-side check here.
-  const protectedPaths = ["/admin"];
+  const protectedPaths = ["/admin", "/dashboard"];
   const isProtected = protectedPaths.some((path) =>
     pathname.startsWith(path),
   );
@@ -47,10 +51,25 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // Redirect logged-in users from login page to dashboard
-  if (user && pathname === "/login") {
+  if (user && pathname.startsWith("/admin") && !isSuperAdmin(user)) {
     const url = request.nextUrl.clone();
     url.pathname = "/dashboard";
+    url.search = "";
+    return NextResponse.redirect(url);
+  }
+
+  if (user && pathname.startsWith("/dashboard") && isSuperAdmin(user)) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/admin";
+    url.search = "";
+    return NextResponse.redirect(url);
+  }
+
+  // Redirect logged-in users from login page to their own workspace
+  if (user && pathname === "/login") {
+    const url = request.nextUrl.clone();
+    url.pathname = getAuthenticatedHome(user);
+    url.search = "";
     return NextResponse.redirect(url);
   }
 

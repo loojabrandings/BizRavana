@@ -23,6 +23,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { createClient } from "@/lib/supabase/client";
+import { getAuthorizedRedirect } from "@/lib/auth-routing";
 
 const highlights = [
   {
@@ -41,14 +42,6 @@ const highlights = [
     description: "See the numbers that matter without wrestling spreadsheets.",
   },
 ];
-
-function getSafeRedirectPath(value: string | null) {
-  if (!value || !value.startsWith("/") || value.startsWith("//")) {
-    return "/dashboard";
-  }
-
-  return value;
-}
 
 function getLoginErrorMessage(error: { code?: string; message: string }) {
   const message = error.message.toLowerCase();
@@ -227,7 +220,7 @@ function BrandPanel() {
 
 function LoginForm() {
   const searchParams = useSearchParams();
-  const redirectTo = getSafeRedirectPath(searchParams.get("redirect"));
+  const requestedRedirect = searchParams.get("redirect");
   const callbackError = searchParams.get("error");
 
   const [email, setEmail] = useState("");
@@ -295,7 +288,7 @@ function LoginForm() {
         return;
       }
 
-      window.location.replace(redirectTo);
+      window.location.replace(getAuthorizedRedirect(requestedRedirect, user));
     } catch (caughtError) {
       const message =
         caughtError instanceof Error

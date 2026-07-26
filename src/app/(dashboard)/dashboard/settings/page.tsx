@@ -2288,6 +2288,15 @@ const SIDEBAR_SUB_ITEMS: Record<string, SidebarSubItem[]> = {
   ],
 };
 
+// ── Pre-built reverse map: sectionId → tab (for hash-based navigation)
+const HASH_SECTION_TO_TAB: Record<string, string> = {};
+for (const [tab, items] of Object.entries(SIDEBAR_SUB_ITEMS)) {
+  for (const item of items) {
+    HASH_SECTION_TO_TAB[item.sectionId] = tab;
+  }
+}
+const TAB_VALUES = TABS.map((t) => t.value) as readonly string[];
+
 function SettingsSidebar({ activeTab, activeSection, onTabChange }: { activeTab: string; activeSection: string | null; onTabChange: (tab: string, sectionId?: string) => void }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [expandedTabs, setExpandedTabs] = useState<Set<string>>(new Set(["general", "profile", "operational"]));
@@ -2679,6 +2688,39 @@ export default function SettingsPage() {
       setActiveSection(subItems[0].sectionId);
     }
   }, []);
+
+  // ── Handle URL hash for direct section navigation ────────────
+  const resolveHash = useCallback((hash: string) => {
+    const cleanHash = hash.replace("#", "");
+    if (!cleanHash) return;
+
+    // Check if hash matches a tab value directly
+    if ((TAB_VALUES as readonly string[]).includes(cleanHash)) {
+      setActiveTab(cleanHash as typeof activeTab);
+      const subItems = SIDEBAR_SUB_ITEMS[cleanHash];
+      if (subItems && subItems.length > 0) {
+        setActiveSection(subItems[0].sectionId);
+      }
+      return;
+    }
+
+    // Check if hash matches a sectionId
+    const foundTab = HASH_SECTION_TO_TAB[cleanHash];
+    if (foundTab) {
+      setActiveTab(foundTab as typeof activeTab);
+      setActiveSection(cleanHash);
+    }
+  }, []);
+
+  useEffect(() => {
+    // Read hash on initial load
+    resolveHash(window.location.hash);
+
+    // Listen for hash changes (e.g. user clicks dropdown item while on settings)
+    const handleHashChange = () => resolveHash(window.location.hash);
+    window.addEventListener("hashchange", handleHashChange);
+    return () => window.removeEventListener("hashchange", handleHashChange);
+  }, [resolveHash]);
 
   return (
     <div className="flex h-full flex-col overflow-hidden">

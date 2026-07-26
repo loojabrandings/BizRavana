@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextRequest, NextResponse } from "next/server";
+import { getAuthenticatedHome } from "@/lib/auth-routing";
 
 /**
  * Server-side login handler — acts as the native form action for the
@@ -22,7 +23,7 @@ export async function POST(request: NextRequest) {
   }
 
   // Prepare a redirect response — we'll attach auth cookies to it
-  let response = NextResponse.redirect(new URL("/dashboard", request.url));
+  const response = NextResponse.redirect(new URL("/dashboard", request.url));
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -41,15 +42,21 @@ export async function POST(request: NextRequest) {
     },
   );
 
-  const { error } = await supabase.auth.signInWithPassword({
+  const { data, error } = await supabase.auth.signInWithPassword({
     email,
     password,
   });
 
   if (error) {
     const params = new URLSearchParams({ error: error.message });
-    response = NextResponse.redirect(
-      new URL(`/login?${params.toString()}`, request.url),
+    response.headers.set(
+      "Location",
+      new URL(`/login?${params.toString()}`, request.url).toString(),
+    );
+  } else {
+    response.headers.set(
+      "Location",
+      new URL(getAuthenticatedHome(data.user), request.url).toString(),
     );
   }
 

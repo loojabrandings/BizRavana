@@ -1,0 +1,195 @@
+Terms & Conditions
+
+Last Updated: July 2026
+
+Welcome to BizRavana. These Terms & Conditions ("Terms") govern your access to and use of the BizRavana platform, website, and related services ("Services"). By creating an account, accessing, or using BizRavana, you agree to be bound by these Terms. If you do not agree with these Terms, you must not use our Services.
+
+1. About BizRavana
+
+BizRavana is a cloud-based business management platform designed to help businesses manage orders, customers, products, inventory, quotations, invoices, expenses, courier operations, reports, and other business activities from a single workspace.
+
+2. Eligibility
+
+To use BizRavana, you must:
+
+Be at least 18 years of age.
+Provide accurate, complete, and up-to-date registration information.
+Be legally capable of entering into a binding agreement.
+
+You are responsible for maintaining the confidentiality of your login credentials and for all activities performed under your account.
+
+3. Account Registration
+
+When creating an account, you agree to:
+
+Provide accurate information.
+Keep your information updated.
+Protect your password and account access.
+Notify us immediately if you suspect unauthorized access to your account.
+
+BizRavana reserves the right to suspend or terminate accounts that contain false information or are used for fraudulent or unlawful activities.
+
+4. Free Trial
+
+New users may receive a 3-day free trial with access to eligible BizRavana features.
+
+At the end of the trial period:
+
+Your account may enter Read-Only Mode until an active subscription is purchased.
+Existing business data will remain available according to our data retention policy.
+No payment is required to start the free trial.
+
+BizRavana reserves the right to modify or discontinue the free trial offer at any time.
+
+5. Subscription Plans
+
+BizRavana offers subscription plans with different features, limits, and pricing.
+
+Your selected plan determines:
+
+Available features
+Usage limits
+Storage limits
+User access
+Other plan-specific benefits
+
+Plan prices may change from time to time. Existing subscribers will be notified before any pricing changes affecting future billing periods.
+
+6. Payments
+
+Subscription payments are processed securely through trusted third-party payment providers, including PayHere.
+
+BizRavana does not store your complete debit or credit card information.
+
+You agree to pay all applicable subscription fees associated with your selected plan.
+
+7. Subscription Renewal
+
+Where supported by the selected payment provider, subscriptions may renew automatically at the end of each billing period.
+
+If automatic renewal is not available, users must manually renew their subscription before the expiration date to continue uninterrupted access.
+
+You may cancel your subscription renewal at any time before the next billing cycle.
+
+8. Cancellation
+
+You may cancel your subscription at any time.
+
+Cancellation prevents future subscription renewals but does not immediately terminate your access.
+
+You will continue to have access to your subscribed plan until the end of the current billing period.
+
+No partial refunds or credits will be issued for unused subscription periods except where required by applicable law or explicitly stated in our Refund & Cancellation Policy.
+
+9. Subscription Expiry
+
+If your subscription expires:
+
+Your account may be placed into Read-Only Mode.
+You may continue viewing your existing data during the applicable retention period.
+Creating, editing, or deleting business data may be restricted until an active subscription is restored.
+10. Data Retention
+
+Following subscription expiry or account closure, BizRavana may retain your business data for a limited period to allow account recovery.
+
+After the retention period ends, your data may be permanently deleted and cannot be recovered.
+
+Please ensure you export any required business data before your retention period expires.
+
+11. Acceptable Use
+
+You agree not to:
+
+Use BizRavana for unlawful purposes.
+Attempt unauthorized access to any account or system.
+Distribute malware, spam, or harmful content.
+Interfere with the operation or security of the platform.
+Upload malicious files or software.
+Reverse engineer or attempt to exploit the platform.
+
+Violation of these Terms may result in immediate suspension or termination of your account.
+
+12. Third-Party Services
+
+BizRavana may integrate with third-party services such as:
+
+Payment providers
+Courier service providers
+Email delivery services
+Messaging services
+Other supported integrations
+
+BizRavana is not responsible for interruptions, delays, or failures caused by third-party services beyond our reasonable control.
+
+13. Intellectual Property
+
+All software, content, branding, trademarks, logos, graphics, text, designs, and source code relating to BizRavana remain the exclusive property of BizRavana or its licensors.
+
+You may not:
+
+Copy
+Modify
+Distribute
+Reverse engineer
+Resell
+Reproduce
+
+any part of the Services without prior written permission.
+
+14. Service Availability
+
+While we strive to maintain continuous service availability, BizRavana does not guarantee uninterrupted operation.
+
+Scheduled maintenance, software updates, security improvements, or unexpected technical issues may temporarily affect service availability.
+
+15. Limitation of Liability
+
+To the maximum extent permitted by applicable law, BizRavana shall not be liable for indirect, incidental, consequential, or special damages arising from:
+
+Use or inability to use the Services.
+Business interruption.
+Data loss caused by circumstances beyond our reasonable control.
+Third-party service failures.
+Unauthorized access resulting from compromised user credentials.
+
+Nothing in these Terms excludes liability where such exclusion is prohibited by applicable law.
+
+16. Changes to the Service
+
+BizRavana may:
+
+Add or remove features.
+Modify subscription plans.
+Improve or discontinue functionality.
+Update pricing.
+Introduce new services.
+
+Reasonable notice will be provided where changes materially affect subscribers.
+
+17. Changes to These Terms
+
+We may update these Terms from time to time.
+
+Updated versions will be published on our website together with the revised "Last Updated" date.
+
+Continued use of the Services after changes become effective constitutes acceptance of the revised Terms.
+
+18. Governing Law
+
+These Terms shall be governed by and interpreted in accordance with the laws of the Democratic Socialist Republic of Sri Lanka.
+
+Any disputes arising from these Terms shall be subject to the jurisdiction of the competent courts of Sri Lanka.
+
+19. Contact Us
+
+If you have any questions regarding these Terms & Conditions, please contact us.
+
+BizRavana
+
+Address:
+Near the temple,
+Seelagama,
+Belihuloya
+
+Email:
+loojabrandings@gmail.com

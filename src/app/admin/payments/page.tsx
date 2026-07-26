@@ -57,6 +57,7 @@ interface PaymentProofRow {
   amount: number;
   payment_method: string;
   proof_image_url: string | null;
+  proof_image_path: string | null;
   notes: string | null;
   admin_note: string | null;
   status: PaymentStatus;
@@ -138,8 +139,16 @@ function ReceiptPreviewDialog({
           </div>
         </div>
         <div className="flex items-center justify-center bg-muted/20 p-6 overflow-auto max-h-[calc(90vh-8rem)]">
-          <img src={imageUrl} alt={`Payment receipt for ${businessName}`}
-            className="max-w-full max-h-[70vh] rounded-xl object-contain shadow-lg ring-1 ring-border/10" />
+          {imageUrl.toLowerCase().includes(".pdf") ? (
+            <iframe
+              src={imageUrl}
+              title={`Payment receipt for ${businessName}`}
+              className="h-[70vh] w-full rounded-xl bg-background shadow-lg ring-1 ring-border/10"
+            />
+          ) : (
+            <img src={imageUrl} alt={`Payment receipt for ${businessName}`}
+              className="max-w-full max-h-[70vh] rounded-xl object-contain shadow-lg ring-1 ring-border/10" />
+          )}
         </div>
       </DialogContent>
     </Dialog>
@@ -197,7 +206,7 @@ function ReviewDialog({
         <div className="space-y-2">
           <label className="text-sm font-medium text-foreground/80 flex items-center gap-1.5">
             <MessageSquare className="size-3.5 text-muted-foreground/60" />
-            Admin Note <span className="text-xs text-muted-foreground/50 font-normal">(optional)</span>
+            Admin Note <span className="text-xs text-muted-foreground/50 font-normal">({isApprove ? "optional" : "required"})</span>
           </label>
           <Textarea ref={textareaRef}
             placeholder={isApprove ? "Add a note about this approval..." : "Provide a reason for rejection..."}
@@ -205,7 +214,7 @@ function ReviewDialog({
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>Cancel</Button>
-          <Button variant={isApprove ? "default" : "destructive"} onClick={() => onConfirm(adminNote)} disabled={loading}>
+          <Button variant={isApprove ? "default" : "destructive"} onClick={() => onConfirm(adminNote)} disabled={loading || (!isApprove && !adminNote.trim())}>
             {loading && <Loader2 className="size-4 animate-spin" />}
             {isApprove ? "Approve & Activate" : "Reject Payment"}
           </Button>
@@ -256,6 +265,8 @@ export default function AdminPaymentsPage() {
 
   // Receipt preview
   const [previewPayment, setPreviewPayment] = useState<PaymentProofRow | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [openingReceiptId, setOpeningReceiptId] = useState<string | null>(null);
 
   // Review dialog
   const [reviewPayment, setReviewPayment] = useState<PaymentProofRow | null>(null);
@@ -290,7 +301,8 @@ export default function AdminPaymentsPage() {
         business_name: bizMap.get(p.business_id) || "Unknown",
         plan_name: p.plan_id ? planMap.get(p.plan_id) || "—" : "—",
         amount: p.amount, payment_method: p.payment_method,
-        proof_image_url: p.proof_image_url, notes: p.notes, admin_note: p.admin_note,
+        proof_image_url: p.proof_image_url, proof_image_path: p.proof_image_path,
+        notes: p.notes, admin_note: p.admin_note,
         status: p.status as PaymentStatus, created_at: p.created_at, approved_at: p.approved_at,
       }));
       setPayments(enriched);
@@ -326,46 +338,54 @@ export default function AdminPaymentsPage() {
   }, [payments, activeTab, searchQuery]);
 
   // ── Log Activity ────────────────────────────────────────────
-  const logActivity = useCallback(async (action: string, targetBusinessId: string, details: Record<string, unknown>) => {
+  const openReceipt = useCallback(async (payment: PaymentProofRow) => {
+    setOpeningReceiptId(payment.id);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      await supabase.from("admin_activity_log").insert({ admin_id: user.id, action, target_type: "business", target_id: targetBusinessId, details });
-    } catch { /* best-effort */ }
-  }, [supabase]);
+      const response = await fetch(`/api/admin/payments/${payment.id}/receipt`);
+      const result = await response.json() as { url?: string; error?: string };
+      if (!response.ok || !result.url) {
+        throw new Error(result.error || "Receipt could not be opened.");
+      }
+      setPreviewUrl(result.url);
+      setPreviewPayment(payment);
+    } catch (error) {
+      toast.error("Failed to open receipt", {
+        description: error instanceof Error ? error.message : "Please try again.",
+      });
+    } finally {
+      setOpeningReceiptId(null);
+    }
+  }, []);
 
   // ── Approve ─────────────────────────────────────────────────
-  const handleApprove = useCallback(async (adminNote: string) => {
-    if (!reviewPayment) return;
+  const handleReview = useCallback(async (action: "approve" | "reject", adminNote: string) => {
+    if (!reviewPayment || processing) return;
     setProcessing(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      const now = new Date().toISOString();
-      const subscriptionEnd = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
-      await supabase.from("payment_proofs").update({ status: "approved", approved_at: now, approved_by: user?.id || null, admin_note: adminNote || null }).eq("id", reviewPayment.id);
-      await supabase.from("businesses").update({ account_status: "active", subscription_started_at: now, subscription_ends_at: subscriptionEnd, data_delete_after: null, updated_at: now }).eq("id", reviewPayment.business_id);
-      await logActivity("payment_approved", reviewPayment.business_id, { payment_id: reviewPayment.id, amount: reviewPayment.amount, plan_name: reviewPayment.plan_name, admin_note: adminNote || null });
-      toast.success("Payment approved! Subscription activated for 30 days.");
+      const response = await fetch(`/api/admin/payments/${reviewPayment.id}/review`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action, adminNote }),
+      });
+      const result = await response.json() as { error?: string };
+      if (!response.ok) throw new Error(result.error || "Payment review failed.");
+      toast.success(
+        action === "approve"
+          ? "Payment approved and subscription activated."
+          : "Payment rejected and account status restored.",
+      );
       setReviewPayment(null);
-      fetchPayments();
-    } catch (err) { console.error("Approve error:", err); toast.error("Failed to approve payment"); }
-    finally { setProcessing(false); }
-  }, [reviewPayment, supabase, logActivity, fetchPayments]);
+      await fetchPayments();
+    } catch (error) {
+      toast.error(action === "approve" ? "Failed to approve payment" : "Failed to reject payment", {
+        description: error instanceof Error ? error.message : "Please try again.",
+      });
+    } finally {
+      setProcessing(false);
+    }
+  }, [reviewPayment, processing, fetchPayments]);
 
   // ── Reject ──────────────────────────────────────────────────
-  const handleReject = useCallback(async (adminNote: string) => {
-    if (!reviewPayment) return;
-    setProcessing(true);
-    try {
-      await supabase.from("payment_proofs").update({ status: "rejected", admin_note: adminNote || null }).eq("id", reviewPayment.id);
-      await logActivity("payment_rejected", reviewPayment.business_id, { payment_id: reviewPayment.id, amount: reviewPayment.amount, plan_name: reviewPayment.plan_name, admin_note: adminNote || null });
-      toast.success("Payment rejected.");
-      setReviewPayment(null);
-      fetchPayments();
-    } catch { toast.error("Failed to reject payment"); }
-    finally { setProcessing(false); }
-  }, [reviewPayment, supabase, logActivity, fetchPayments]);
-
   // ── Mobile action sheet ─────────────────────────────────────
   const handleOpenActionSheet = useCallback((payment: PaymentProofRow) => {
     setActionSheetTarget(payment);
@@ -398,9 +418,9 @@ export default function AdminPaymentsPage() {
     { header: "Method", hideBelow: "sm", accessor: (p) => <span className="text-sm text-muted-foreground/80 capitalize">{p.payment_method.replace("_", " ")}</span> },
     { header: "Submitted", hideBelow: "md", accessor: (p) => <span className="text-sm text-muted-foreground/80 tabular-nums">{new Date(p.created_at).toLocaleDateString()}</span> },
     { header: "Status", accessor: (p) => <PaymentStatusBadge status={p.status} /> },
-    { header: "Proof", accessor: (p) => p.proof_image_url ? (
-      <Button variant="ghost" size="icon-xs" onClick={() => setPreviewPayment(p)} className="text-muted-foreground/60 hover:text-foreground" title="View receipt">
-        <Eye className="size-3.5" />
+    { header: "Proof", accessor: (p) => (p.proof_image_path || p.proof_image_url) ? (
+      <Button variant="ghost" size="icon-xs" onClick={() => openReceipt(p)} disabled={openingReceiptId === p.id} className="text-muted-foreground/60 hover:text-foreground" title="View receipt">
+        {openingReceiptId === p.id ? <Loader2 className="size-3.5 animate-spin" /> : <Eye className="size-3.5" />}
       </Button>
     ) : <span className="text-xs text-muted-foreground/50">—</span> },
     { header: "", className: "w-32", headerClassName: "hidden sm:table-cell", accessor: (p) => p.status === "pending" ? (
@@ -413,7 +433,7 @@ export default function AdminPaymentsPage() {
         </Button>
       </div>
     ) : <span className="text-xs text-muted-foreground/60">{p.status === "approved" ? "Approved" : "Rejected"}{p.approved_at && <><br /><span className="text-[10px]">{new Date(p.approved_at).toLocaleDateString()}</span></>}</span> },
-  ], []);
+  ], [openReceipt, openingReceiptId]);
 
   // ── Mobile card renderer ────────────────────────────────────
   const renderMobileCard = useCallback((payment: PaymentProofRow) => (
@@ -430,10 +450,10 @@ export default function AdminPaymentsPage() {
       ]}
       actions={
         <>
-          {payment.proof_image_url && (
-            <button type="button" onClick={() => setPreviewPayment(payment)}
+          {(payment.proof_image_path || payment.proof_image_url) && (
+            <button type="button" onClick={() => openReceipt(payment)} disabled={openingReceiptId === payment.id}
               className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-input bg-background px-3 py-2 text-xs font-medium min-h-11 hover:bg-accent transition-colors">
-              <Eye className="size-3.5" /> Receipt
+              {openingReceiptId === payment.id ? <Loader2 className="size-3.5 animate-spin" /> : <Eye className="size-3.5" />} Receipt
             </button>
           )}
           {payment.status === "pending" ? (
@@ -449,7 +469,7 @@ export default function AdminPaymentsPage() {
         </>
       }
     />
-  ), [handleOpenActionSheet]);
+  ), [handleOpenActionSheet, openReceipt, openingReceiptId]);
 
   // ── Tabs ────────────────────────────────────────────────────
   const tabs = [
@@ -511,15 +531,15 @@ export default function AdminPaymentsPage() {
         />
       )}
 
-      {previewPayment?.proof_image_url && (
-        <ReceiptPreviewDialog open={previewPayment !== null} onOpenChange={(o) => { if (!o) setPreviewPayment(null); }}
-          imageUrl={previewPayment.proof_image_url} businessName={previewPayment.business_name} amount={previewPayment.amount} />
+      {previewPayment && previewUrl && (
+        <ReceiptPreviewDialog open={previewPayment !== null} onOpenChange={(o) => { if (!o) { setPreviewPayment(null); setPreviewUrl(null); } }}
+          imageUrl={previewUrl} businessName={previewPayment.business_name} amount={previewPayment.amount} />
       )}
 
       {reviewPayment && (
         <ReviewDialog open={reviewPayment !== null} onOpenChange={(o) => { if (!o) setReviewPayment(null); }}
           payment={reviewPayment} action={reviewAction}
-          onConfirm={(adminNote) => reviewAction === "approve" ? handleApprove(adminNote) : handleReject(adminNote)} loading={processing} />
+          onConfirm={(adminNote) => handleReview(reviewAction, adminNote)} loading={processing} />
       )}
     </div>
   );

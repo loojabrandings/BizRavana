@@ -56,7 +56,7 @@ function RoleBadge({ role }: { role: string | null }) {
   if (!c) return null;
   return (
     <span className={cn(
-      "inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold border",
+      "inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold border",
       c.color, c.bg, c.border,
     )}>
       {c.label}
@@ -86,15 +86,15 @@ function HeaderAvatarDropdown({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
+        className="h-auto border-0 bg-transparent p-0 shadow-none hover:border-transparent focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:ring-offset-2 dark:bg-transparent"
         render={
           <button
             className={cn(
-              "group/avatar-btn relative flex items-center justify-center rounded-xl transition-all duration-200",
-              "hover:bg-accent/60 hover:text-accent-foreground",
-              "active:scale-95",
+              "group/avatar-btn relative flex items-center justify-center transition-all duration-200",
+              "hover:opacity-90 active:scale-95",
               compact
                 ? "size-10"
-                : "ml-1 gap-2 p-1 pr-2.5",
+                : "ml-1 gap-1.5",
             )}
           />
         }
@@ -123,11 +123,11 @@ function HeaderAvatarDropdown({
       </DropdownMenuTrigger>
       <DropdownMenuContent
         align="end"
-        className="w-64 overflow-hidden rounded-xl border-border/40 p-0 shadow-lg"
+        className="max-h-[calc(100vh-5rem)] w-72 overflow-y-auto rounded-2xl border-border/40 bg-popover/95 p-0 shadow-xl"
       >
         {/* ─── Premium Header ───────────────────────────── */}
-        <div className="relative bg-gradient-to-br from-primary/[0.04] via-transparent to-primary/[0.02] px-4 pb-3 pt-4">
-          <div className="flex items-center gap-3.5">
+        <div className="relative border-b border-border/30 bg-gradient-to-br from-primary/[0.06] via-transparent to-primary/[0.03] px-4 py-4">
+          <div className="flex items-center gap-3">
             <div className="relative shrink-0">
               <Avatar className="size-11 [&::after]:!border-transparent">
                 <AvatarImage src={userAvatar || undefined} alt={userFullName} />
@@ -139,13 +139,13 @@ function HeaderAvatarDropdown({
             </div>
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
-                <p className="truncate text-sm font-semibold text-foreground">
+                <p className="truncate text-base font-semibold leading-5 text-foreground">
                   {userFullName}
                 </p>
                 <RoleBadge role={userRole} />
               </div>
               {businessName && (
-                <p className="mt-0.5 truncate text-xs text-muted-foreground/70">
+                <p className="mt-1 truncate text-sm text-muted-foreground/70">
                   {businessName}
                 </p>
               )}
@@ -153,52 +153,54 @@ function HeaderAvatarDropdown({
           </div>
         </div>
 
-        <div className="p-1.5">
-          <DropdownMenuItem onClick={() => router.push("/dashboard/settings/profile")} className="gap-2.5 rounded-lg py-2">
-            <span className="flex size-7 items-center justify-center rounded-md bg-muted/50 text-muted-foreground">
-              <UserCircle className="size-3.5" />
+        <div className="p-2">
+          <DropdownMenuItem onClick={() => {
+              if (window.location.pathname === "/dashboard/settings") {
+                window.location.hash = "profile";
+              } else {
+                router.push("/dashboard/settings#profile");
+              }
+            }} className="gap-3 rounded-xl px-2.5 py-2.5">
+            <span className="flex size-8 items-center justify-center rounded-lg bg-muted/50 text-muted-foreground">
+              <UserCircle className="size-4" />
             </span>
-            <div>
-              <span className="block text-xs font-medium">My Profile</span>
-            </div>
+            <span className="text-sm font-medium">My Profile</span>
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => router.push("/dashboard/settings/profile#business-profile")} className="gap-2.5 rounded-lg py-2">
-            <span className="flex size-7 items-center justify-center rounded-md bg-muted/50 text-muted-foreground">
-              <Building2 className="size-3.5" />
+          <DropdownMenuItem onClick={() => {
+              if (window.location.pathname === "/dashboard/settings") {
+                window.location.hash = "business-profile";
+              } else {
+                router.push("/dashboard/settings#business-profile");
+              }
+            }} className="gap-3 rounded-xl px-2.5 py-2.5">
+            <span className="flex size-8 items-center justify-center rounded-lg bg-muted/50 text-muted-foreground">
+              <Building2 className="size-4" />
             </span>
-            <div>
-              <span className="block text-xs font-medium">Business Profile</span>
-            </div>
+            <span className="text-sm font-medium">Business Profile</span>
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => router.push("/dashboard/settings/preferences")} className="gap-2.5 rounded-lg py-2">
-            <span className="flex size-7 items-center justify-center rounded-md bg-muted/50 text-muted-foreground">
-              <Bell className="size-3.5" />
+          <DropdownMenuItem onClick={() => router.push("/dashboard/settings/preferences")} className="gap-3 rounded-xl px-2.5 py-2.5">
+            <span className="flex size-8 items-center justify-center rounded-lg bg-muted/50 text-muted-foreground">
+              <Bell className="size-4" />
             </span>
-            <div>
-              <span className="block text-xs font-medium">Preferences</span>
-            </div>
-          </DropdownMenuItem>
-
-          <DropdownMenuSeparator className="mx-1 my-1" />
-
-          <DropdownMenuItem onClick={() => router.push("/dashboard/help")} className="gap-2.5 rounded-lg py-2">
-            <span className="flex size-7 items-center justify-center rounded-md bg-muted/50 text-muted-foreground">
-              <LifeBuoy className="size-3.5" />
-            </span>
-            <div>
-              <span className="block text-xs font-medium">Help Center</span>
-            </div>
+            <span className="text-sm font-medium">Preferences</span>
           </DropdownMenuItem>
 
-          <DropdownMenuSeparator className="mx-1 my-1" />
+          <DropdownMenuSeparator className="mx-1 my-1.5" />
 
-          <DropdownMenuItem variant="destructive" onClick={onLogout} className="gap-2.5 rounded-lg py-2">
-            <span className="flex size-7 items-center justify-center rounded-md bg-destructive/5 text-destructive">
-              <LogOut className="size-3.5" />
+          <DropdownMenuItem onClick={() => router.push("/dashboard/help")} className="gap-3 rounded-xl px-2.5 py-2.5">
+            <span className="flex size-8 items-center justify-center rounded-lg bg-muted/50 text-muted-foreground">
+              <LifeBuoy className="size-4" />
             </span>
-            <div>
-              <span className="block text-xs font-medium">Logout</span>
-            </div>
+            <span className="text-sm font-medium">Help Center</span>
+          </DropdownMenuItem>
+
+          <DropdownMenuSeparator className="mx-1 my-1.5" />
+
+          <DropdownMenuItem variant="destructive" onClick={onLogout} className="gap-3 rounded-xl px-2.5 py-2.5">
+            <span className="flex size-8 items-center justify-center rounded-lg bg-destructive/5 text-destructive">
+              <LogOut className="size-4" />
+            </span>
+            <span className="text-sm font-medium">Logout</span>
           </DropdownMenuItem>
         </div>
       </DropdownMenuContent>

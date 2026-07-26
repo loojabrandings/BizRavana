@@ -11,11 +11,12 @@ import {
   FileText,
   History,
   Loader2,
+  ShieldAlert,
+  Trash2,
   XCircle,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
-import { Input } from "@/components/ui/input";
 import {
   Dialog,
   DialogContent,
@@ -42,23 +43,25 @@ import {
 
 interface ActivityLogRow {
   id: string;
-  admin_id: string;
+  admin_id: string | null;
   admin_name: string | null;
   action: string;
   target_type: string | null;
   target_id: string | null;
   target_name: string | null;
+  target_exists: boolean;
   details: Record<string, unknown>;
   created_at: string;
 }
 
-type FilterTab = "all" | "payment_approved" | "payment_rejected" | "other";
+type FilterTab = "all" | "payment_approved" | "payment_rejected" | "deletions" | "other";
 type DateRange = "all" | "7d" | "30d" | "90d";
 
 interface StatsSummary {
   total: number;
   paymentApproved: number;
   paymentRejected: number;
+  deletions: number;
   other: number;
 }
 
@@ -70,6 +73,9 @@ function ActionBadge({ action }: { action: string }) {
   const config: Record<string, { label: string; icon: typeof CheckCircle2; style: string }> = {
     payment_approved: { label: "Payment Approved", icon: CheckCircle2, style: "bg-success/10 text-success border-success/20" },
     payment_rejected: { label: "Payment Rejected", icon: XCircle, style: "bg-destructive/10 text-destructive border-destructive/20" },
+    business_permanently_deleted: { label: "Business Deleted", icon: Trash2, style: "bg-destructive/10 text-destructive border-destructive/20" },
+    business_permanent_delete_started: { label: "Deletion Started", icon: Trash2, style: "bg-warning/10 text-warning border-warning/20" },
+    business_permanent_delete_failed: { label: "Deletion Failed", icon: ShieldAlert, style: "bg-destructive/10 text-destructive border-destructive/20" },
   };
   const match = config[action];
   if (match) {
@@ -80,9 +86,21 @@ function ActionBadge({ action }: { action: string }) {
 }
 
 function ActionIcon({ action }: { action: string }) {
-  const icons: Record<string, typeof CheckCircle2> = { payment_approved: CheckCircle2, payment_rejected: XCircle };
+  const icons: Record<string, typeof CheckCircle2> = {
+    payment_approved: CheckCircle2,
+    payment_rejected: XCircle,
+    business_permanently_deleted: Trash2,
+    business_permanent_delete_started: Trash2,
+    business_permanent_delete_failed: ShieldAlert,
+  };
   const Icon = icons[action] || Activity;
-  const colors: Record<string, string> = { payment_approved: "text-success", payment_rejected: "text-destructive" };
+  const colors: Record<string, string> = {
+    payment_approved: "text-success",
+    payment_rejected: "text-destructive",
+    business_permanently_deleted: "text-destructive",
+    business_permanent_delete_started: "text-warning",
+    business_permanent_delete_failed: "text-destructive",
+  };
   return <Icon className={cn("size-4", colors[action] || "text-muted-foreground/60")} />;
 }
 
@@ -128,8 +146,12 @@ function ActivityDetailDialog({ open, onOpenChange, log }: {
           <div className="rounded-xl border border-border/20 bg-muted/5 p-4 space-y-2">
             <div className="flex items-center justify-between"><span className="text-sm text-muted-foreground/70">Admin</span><span className="text-sm font-medium text-foreground">{log.admin_name || "Unknown"}</span></div>
             {log.target_name && <div className="flex items-center justify-between"><span className="text-sm text-muted-foreground/70">Target</span>
-              <button type="button" onClick={() => { if (log.target_id) router.push(`/admin/businesses/${log.target_id}`); }}
-                className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"><Building2 className="size-3.5" />{log.target_name}<ExternalLink className="size-3" /></button></div>}
+              {log.target_exists ? (
+                <button type="button" onClick={() => { if (log.target_id) router.push(`/admin/businesses/${log.target_id}`); }}
+                  className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"><Building2 className="size-3.5" />{log.target_name}<ExternalLink className="size-3" /></button>
+              ) : (
+                <span className="inline-flex items-center gap-1 text-sm font-medium text-foreground/80"><Trash2 className="size-3.5 text-destructive" />{log.target_name} (deleted)</span>
+              )}</div>}
             <div className="flex items-center justify-between"><span className="text-sm text-muted-foreground/70">Action</span><ActionBadge action={log.action} /></div>
             <div className="flex items-center justify-between"><span className="text-sm text-muted-foreground/70">Timestamp</span><span className="text-sm text-foreground tabular-nums">{new Date(log.created_at).toLocaleString()}</span></div></div>
           {detailEntries.length > 0 && <div><h4 className="text-sm font-semibold text-foreground/80 mb-2 flex items-center gap-1.5"><FileText className="size-3.5 text-muted-foreground/60" />Details</h4>
@@ -193,7 +215,13 @@ export default function AdminActivityLogPage() {
       const { data, error } = await supabase.from("admin_activity_log").select("*").order("created_at", { ascending: false }).limit(200);
       if (error) throw error;
 
-      const adminIds = [...new Set((data || []).map((l) => l.admin_id).filter(Boolean))];
+      const adminIds = [
+        ...new Set(
+          (data || [])
+            .map((l) => l.admin_id)
+            .filter((id): id is string => typeof id === "string"),
+        ),
+      ];
       const bizIds = [...new Set((data || []).filter((l) => l.target_type === "business" && l.target_id).map((l) => l.target_id as string))];
 
       const [profilesRes, bizRes] = await Promise.all([
@@ -203,12 +231,32 @@ export default function AdminActivityLogPage() {
       const adminMap = new Map((profilesRes.data || []).map((p) => [p.user_id, p.full_name]));
       const bizMap = new Map((bizRes.data || []).map((b) => [b.id, b.name]));
 
-      const enriched: ActivityLogRow[] = (data || []).map((l) => ({
-        id: l.id, admin_id: l.admin_id, admin_name: adminMap.get(l.admin_id) || null,
-        action: l.action, target_type: l.target_type, target_id: l.target_id,
-        target_name: l.target_id && l.target_type === "business" ? bizMap.get(l.target_id) || null : null,
-        details: (l.details || {}) as Record<string, unknown>, created_at: l.created_at,
-      }));
+      const enriched: ActivityLogRow[] = (data || []).map((l) => {
+        const details = (l.details || {}) as Record<string, unknown>;
+        const businessStillExists = Boolean(
+          l.target_id &&
+          l.target_type === "business" &&
+          bizMap.has(l.target_id),
+        );
+        return {
+          id: l.id,
+          admin_id: l.admin_id,
+          admin_name:
+            (l.admin_id ? adminMap.get(l.admin_id) : null) ||
+            (typeof details.admin_email === "string" ? details.admin_email : null),
+          action: l.action,
+          target_type: l.target_type,
+          target_id: l.target_id,
+          target_name:
+            l.target_id && l.target_type === "business"
+              ? bizMap.get(l.target_id) ||
+                (typeof details.business_name === "string" ? details.business_name : null)
+              : null,
+          target_exists: businessStillExists,
+          details,
+          created_at: l.created_at,
+        };
+      });
       setLogs(enriched);
     } catch (err) { console.error("Failed to fetch activity log:", err); toast.error("Failed to load activity log"); }
     finally { setLoading(false); }
@@ -220,7 +268,12 @@ export default function AdminActivityLogPage() {
   const stats: StatsSummary = useMemo(() => ({
     total: logs.length, paymentApproved: logs.filter((l) => l.action === "payment_approved").length,
     paymentRejected: logs.filter((l) => l.action === "payment_rejected").length,
-    other: logs.filter((l) => l.action !== "payment_approved" && l.action !== "payment_rejected").length,
+    deletions: logs.filter((l) => l.action.startsWith("business_permanent")).length,
+    other: logs.filter((l) =>
+      l.action !== "payment_approved" &&
+      l.action !== "payment_rejected" &&
+      !l.action.startsWith("business_permanent")
+    ).length,
   }), [logs]);
 
   // ── Filtered ──────────────────────────────────────────────────
@@ -228,7 +281,12 @@ export default function AdminActivityLogPage() {
     let result = logs;
     if (activeTab === "payment_approved") result = result.filter((l) => l.action === "payment_approved");
     else if (activeTab === "payment_rejected") result = result.filter((l) => l.action === "payment_rejected");
-    else if (activeTab === "other") result = result.filter((l) => l.action !== "payment_approved" && l.action !== "payment_rejected");
+    else if (activeTab === "deletions") result = result.filter((l) => l.action.startsWith("business_permanent"));
+    else if (activeTab === "other") result = result.filter((l) =>
+      l.action !== "payment_approved" &&
+      l.action !== "payment_rejected" &&
+      !l.action.startsWith("business_permanent")
+    );
 
     if (dateRange !== "all") {
       const cutoff = new Date();
@@ -250,12 +308,17 @@ export default function AdminActivityLogPage() {
     )},
     { header: "Action", accessor: (log) => <ActionBadge action={log.action} /> },
     { header: "Admin", hideBelow: "sm", accessor: (log) => <span className="text-sm text-foreground/80">{log.admin_name || <span className="text-muted-foreground/50 italic">Unknown</span>}</span> },
-    { header: "Target", hideBelow: "md", accessor: (log) => log.target_name ? (
+    { header: "Target", hideBelow: "md", accessor: (log) => log.target_name && log.target_exists ? (
       <button type="button" onClick={() => router.push(`/admin/businesses/${log.target_id}`)}
         className="inline-flex items-center gap-1.5 text-sm font-medium text-foreground/80 hover:text-primary transition-colors">
         <Building2 className="size-3.5 text-muted-foreground/60 shrink-0" />
         <span className="truncate max-w-[160px]">{log.target_name}</span>
         <ExternalLink className="size-2.5 text-muted-foreground/40 shrink-0" /></button>
+    ) : log.target_name ? (
+      <span className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground/70">
+        <Trash2 className="size-3.5 text-destructive/70" />
+        <span className="truncate max-w-[160px]">{log.target_name}</span>
+      </span>
     ) : <span className="text-sm text-muted-foreground/50 italic">—</span> },
     { header: "Details", hideBelow: "lg", accessor: (log) => (
       <span className="text-xs text-muted-foreground/70 truncate max-w-[200px] block">
@@ -285,8 +348,14 @@ export default function AdminActivityLogPage() {
           { label: "Date", value: <span className="tabular-nums">{new Date(log.created_at).toLocaleString()}</span> },
           ...(log.target_name ? [{
             label: "Target",
-            value: <button type="button" onClick={() => router.push(`/admin/businesses/${log.target_id}`)}
-              className="text-primary hover:underline text-left">{log.target_name}</button>,
+            value: log.target_exists ? (
+              <button type="button" onClick={() => router.push(`/admin/businesses/${log.target_id}`)}
+                className="text-primary hover:underline text-left">{log.target_name}</button>
+            ) : (
+              <span className="inline-flex items-center gap-1 text-muted-foreground/80">
+                <Trash2 className="size-3 text-destructive/70" />{log.target_name} (deleted)
+              </span>
+            ),
           }] : []),
           ...(detailPreview ? [{ label: "Summary", value: <span className="text-xs text-muted-foreground/80">{detailPreview}</span> }] : []),
         ]}
@@ -305,6 +374,7 @@ export default function AdminActivityLogPage() {
     { key: "all", label: "All Activity", count: stats.total },
     { key: "payment_approved", label: "Payment Approvals", count: stats.paymentApproved },
     { key: "payment_rejected", label: "Payment Rejections", count: stats.paymentRejected },
+    { key: "deletions", label: "Permanent Deletions", count: stats.deletions },
     { key: "other", label: "Other", count: stats.other },
   ];
 
@@ -334,10 +404,11 @@ export default function AdminActivityLogPage() {
     <div className="space-y-6 min-w-0 max-w-full">
       <AdminPageHeader title="Activity Log" subtitle="Audit trail of all administrative actions across the platform" />
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
         <StatsCard label="Total Actions" value={stats.total} icon={History} accent="primary" />
         <StatsCard label="Payment Approvals" value={stats.paymentApproved} icon={CheckCircle2} accent="success" />
         <StatsCard label="Payment Rejections" value={stats.paymentRejected} icon={XCircle} accent="destructive" />
+        <StatsCard label="Permanent Deletions" value={stats.deletions} icon={Trash2} accent="destructive" />
         <StatsCard label="Other Actions" value={stats.other} icon={Activity} accent="default" />
       </div>
 

@@ -41,6 +41,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -270,6 +271,8 @@ export default function BusinessDetailPage() {
   // Danger zone confirmations
   const [confirmAction, setConfirmAction] = useState<string | null>(null);
   const [processing, setProcessing] = useState(false);
+  const [permanentDeleteOpen, setPermanentDeleteOpen] = useState(false);
+  const [deleteConfirmation, setDeleteConfirmation] = useState("");
 
   // Change plan dialog
   const [showChangePlan, setShowChangePlan] = useState(false);
@@ -304,10 +307,39 @@ export default function BusinessDetailPage() {
         .eq("user_id", biz.owner_id)
         .single();
 
-      if (profile) {
-        // Fetch real email from auth.users (email column doesn't exist in public.profiles)
-        const emailMap = await fetchUserEmails([biz.owner_id]);
-        setOwner({ ...profile, email: emailMap[biz.owner_id] || null } as OwnerProfile);
+      // Fetch the real Auth email. If the Auth user was removed during a
+      // partially completed deletion, recover the email from the audit record
+      // so the remaining business data can still be cleaned up safely.
+      const emailMap = await fetchUserEmails([biz.owner_id]);
+      let ownerEmail = emailMap[biz.owner_id] || null;
+      if (!ownerEmail) {
+        const { data: previousDeletionLog } = await supabase
+          .from("admin_activity_log")
+          .select("details")
+          .eq("target_type", "business")
+          .eq("target_id", biz.id)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        const previousDetails =
+          previousDeletionLog?.details &&
+          typeof previousDeletionLog.details === "object" &&
+          !Array.isArray(previousDeletionLog.details)
+            ? (previousDeletionLog.details as Record<string, unknown>)
+            : null;
+        ownerEmail =
+          typeof previousDetails?.owner_email === "string"
+            ? previousDetails.owner_email
+            : null;
+      }
+
+      if (profile || ownerEmail) {
+        setOwner({
+          full_name: profile?.full_name || "Deleted Auth user",
+          phone: profile?.phone || null,
+          avatar_url: profile?.avatar_url || null,
+          email: ownerEmail,
+        });
       }
 
       // Fetch all active plans
@@ -445,10 +477,6 @@ export default function BusinessDetailPage() {
         case "archive":
           updates.account_status = "archived";
           break;
-        case "delete":
-          updates.account_status = "deleted";
-          updates.deleted_at = now;
-          break;
         default:
           return;
       }
@@ -471,6 +499,43 @@ export default function BusinessDetailPage() {
   }, [business, confirmAction, supabase, fetchData]);
 
   // ─── Extend Trial ─────────────────────────────────────────
+  const handlePermanentDelete = useCallback(async () => {
+    if (!business || !owner?.email) return;
+    setProcessing(true);
+
+    try {
+      const response = await fetch(
+        `/api/admin/businesses/${business.id}/permanent-delete`,
+        {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ confirmation: deleteConfirmation.trim() }),
+        },
+      );
+      const result = (await response.json()) as {
+        error?: string;
+        warning?: string;
+      };
+
+      if (!response.ok) {
+        throw new Error(result.error || "Permanent deletion failed");
+      }
+
+      toast.success("User account and business data permanently deleted");
+      if (result.warning) toast.warning(result.warning);
+      setPermanentDeleteOpen(false);
+      setDeleteConfirmation("");
+      router.push("/admin/businesses");
+    } catch (error) {
+      console.error("Permanent deletion failed:", error);
+      toast.error(
+        error instanceof Error ? error.message : "Permanent deletion failed",
+      );
+    } finally {
+      setProcessing(false);
+    }
+  }, [business, owner?.email, deleteConfirmation, router]);
+
   const handleExtendTrial = useCallback(async () => {
     if (!business) return;
     setProcessing(true);
@@ -830,11 +895,11 @@ export default function BusinessDetailPage() {
               onClick={() => setConfirmAction("archive")}
             />
             <DangerButton
-              label="Delete"
-              description="Permanently remove"
+              label="Delete User & Data"
+              description="Remove Auth, business data and files"
               icon={Trash2}
               destructive
-              onClick={() => setConfirmAction("delete")}
+              onClick={() => setPermanentDeleteOpen(true)}
             />
           </div>
         </div>
@@ -885,6 +950,83 @@ export default function BusinessDetailPage() {
       </Dialog>
 
       {/* ═══ DANGER CONFIRM DIALOG ═══════════════════════════ */}
+      <Dialog
+        open={permanentDeleteOpen}
+        onOpenChange={(open) => {
+          if (!processing) {
+            setPermanentDeleteOpen(open);
+            if (!open) setDeleteConfirmation("");
+          }
+        }}
+      >
+        <DialogContent size="md">
+          <DialogHeader>
+            <div className="mb-2 flex size-11 items-center justify-center rounded-xl bg-destructive/10">
+              <Trash2 className="size-5 text-destructive" />
+            </div>
+            <DialogTitle>Permanently Delete User & Business</DialogTitle>
+            <DialogDescription>
+              This action cannot be undone. A detailed record will remain in the
+              Admin Activity Log.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            <div className="rounded-xl border border-destructive/25 bg-destructive/5 p-4">
+              <p className="text-sm font-semibold text-destructive">
+                The following will be permanently removed
+              </p>
+              <ul className="mt-2 space-y-1 text-sm text-muted-foreground/80">
+                <li>• Supabase Auth account for {owner?.email || "the owner"}</li>
+                <li>• {business.name} and all related database records</li>
+                <li>• Payment receipts, business logo, owner avatar, and order images</li>
+              </ul>
+            </div>
+
+            <div className="space-y-2">
+              <label
+                htmlFor="permanent-delete-confirmation"
+                className="text-sm font-medium text-foreground"
+              >
+                Type{" "}
+                <span className="font-semibold text-destructive">{owner?.email}</span>{" "}
+                to confirm
+              </label>
+              <Input
+                id="permanent-delete-confirmation"
+                value={deleteConfirmation}
+                onChange={(event) => setDeleteConfirmation(event.target.value)}
+                placeholder={owner?.email || "Owner email unavailable"}
+                autoComplete="off"
+                disabled={processing || !owner?.email}
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setPermanentDeleteOpen(false)}
+              disabled={processing}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handlePermanentDelete}
+              disabled={
+                processing ||
+                !owner?.email ||
+                deleteConfirmation.trim().toLowerCase() !== owner.email.toLowerCase()
+              }
+            >
+              {processing && <Loader2 className="size-4 animate-spin" />}
+              Delete Permanently
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <ConfirmDialog
         open={confirmAction !== null}
         onOpenChange={() => setConfirmAction(null)}
@@ -981,4 +1123,3 @@ function DangerButton({
     </button>
   );
 }
-

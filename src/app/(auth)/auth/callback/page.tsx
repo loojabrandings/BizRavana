@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { provisionUser } from "@/lib/supabase/provision-user";
+import { getAuthenticatedHome, isSuperAdmin } from "@/lib/auth-routing";
 
 function CallbackHandler() {
   const router = useRouter();
@@ -63,14 +64,16 @@ function CallbackHandler() {
         return;
       }
 
-      const provisionError = await provisionUser(supabase, user);
-      if (provisionError) {
-        console.error("Account provisioning error:", provisionError);
-        router.push("/login?error=account_setup");
-        return;
+      if (!isSuperAdmin(user)) {
+        const provisionError = await provisionUser(supabase, user);
+        if (provisionError) {
+          console.error("Account provisioning error:", provisionError);
+          router.push("/login?error=account_setup");
+          return;
+        }
       }
 
-      router.push("/dashboard");
+      router.push(getAuthenticatedHome(user));
       router.refresh();
     };
 

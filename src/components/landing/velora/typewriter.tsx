@@ -65,7 +65,7 @@ export function Typewriter({
   return (
     <span
       data-slot="typewriter"
-      className={cn("inline-grid text-left", className)}
+      className={cn("inline-grid text-center", className)}
       {...props}
     >
       <span className="sr-only">{words[0]}</span>

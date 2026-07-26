@@ -8,6 +8,7 @@ import {
   Bell,
   Boxes,
   Building2,
+  ChevronDown,
   CreditCard,
   Crown,
   HardDrive,
@@ -17,6 +18,7 @@ import {
   Settings,
   Shield,
   Trash2,
+  UserRound,
   Wallet,
   X,
 } from "lucide-react";
@@ -61,10 +63,6 @@ const adminNav: (AdminNavItem | { divider: true })[] = [
 ];
 
 // Mobile bottom nav items (subset of main nav)
-const mobileAdminNav = adminNav.filter(
-  (item): item is AdminNavItem => !("divider" in item),
-);
-
 // ══════════════════════════════════════════════════════════════════
 // MOBILE BOTTOM NAV
 // ══════════════════════════════════════════════════════════════════
@@ -244,17 +242,6 @@ function MobileNavDrawer({
           })}
         </nav>
 
-        {/* Footer */}
-        <div className="border-t border-border/20 p-3">
-          <button
-            type="button"
-            onClick={() => handleNav("/dashboard")}
-            className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-muted-foreground/80 hover:bg-muted/50 hover:text-foreground transition-all"
-          >
-            <LayoutDashboard className="size-4.5 shrink-0" />
-            <span>Back to Dashboard</span>
-          </button>
-        </div>
       </SheetContent>
     </Sheet>
   );
@@ -273,8 +260,6 @@ function DesktopSidebar({
   pathname: string;
   onToggle: () => void;
 }) {
-  const router = useRouter();
-
   const isActive = (href: string) => {
     if (href === "/admin") return pathname === "/admin";
     return pathname.startsWith(href);
@@ -345,15 +330,6 @@ function DesktopSidebar({
             <span className="text-xs">{collapsed ? "→" : "←"}</span>
             {!collapsed && <span className="text-xs">Collapse</span>}
           </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => router.push("/dashboard")}
-            className="text-muted-foreground/60 hover:text-foreground"
-            title="Back to Dashboard"
-          >
-            <LayoutDashboard className="size-3.5" />
-          </Button>
         </div>
       </div>
     </aside>
@@ -375,21 +351,40 @@ export default function AdminLayout({
   const [checking, setChecking] = useState(true);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
+  const [adminIdentity, setAdminIdentity] = useState({
+    name: "Super Admin",
+    email: "",
+    avatarUrl: null as string | null,
+  });
 
   // ── Auth check ────────────────────────────────────────────
   useEffect(() => {
     const checkAuth = async () => {
       try {
         const supabase = createClient();
-        const { data: { session } } = await supabase.auth.getSession();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
 
-        if (!session?.user) {
+        if (!user) {
           router.replace("/login?redirect=/admin");
           return;
         }
 
-        const isSa = session.user.app_metadata?.is_super_admin === true;
+        const isSa = user.app_metadata?.is_super_admin === true;
         setIsSuperAdmin(isSa);
+        setAdminIdentity({
+          name:
+            typeof user.user_metadata?.full_name === "string" &&
+            user.user_metadata.full_name.trim()
+              ? user.user_metadata.full_name.trim()
+              : "Super Admin",
+          email: user.email ?? "",
+          avatarUrl:
+            typeof user.user_metadata?.avatar_url === "string"
+              ? user.user_metadata.avatar_url
+              : null,
+        });
 
         if (!isSa) {
           router.replace("/dashboard");
@@ -401,7 +396,12 @@ export default function AdminLayout({
       }
     };
 
-    checkAuth();
+    void checkAuth();
+    window.addEventListener("admin-profile-updated", checkAuth);
+
+    return () => {
+      window.removeEventListener("admin-profile-updated", checkAuth);
+    };
   }, [router]);
 
   const handleLogout = useCallback(async () => {
@@ -411,13 +411,6 @@ export default function AdminLayout({
   }, []);
 
   // ── Close mobile drawer on route change ──────────────────
-  useEffect(() => {
-    if (mobileDrawerOpen) {
-      setMobileDrawerOpen(false);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pathname]);
-
   // ── Loading ───────────────────────────────────────────────
   if (checking) {
     return (
@@ -435,11 +428,16 @@ export default function AdminLayout({
   }
 
   const currentPageLabel =
-    (adminNav.filter((n): n is AdminNavItem => !("divider" in n)) as AdminNavItem[])
-      .find(
-        (n) =>
-          n.href === "/admin" ? pathname === "/admin" : pathname.startsWith(n.href),
-      )?.label || "Admin";
+    pathname === "/admin/profile"
+      ? "Admin Profile"
+      : (adminNav.filter(
+            (n): n is AdminNavItem => !("divider" in n),
+          ) as AdminNavItem[]
+        ).find((n) =>
+          n.href === "/admin"
+            ? pathname === "/admin"
+            : pathname.startsWith(n.href),
+        )?.label || "Admin";
 
   return (
     <div className="flex min-h-screen bg-background">
@@ -488,26 +486,97 @@ export default function AdminLayout({
             <ThemeToggle />
             <DropdownMenu>
               <DropdownMenuTrigger
+                className="h-auto border-0 bg-transparent p-0 shadow-none hover:border-transparent focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:ring-offset-2 dark:bg-transparent"
                 render={
-                  <button className="flex items-center gap-2 rounded-xl p-1 hover:bg-muted/50 transition-colors" />
+                  <button className="group/admin-avatar flex items-center gap-1.5 transition-all duration-200 hover:opacity-90 active:scale-95" />
                 }
               >
-                <Avatar className="size-8">
-                  <AvatarFallback className="bg-primary/10 text-xs font-bold text-primary">
-                    SA
-                  </AvatarFallback>
-                </Avatar>
+                <div className="relative">
+                  <Avatar className="size-8 shadow-xs [&::after]:!border-transparent">
+                    <AvatarImage src={adminIdentity.avatarUrl || undefined} />
+                    <AvatarFallback className="bg-gradient-to-br from-primary/20 via-primary/15 to-primary/30 text-xs font-bold text-primary shadow-inner">
+                      {adminIdentity.name
+                        .split(/\s+/)
+                        .map((part) => part[0])
+                        .join("")
+                        .slice(0, 2)
+                        .toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span className="absolute -bottom-0.5 -right-0.5 size-2.5 rounded-full border-2 border-background bg-success shadow-sm" />
+                </div>
+                <ChevronDown className="size-3 text-muted-foreground/50 transition-transform duration-200 group-hover/admin-avatar:text-foreground/70" />
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuItem onClick={() => router.push("/dashboard")}>
-                  <LayoutDashboard className="size-3.5 mr-2" />
-                  User Dashboard
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem variant="destructive" onClick={handleLogout}>
-                  <LogOut className="size-3.5 mr-2" />
-                  Logout
-                </DropdownMenuItem>
+              <DropdownMenuContent
+                align="end"
+                className="max-h-[calc(100vh-5rem)] w-72 overflow-y-auto rounded-2xl border-border/40 bg-popover/95 p-0 shadow-xl"
+              >
+                <div className="relative border-b border-border/30 bg-gradient-to-br from-primary/[0.06] via-transparent to-primary/[0.03] px-4 py-4">
+                  <div className="flex items-center gap-3">
+                    <div className="relative shrink-0">
+                      <Avatar className="size-11 [&::after]:!border-transparent">
+                        <AvatarImage
+                          src={adminIdentity.avatarUrl || undefined}
+                          alt={adminIdentity.name}
+                        />
+                        <AvatarFallback className="bg-gradient-to-br from-primary/30 via-primary/20 to-primary/40 text-sm font-bold text-primary shadow-inner">
+                          {adminIdentity.name
+                            .split(/\s+/)
+                            .map((part) => part[0])
+                            .join("")
+                            .slice(0, 2)
+                            .toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <span className="absolute -bottom-0.5 -right-0.5 size-3 rounded-full border-[2.5px] border-background bg-success shadow-sm" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <p className="truncate text-base font-semibold leading-5 text-foreground">
+                          {adminIdentity.name}
+                        </p>
+                        <span className="inline-flex shrink-0 items-center rounded-full border border-primary/20 bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary">
+                          Super Admin
+                        </span>
+                      </div>
+                      <p className="mt-1 truncate text-sm text-muted-foreground/70">
+                        {adminIdentity.email}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-2">
+                  <DropdownMenuItem
+                    onClick={() => router.push("/admin/profile")}
+                    className="gap-3 rounded-xl px-2.5 py-2.5"
+                  >
+                    <span className="flex size-8 items-center justify-center rounded-lg bg-muted/50 text-muted-foreground">
+                      <UserRound className="size-4" />
+                    </span>
+                    <span className="text-sm font-medium">Admin Profile</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => router.push("/admin/settings")}
+                    className="gap-3 rounded-xl px-2.5 py-2.5"
+                  >
+                    <span className="flex size-8 items-center justify-center rounded-lg bg-muted/50 text-muted-foreground">
+                      <Settings className="size-4" />
+                    </span>
+                    <span className="text-sm font-medium">Admin Settings</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator className="mx-1 my-1.5" />
+                  <DropdownMenuItem
+                    variant="destructive"
+                    onClick={handleLogout}
+                    className="gap-3 rounded-xl px-2.5 py-2.5"
+                  >
+                    <span className="flex size-8 items-center justify-center rounded-lg bg-destructive/5 text-destructive">
+                      <LogOut className="size-4" />
+                    </span>
+                    <span className="text-sm font-medium">Logout</span>
+                  </DropdownMenuItem>
+                </div>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>

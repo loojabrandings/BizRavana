@@ -97,6 +97,8 @@ export interface Database {
         Row: {
           id: string; business_id: string; plan_id: string | null;
           amount: number; payment_method: string; proof_image_url: string | null;
+          proof_image_path: string | null; submitted_by: string | null;
+          previous_account_status: string | null; reviewed_at: string | null;
           notes: string | null; status: "pending" | "approved" | "rejected";
           admin_note: string | null; approved_by: string | null;
           approved_at: string | null; created_at: string;
@@ -104,6 +106,8 @@ export interface Database {
         Insert: {
           id?: string; business_id: string; plan_id?: string | null;
           amount: number; payment_method?: string; proof_image_url?: string | null;
+          proof_image_path?: string | null; submitted_by?: string | null;
+          previous_account_status?: string | null; reviewed_at?: string | null;
           notes?: string | null; status?: "pending" | "approved" | "rejected";
           admin_note?: string | null; approved_by?: string | null;
           approved_at?: string | null; created_at?: string;
@@ -111,6 +115,8 @@ export interface Database {
         Update: {
           id?: string; business_id?: string; plan_id?: string | null;
           amount?: number; payment_method?: string; proof_image_url?: string | null;
+          proof_image_path?: string | null; submitted_by?: string | null;
+          previous_account_status?: string | null; reviewed_at?: string | null;
           notes?: string | null; status?: "pending" | "approved" | "rejected";
           admin_note?: string | null; approved_by?: string | null;
           approved_at?: string | null; created_at?: string;
@@ -513,17 +519,17 @@ export interface Database {
       };
       admin_activity_log: {
         Row: {
-          id: string; admin_id: string; action: string;
+          id: string; admin_id: string | null; action: string;
           target_type: string | null; target_id: string | null;
           details: Json; created_at: string;
         };
         Insert: {
-          id?: string; admin_id: string; action: string;
+          id?: string; admin_id?: string | null; action: string;
           target_type?: string | null; target_id?: string | null;
           details?: Json; created_at?: string;
         };
         Update: {
-          id?: string; admin_id?: string; action?: string;
+          id?: string; admin_id?: string | null; action?: string;
           target_type?: string | null; target_id?: string | null;
           details?: Json; created_at?: string;
         };
@@ -575,6 +581,31 @@ export interface Database {
       accept_invitation: {
         Args: { invitation_token: string; accepting_user_id: string };
         Returns: string;
+      };
+      create_bank_transfer_payment: {
+        Args: {
+          p_business_id: string;
+          p_plan_id: string;
+          p_proof_image_path: string;
+          p_notes: string;
+          p_submitted_by: string;
+        };
+        Returns: string;
+      };
+      review_bank_transfer_payment: {
+        Args: {
+          p_payment_id: string;
+          p_action: "approve" | "reject";
+          p_admin_note?: string | null;
+        };
+        Returns: Json;
+      };
+      purge_business_data: {
+        Args: {
+          p_business_id: string;
+          p_delete_root?: boolean;
+        };
+        Returns: Json;
       };
     };
     Enums: Record<string, never>;

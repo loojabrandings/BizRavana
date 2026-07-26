@@ -30,16 +30,15 @@ import { HeroMockup } from "@/components/landing/velora/hero-mockup";
 import { IntegrationsBeam } from "@/components/landing/velora/integrations-beam";
 import { ActivityList } from "@/components/landing/velora/activity-list";
 import { AnimatedGradientText } from "@/components/landing/velora/animated-gradient-text";
-import { AuroraBackground } from "@/components/landing/velora/aurora-background";
 import { AvatarCircles } from "@/components/landing/velora/avatar-circles";
 import { BentoCard, BentoGrid } from "@/components/landing/velora/bento-grid";
 import { BlurFade } from "@/components/landing/velora/blur-fade";
 import { BorderBeam } from "@/components/landing/velora/border-beam";
-import { GridPattern } from "@/components/landing/velora/grid-pattern";
+import { DotPattern } from "@/components/landing/velora/grid-pattern";
 import { Marquee } from "@/components/landing/velora/marquee";
 import { NumberTicker } from "@/components/landing/velora/number-ticker";
 import { OrbitingCircles } from "@/components/landing/velora/orbiting-circles";
-import { Particles } from "@/components/landing/velora/particles";
+
 import { RetroGrid } from "@/components/landing/velora/retro-grid";
 import { ShimmerButton } from "@/components/landing/velora/shimmer-button";
 import { SpotlightCard } from "@/components/landing/velora/spotlight-card";
@@ -207,12 +206,8 @@ export default function LandingPage() {
 
       {/* ═══ Hero ═══ */}
       <section className="relative overflow-hidden pt-40 pb-24 lg:pt-48 lg:pb-28">
-        <AuroraBackground intensity="subtle" />
-        <GridPattern
-          width={48}
-          height={48}
-          className="fill-transparent stroke-border/20 [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,black,transparent)]"
-        />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,color-mix(in_oklch,var(--primary)_15%,transparent),transparent_60%)]" />
+        <DotPattern className="[mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,black,transparent)] stroke-border/20 fill-transparent" />
         <div className="relative mx-auto max-w-6xl px-4 text-center lg:px-8">
           <BlurFade delay={0} direction="down">
             <span className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-card/60 px-4 py-1.5 text-sm backdrop-blur">
@@ -244,8 +239,8 @@ export default function LandingPage() {
                 <RocketIcon className="size-4" />
                 Start 3-Day Free Trial
               </ShimmerButton>
-              <a
-                href="#features"
+              <Link
+                href="/features"
                 className="group relative inline-flex h-10 items-center justify-center gap-2 overflow-hidden rounded-lg px-5 text-sm font-medium text-foreground transition-colors hover:bg-muted hover:text-foreground"
               >
                 <span className="relative z-10">Explore Features</span>
@@ -253,7 +248,7 @@ export default function LandingPage() {
                   aria-hidden
                   className="animate-shimmer absolute inset-0 bg-[linear-gradient(110deg,transparent_30%,rgba(255,255,255,0.35)_50%,transparent_70%)] bg-[length:250%_100%] opacity-0 transition-opacity duration-500 group-hover:opacity-100"
                 />
-              </a>
+              </Link>
             </div>
           </BlurFade>
 
@@ -843,8 +838,8 @@ export default function LandingPage() {
 
       {/* ═══ CTA ═══ */}
       <section className="relative overflow-hidden py-24 lg:py-32">
-        <AuroraBackground intensity="subtle" />
-        <Particles quantity={50} />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,color-mix(in_oklch,var(--primary)_15%,transparent),transparent_60%)]" />
+        <DotPattern className="[mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,black,transparent)] stroke-border/20 fill-transparent" />
         <div className="relative mx-auto max-w-4xl px-4 text-center lg:px-8">
           <BlurFade>
             <h2 className="text-4xl font-semibold tracking-tight text-balance lg:text-6xl">
