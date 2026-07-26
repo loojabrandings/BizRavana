@@ -366,8 +366,10 @@ export default function SubscriptionPage() {
           payment.status === "success"
             ? "Successful"
             : payment.status === "created"
-              ? "Started"
-              : payment.status,
+              ? "Checkout started"
+              : payment.status === "pending"
+                ? "Awaiting confirmation"
+                : payment.status,
         methodLabel: payment.payment_method
           ? `Card · ${payment.payment_method}`
           : "Card · PayHere",

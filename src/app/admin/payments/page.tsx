@@ -104,8 +104,8 @@ function PaymentStatusBadge({ status }: { status: PaymentStatus }) {
     invalid: "bg-destructive/10 text-destructive border-destructive/20",
   };
   const labels: Record<PaymentStatus, string> = {
-    created: "Started",
-    pending: "Pending",
+    created: "Checkout started",
+    pending: "Awaiting confirmation",
     approved: "Approved",
     rejected: "Rejected",
     success: "Successful",

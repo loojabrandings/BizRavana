@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
 
-type CheckoutEvent = "dismissed" | "sdk_error";
+type CheckoutEvent = "completed" | "dismissed" | "sdk_error";
 
 function response(body: object, status = 200) {
   return NextResponse.json(body, {
@@ -36,7 +36,11 @@ export async function POST(request: Request) {
   const event = body.event;
   const message = String(body.message ?? "").trim().slice(0, 500);
 
-  if (!orderId || !event || !["dismissed", "sdk_error"].includes(event)) {
+  if (
+    !orderId ||
+    !event ||
+    !["completed", "dismissed", "sdk_error"].includes(event)
+  ) {
     return response({ error: "Invalid checkout event." }, 400);
   }
 
@@ -51,12 +55,19 @@ export async function POST(request: Request) {
   }
 
   const admin = getAdminClient();
-  const status = event === "dismissed" ? "canceled" : "failed";
+  const status =
+    event === "completed"
+      ? "pending"
+      : event === "dismissed"
+        ? "canceled"
+        : "failed";
   const statusMessage =
     message ||
-    (event === "dismissed"
-      ? "Customer closed the PayHere checkout."
-      : "PayHere SDK error.");
+    (event === "completed"
+      ? "Checkout completed; awaiting PayHere server confirmation."
+      : event === "dismissed"
+        ? "Customer closed the PayHere checkout."
+        : "PayHere SDK error.");
   const now = new Date().toISOString();
 
   // Only a checkout that has not received a gateway result can be changed by
@@ -87,9 +98,11 @@ export async function POST(request: Request) {
       .insert({
         admin_id: null,
         action:
-          event === "dismissed"
-            ? "payhere_checkout_dismissed"
-            : "payhere_checkout_sdk_error",
+          event === "completed"
+            ? "payhere_checkout_completed"
+            : event === "dismissed"
+              ? "payhere_checkout_dismissed"
+              : "payhere_checkout_sdk_error",
         target_type: "payhere_payment",
         target_id: updatedPayment.id,
         details: {

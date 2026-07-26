@@ -425,7 +425,7 @@ export function PaymentPageClient({
       const payment = result.payment;
       const payhere = window.payhere;
       const recordClientEvent = async (
-        event: "dismissed" | "sdk_error",
+        event: "completed" | "dismissed" | "sdk_error",
         message?: string,
       ) => {
         const eventResponse = await fetch(
@@ -447,9 +447,9 @@ export function PaymentPageClient({
       };
 
       payhere.onCompleted = () => {
+        void recordClientEvent("completed");
         const loadingToast = toast.loading("Confirming your payment...", {
-          description:
-            "Please keep this page open while PayHere confirms the payment.",
+          description: "This normally takes less than 30 seconds.",
         });
 
         void waitForPayHereConfirmation(payment.order_id)
