@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import Script from "next/script";
 import {
   ArrowLeft,
   BadgeCheck,
@@ -50,6 +51,28 @@ interface AdminSettings {
   bank_branch: string;
   payment_instructions: string;
   support_whatsapp: string;
+}
+
+interface PayHereInitiationResponse {
+  error?: string;
+  payment?: PayHerePayment;
+}
+
+interface PayHereStatusResponse {
+  error?: string;
+  payment?: {
+    orderId: string;
+    status:
+      | "created"
+      | "pending"
+      | "success"
+      | "canceled"
+      | "failed"
+      | "chargedback"
+      | "invalid";
+    statusMessage: string | null;
+    activated: boolean;
+  };
 }
 
 const DEFAULT_ADMIN_SETTINGS: AdminSettings = {
@@ -125,6 +148,8 @@ export function PaymentPageClient({
   );
   const [notes, setNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [payHereReady, setPayHereReady] = useState(false);
+  const [payHereScriptFailed, setPayHereScriptFailed] = useState(false);
   const [copiedBankField, setCopiedBankField] = useState<string | null>(null);
   const [submittedPayment, setSubmittedPayment] = useState<{
     planName: string;
@@ -313,7 +338,39 @@ export function PaymentPageClient({
     [],
   );
 
-  const continueToPayHere = useCallback(() => {
+  const waitForPayHereConfirmation = useCallback(async (orderId: string) => {
+    for (let attempt = 0; attempt < 20; attempt += 1) {
+      const response = await fetch(
+        `/api/payments/payhere/status?orderId=${encodeURIComponent(orderId)}`,
+        { cache: "no-store" },
+      );
+      const result = (await response.json()) as PayHereStatusResponse;
+
+      if (!response.ok || !result.payment) {
+        throw new Error(result.error || "Payment status could not be checked.");
+      }
+
+      if (
+        result.payment.status === "success" &&
+        result.payment.activated
+      ) {
+        return result.payment;
+      }
+      if (
+        ["canceled", "failed", "chargedback", "invalid"].includes(
+          result.payment.status,
+        )
+      ) {
+        return result.payment;
+      }
+
+      await new Promise((resolve) => window.setTimeout(resolve, 1500));
+    }
+
+    return null;
+  }, []);
+
+  const continueToPayHere = useCallback(async () => {
     const customerFields: Array<
       [string, keyof CardCustomerDetails, string]
     > = [
@@ -342,10 +399,119 @@ export function PaymentPageClient({
       return;
     }
 
-    toast.info("Card payment details are ready.", {
-      description: "The secure PayHere checkout will be connected next.",
-    });
-  }, [cardCustomer, selectedPlan]);
+    if (!payHereReady || !window.payhere) {
+      toast.error("PayHere checkout is still loading.", {
+        description: "Please wait a moment and try again.",
+      });
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const response = await fetch("/api/payments/payhere/initiate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          planId: selectedPlan.id,
+          customer: cardCustomer,
+        }),
+      });
+      const result = (await response.json()) as PayHereInitiationResponse;
+
+      if (!response.ok || !result.payment) {
+        throw new Error(result.error || "PayHere checkout could not be prepared.");
+      }
+
+      const payment = result.payment;
+      const payhere = window.payhere;
+
+      payhere.onCompleted = () => {
+        const loadingToast = toast.loading("Confirming your payment...", {
+          description:
+            "Please keep this page open while PayHere confirms the payment.",
+        });
+
+        void waitForPayHereConfirmation(payment.order_id)
+          .then((confirmedPayment) => {
+            toast.dismiss(loadingToast);
+
+            if (
+              confirmedPayment?.status === "success" &&
+              confirmedPayment.activated
+            ) {
+              toast.success("Payment successful.", {
+                description: "Your subscription is now active.",
+              });
+              router.replace(
+                `/dashboard/subscription?payment=success&order_id=${encodeURIComponent(payment.order_id)}`,
+              );
+              router.refresh();
+              return;
+            }
+
+            if (confirmedPayment) {
+              toast.error("Payment was not successful.", {
+                description:
+                  confirmedPayment.statusMessage ||
+                  "No charge was confirmed by PayHere.",
+              });
+              setSubmitting(false);
+              return;
+            }
+
+            toast.info("Payment confirmation is taking longer than expected.", {
+              description:
+                "Do not pay again. Check your subscription page in a moment.",
+            });
+            router.replace(
+              `/dashboard/subscription?payment=pending&order_id=${encodeURIComponent(payment.order_id)}`,
+            );
+            router.refresh();
+          })
+          .catch((error) => {
+            toast.dismiss(loadingToast);
+            toast.error("Payment status could not be confirmed.", {
+              description:
+                error instanceof Error ? error.message : "Please try again.",
+            });
+            setSubmitting(false);
+          });
+      };
+
+      payhere.onDismissed = () => {
+        setSubmitting(false);
+        toast.info("PayHere checkout was closed.", {
+          description: "No completed payment was confirmed.",
+        });
+      };
+
+      payhere.onError = (error) => {
+        setSubmitting(false);
+        toast.error("PayHere checkout could not be opened.", {
+          description: error || "Please check the payment details and try again.",
+        });
+      };
+
+      payhere.startPayment({
+        ...payment,
+        // The popup SDK requires these to be undefined to avoid a page redirect.
+        return_url: undefined,
+        cancel_url: undefined,
+      });
+    } catch (error) {
+      setSubmitting(false);
+      toast.error("Card payment could not be started.", {
+        description:
+          error instanceof Error ? error.message : "Please try again.",
+      });
+    }
+  }, [
+    cardCustomer,
+    payHereReady,
+    router,
+    selectedPlan,
+    waitForPayHereConfirmation,
+  ]);
 
   const submitPayment = useCallback(async () => {
     if (!selectedPlan || !receipt) {
@@ -455,7 +621,22 @@ export function PaymentPageClient({
   }
 
   return (
-    <div className="space-y-6 p-4 pb-24 sm:p-6">
+    <>
+      <Script
+        id="payhere-sdk"
+        src="https://www.payhere.lk/lib/payhere.js"
+        strategy="afterInteractive"
+        onReady={() => {
+          setPayHereReady(Boolean(window.payhere));
+          setPayHereScriptFailed(false);
+        }}
+        onError={() => {
+          setPayHereReady(false);
+          setPayHereScriptFailed(true);
+          toast.error("PayHere checkout could not be loaded.");
+        }}
+      />
+      <div className="space-y-6 p-4 pb-24 sm:p-6">
       <button
         type="button"
         onClick={() => router.push("/dashboard/subscription")}
@@ -723,12 +904,15 @@ export function PaymentPageClient({
           pendingPayment={pendingPayment}
           receipt={receipt}
           submitting={submitting}
+          payHereReady={payHereReady}
+          payHereScriptFailed={payHereScriptFailed}
           onPlanChange={setSelectedPlanId}
           onBankSubmit={submitPayment}
           onCardContinue={continueToPayHere}
         />
       </div>
-    </div>
+      </div>
+    </>
   );
 }
 
@@ -947,6 +1131,8 @@ function OrderSummary({
   pendingPayment,
   receipt,
   submitting,
+  payHereReady,
+  payHereScriptFailed,
   onPlanChange,
   onBankSubmit,
   onCardContinue,
@@ -958,6 +1144,8 @@ function OrderSummary({
   pendingPayment: boolean;
   receipt: File | null;
   submitting: boolean;
+  payHereReady: boolean;
+  payHereScriptFailed: boolean;
   onPlanChange: (id: string) => void;
   onBankSubmit: () => void;
   onCardContinue: () => void;
@@ -977,7 +1165,7 @@ function OrderSummary({
             label: `${plan.name} — Rs. ${plan.monthly_price.toLocaleString()}`,
           }))}
           placeholder="Select a subscription plan"
-          disabled={pendingPayment}
+          disabled={pendingPayment || submitting}
           className="h-11 w-full rounded-xl"
           fullWidth
         />
@@ -1029,6 +1217,7 @@ function OrderSummary({
           submitting ||
           pendingPayment ||
           !selectedPlan ||
+          (paymentMethod === "card" && !payHereReady) ||
           (paymentMethod === "bank" && !receipt)
         }
         onClick={() =>
@@ -1045,11 +1234,17 @@ function OrderSummary({
           <Upload className="size-4" />
         )}
         {submitting
-          ? "Submitting..."
+          ? paymentMethod === "card"
+            ? "Opening PayHere..."
+            : "Submitting..."
           : pendingPayment
             ? "Payment under review"
             : paymentMethod === "card"
-              ? "Continue to PayHere"
+              ? payHereScriptFailed
+                ? "PayHere unavailable"
+                : payHereReady
+                  ? "Continue to PayHere"
+                  : "Loading PayHere..."
               : "Submit for Review"}
       </Button>
       <div className="mt-4 flex items-start gap-2 text-xs leading-5 text-muted-foreground">
