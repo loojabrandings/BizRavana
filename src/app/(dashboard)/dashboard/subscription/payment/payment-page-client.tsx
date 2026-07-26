@@ -14,7 +14,6 @@ import {
   Eye,
   Landmark,
   Loader2,
-  LockKeyhole,
   MessageCircle,
   ShieldCheck,
   Trash2,
@@ -24,12 +23,25 @@ import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Dropdown } from "@/components/ui/dropdown";
+import { Input } from "@/components/ui/input";
 import { PageHeader } from "@/components/shared/page-header";
 import { cn } from "@/lib/utils";
 import type { Database } from "@/types/database";
 
 type SubscriptionPlan =
   Database["public"]["Tables"]["subscription_plans"]["Row"];
+
+type PaymentMethod = "card" | "bank";
+
+interface CardCustomerDetails {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  address: string;
+  city: string;
+  country: string;
+}
 
 interface AdminSettings {
   bank_name: string;
@@ -49,8 +61,42 @@ const DEFAULT_ADMIN_SETTINGS: AdminSettings = {
   support_whatsapp: "94750350109",
 };
 
+const EMPTY_CARD_CUSTOMER_DETAILS: CardCustomerDetails = {
+  firstName: "",
+  lastName: "",
+  email: "",
+  phone: "",
+  address: "",
+  city: "",
+  country: "Sri Lanka",
+};
+
 function formatLimit(value: number) {
   return value >= 999999 ? "Unlimited" : value.toLocaleString();
+}
+
+function getCardCustomerFieldError(
+  field: keyof CardCustomerDetails,
+  value: string,
+) {
+  const trimmedValue = value.trim();
+  if (!trimmedValue) return "This field is required.";
+
+  if (
+    field === "email" &&
+    !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedValue)
+  ) {
+    return "Enter a valid email address.";
+  }
+
+  if (field === "phone") {
+    const digits = trimmedValue.replace(/\D/g, "");
+    if (digits.length < 9 || digits.length > 15) {
+      return "Enter a valid phone number.";
+    }
+  }
+
+  return null;
 }
 
 export function PaymentPageClient({
@@ -65,6 +111,11 @@ export function PaymentPageClient({
   const [loading, setLoading] = useState(true);
   const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
   const [selectedPlanId, setSelectedPlanId] = useState(initialPlanId);
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("card");
+  const [cardCustomer, setCardCustomer] = useState<CardCustomerDetails>(
+    EMPTY_CARD_CUSTOMER_DETAILS,
+  );
+  const [cardValidationAttempted, setCardValidationAttempted] = useState(false);
   const [businessName, setBusinessName] = useState("");
   const [adminSettings, setAdminSettings] = useState(DEFAULT_ADMIN_SETTINGS);
   const [pendingPayment, setPendingPayment] = useState(false);
@@ -107,7 +158,7 @@ export function PaymentPageClient({
 
       const { data: profile } = await supabase
         .from("profiles")
-        .select("business_id")
+        .select("business_id, full_name, phone")
         .eq("user_id", user.id)
         .single();
 
@@ -117,7 +168,13 @@ export function PaymentPageClient({
         return;
       }
 
-      const [plansResult, businessResult, settingsResult, pendingResult] =
+      const [
+        plansResult,
+        businessResult,
+        settingsResult,
+        pendingResult,
+        businessSettingsResult,
+      ] =
         await Promise.all([
           supabase
             .from("subscription_plans")
@@ -126,7 +183,7 @@ export function PaymentPageClient({
             .order("sort_order"),
           supabase
             .from("businesses")
-            .select("name")
+            .select("name, phone, district, address")
             .eq("id", profile.business_id)
             .single(),
           supabase
@@ -141,6 +198,11 @@ export function PaymentPageClient({
             .eq("status", "pending")
             .limit(1)
             .maybeSingle(),
+          supabase
+            .from("business_settings")
+            .select("key, value")
+            .eq("business_id", profile.business_id)
+            .in("key", ["business_email", "city", "country"]),
         ]);
 
       const availablePlans = (plansResult.data ?? []).filter(
@@ -151,6 +213,29 @@ export function PaymentPageClient({
       setPlans(availablePlans);
       setBusinessName(businessResult.data?.name ?? "");
       setPendingPayment(Boolean(pendingResult.data));
+
+      const businessSettings = Object.fromEntries(
+        (businessSettingsResult.data ?? []).map((setting) => [
+          setting.key,
+          String(setting.value ?? ""),
+        ]),
+      );
+      const fullName = profile.full_name.trim();
+      const lastSpaceIndex = fullName.lastIndexOf(" ");
+      const firstName =
+        lastSpaceIndex > 0 ? fullName.slice(0, lastSpaceIndex) : fullName;
+      const lastName =
+        lastSpaceIndex > 0 ? fullName.slice(lastSpaceIndex + 1) : "";
+
+      setCardCustomer({
+        firstName,
+        lastName,
+        email: user.email ?? businessSettings.business_email ?? "",
+        phone: profile.phone ?? businessResult.data?.phone ?? "",
+        address: businessResult.data?.address ?? "",
+        city: businessSettings.city || businessResult.data?.district || "",
+        country: businessSettings.country || "Sri Lanka",
+      });
 
       if (settingsResult.data?.value) {
         setAdminSettings({
@@ -220,6 +305,47 @@ export function PaymentPageClient({
       toast.error(`${label} could not be copied.`);
     }
   }, []);
+
+  const updateCardCustomer = useCallback(
+    (field: keyof CardCustomerDetails, value: string) => {
+      setCardCustomer((current) => ({ ...current, [field]: value }));
+    },
+    [],
+  );
+
+  const continueToPayHere = useCallback(() => {
+    const customerFields: Array<
+      [string, keyof CardCustomerDetails, string]
+    > = [
+      ["first name", "firstName", cardCustomer.firstName],
+      ["last name", "lastName", cardCustomer.lastName],
+      ["email", "email", cardCustomer.email],
+      ["phone", "phone", cardCustomer.phone],
+      ["address", "address", cardCustomer.address],
+      ["city", "city", cardCustomer.city],
+      ["country", "country", cardCustomer.country],
+    ];
+    const invalidFields = customerFields
+      .filter(([, field, value]) => getCardCustomerFieldError(field, value))
+      .map(([label]) => label);
+
+    setCardValidationAttempted(true);
+
+    if (!selectedPlan) {
+      toast.error("Select a subscription plan.");
+      return;
+    }
+    if (invalidFields.length > 0) {
+      toast.error("Check the customer details.", {
+        description: `Review: ${invalidFields.join(", ")}.`,
+      });
+      return;
+    }
+
+    toast.info("Card payment details are ready.", {
+      description: "The secure PayHere checkout will be connected next.",
+    });
+  }, [cardCustomer, selectedPlan]);
 
   const submitPayment = useCallback(async () => {
     if (!selectedPlan || !receipt) {
@@ -366,21 +492,36 @@ export function PaymentPageClient({
               Choose a payment method
             </p>
             <p className="mt-1 text-sm text-muted-foreground">
-              Card payments will be available in a future update.
+              Pay securely with PayHere or submit a bank-transfer receipt.
             </p>
 
             <div className="mt-5 grid gap-3 sm:grid-cols-2">
-              <div
-                aria-disabled="true"
-                className="relative rounded-2xl border border-border/30 bg-muted/10 p-4 opacity-55"
+              <button
+                type="button"
+                onClick={() => setPaymentMethod("card")}
+                className={cn(
+                  "relative rounded-2xl border p-4 text-left transition-all",
+                  paymentMethod === "card"
+                    ? "border-2 border-primary bg-primary/[0.04] shadow-sm shadow-primary/10"
+                    : "border-border/30 bg-muted/10 hover:border-primary/30 hover:bg-primary/[0.02]",
+                )}
               >
                 <div className="flex items-start justify-between gap-3">
-                  <div className="flex size-10 items-center justify-center rounded-xl bg-muted text-muted-foreground">
+                  <div
+                    className={cn(
+                      "flex size-10 items-center justify-center rounded-xl",
+                      paymentMethod === "card"
+                        ? "bg-primary/10 text-primary"
+                        : "bg-muted text-muted-foreground",
+                    )}
+                  >
                     <CreditCard className="size-5" />
                   </div>
-                  <span className="rounded-full border border-border/40 bg-muted px-2.5 py-1 text-xs font-semibold text-muted-foreground">
-                    Coming soon
-                  </span>
+                  {paymentMethod === "card" && (
+                    <span className="flex size-6 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                      <Check className="size-3.5" />
+                    </span>
+                  )}
                 </div>
                 <p className="mt-4 text-sm font-semibold text-foreground">
                   Card Payment
@@ -388,23 +529,45 @@ export function PaymentPageClient({
                 <p className="mt-1 text-sm text-muted-foreground">
                   Secure online payment with PayHere.
                 </p>
-                <div className="mt-4 flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-                  <LockKeyhole className="size-3.5" />
-                  Currently unavailable
+                <div
+                  className={cn(
+                    "mt-4 flex items-center gap-1.5 text-xs font-medium",
+                    paymentMethod === "card"
+                      ? "text-primary"
+                      : "text-muted-foreground",
+                  )}
+                >
+                  <BadgeCheck className="size-3.5" />
+                  {paymentMethod === "card" ? "Selected" : "Select method"}
                 </div>
-              </div>
+              </button>
 
               <button
                 type="button"
-                className="relative rounded-2xl border-2 border-primary bg-primary/[0.04] p-4 text-left shadow-sm shadow-primary/10"
+                onClick={() => setPaymentMethod("bank")}
+                className={cn(
+                  "relative rounded-2xl border p-4 text-left transition-all",
+                  paymentMethod === "bank"
+                    ? "border-2 border-primary bg-primary/[0.04] shadow-sm shadow-primary/10"
+                    : "border-border/30 bg-muted/10 hover:border-primary/30 hover:bg-primary/[0.02]",
+                )}
               >
                 <div className="flex items-start justify-between gap-3">
-                  <div className="flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                  <div
+                    className={cn(
+                      "flex size-10 items-center justify-center rounded-xl",
+                      paymentMethod === "bank"
+                        ? "bg-primary/10 text-primary"
+                        : "bg-muted text-muted-foreground",
+                    )}
+                  >
                     <Landmark className="size-5" />
                   </div>
-                  <span className="flex size-6 items-center justify-center rounded-full bg-primary text-primary-foreground">
-                    <Check className="size-3.5" />
-                  </span>
+                  {paymentMethod === "bank" && (
+                    <span className="flex size-6 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                      <Check className="size-3.5" />
+                    </span>
+                  )}
                 </div>
                 <p className="mt-4 text-sm font-semibold text-foreground">
                   Bank Transfer
@@ -412,14 +575,28 @@ export function PaymentPageClient({
                 <p className="mt-1 text-sm text-muted-foreground">
                   Transfer manually and attach your receipt.
                 </p>
-                <div className="mt-4 flex items-center gap-1.5 text-xs font-medium text-primary">
+                <div
+                  className={cn(
+                    "mt-4 flex items-center gap-1.5 text-xs font-medium",
+                    paymentMethod === "bank"
+                      ? "text-primary"
+                      : "text-muted-foreground",
+                  )}
+                >
                   <BadgeCheck className="size-3.5" />
-                  Selected
+                  {paymentMethod === "bank" ? "Selected" : "Select method"}
                 </div>
               </button>
             </div>
           </section>
 
+          {paymentMethod === "card" ? (
+            <CardCustomerForm
+              details={cardCustomer}
+              showValidation={cardValidationAttempted}
+              onChange={updateCardCustomer}
+            />
+          ) : (
           <div className="grid items-stretch gap-6 xl:grid-cols-2">
             <BankDetails
               settings={adminSettings}
@@ -535,20 +712,153 @@ export function PaymentPageClient({
             </div>
             </section>
           </div>
+          )}
         </div>
 
         <OrderSummary
           plans={plans}
           selectedPlan={selectedPlan}
           selectedPlanId={selectedPlanId}
+          paymentMethod={paymentMethod}
           pendingPayment={pendingPayment}
           receipt={receipt}
           submitting={submitting}
           onPlanChange={setSelectedPlanId}
-          onSubmit={submitPayment}
+          onBankSubmit={submitPayment}
+          onCardContinue={continueToPayHere}
         />
       </div>
     </div>
+  );
+}
+
+function CardCustomerForm({
+  details,
+  showValidation,
+  onChange,
+}: {
+  details: CardCustomerDetails;
+  showValidation: boolean;
+  onChange: (field: keyof CardCustomerDetails, value: string) => void;
+}) {
+  const fields: Array<{
+    field: keyof CardCustomerDetails;
+    label: string;
+    type?: "text" | "email" | "tel";
+    autoComplete: string;
+    placeholder: string;
+    fullWidth?: boolean;
+  }> = [
+    {
+      field: "firstName",
+      label: "First name",
+      autoComplete: "given-name",
+      placeholder: "Enter first name",
+    },
+    {
+      field: "lastName",
+      label: "Last name",
+      autoComplete: "family-name",
+      placeholder: "Enter last name",
+    },
+    {
+      field: "email",
+      label: "Email address",
+      type: "email",
+      autoComplete: "email",
+      placeholder: "name@example.com",
+    },
+    {
+      field: "phone",
+      label: "Phone number",
+      type: "tel",
+      autoComplete: "tel",
+      placeholder: "07X XXX XXXX",
+    },
+    {
+      field: "address",
+      label: "Address",
+      autoComplete: "street-address",
+      placeholder: "Enter billing address",
+      fullWidth: true,
+    },
+    {
+      field: "city",
+      label: "City",
+      autoComplete: "address-level2",
+      placeholder: "Enter city",
+    },
+    {
+      field: "country",
+      label: "Country",
+      autoComplete: "country-name",
+      placeholder: "Enter country",
+    },
+  ];
+
+  return (
+    <section className="glass-card rounded-2xl p-5 sm:p-6">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="text-sm font-semibold text-foreground">
+            Card-payment customer details
+          </p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Confirm the details that will be sent securely to PayHere.
+          </p>
+        </div>
+        <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+          <CreditCard className="size-5" />
+        </div>
+      </div>
+
+      <div className="mt-5 grid gap-4 sm:grid-cols-2">
+        {fields.map((item) => {
+          const validationError = getCardCustomerFieldError(
+            item.field,
+            details[item.field],
+          );
+          const invalid = showValidation && Boolean(validationError);
+          const id = `payhere-${item.field}`;
+
+          return (
+            <div
+              key={item.field}
+              className={item.fullWidth ? "sm:col-span-2" : undefined}
+            >
+              <label
+                htmlFor={id}
+                className="text-sm font-medium text-foreground"
+              >
+                {item.label} <span className="text-destructive">*</span>
+              </label>
+              <Input
+                id={id}
+                type={item.type ?? "text"}
+                value={details[item.field]}
+                onChange={(event) => onChange(item.field, event.target.value)}
+                autoComplete={item.autoComplete}
+                placeholder={item.placeholder}
+                required
+                aria-invalid={invalid}
+                className="mt-2 h-11 rounded-xl border-border/40 bg-background/40 px-3"
+              />
+              {invalid && (
+                <p className="mt-1.5 text-xs text-destructive">
+                  {validationError}
+                </p>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="mt-5 flex items-start gap-2 rounded-xl border border-primary/15 bg-primary/[0.03] p-3 text-xs leading-5 text-muted-foreground">
+        <ShieldCheck className="mt-0.5 size-4 shrink-0 text-primary" />
+        Your card number and CVV will be entered only in PayHere&apos;s secure
+        checkout. BizRavana does not collect or store card details.
+      </div>
+    </section>
   );
 }
 
@@ -633,20 +943,24 @@ function OrderSummary({
   plans,
   selectedPlan,
   selectedPlanId,
+  paymentMethod,
   pendingPayment,
   receipt,
   submitting,
   onPlanChange,
-  onSubmit,
+  onBankSubmit,
+  onCardContinue,
 }: {
   plans: SubscriptionPlan[];
   selectedPlan: SubscriptionPlan | null;
   selectedPlanId: string;
+  paymentMethod: PaymentMethod;
   pendingPayment: boolean;
   receipt: File | null;
   submitting: boolean;
   onPlanChange: (id: string) => void;
-  onSubmit: () => void;
+  onBankSubmit: () => void;
+  onCardContinue: () => void;
 }) {
   return (
     <aside className="glass-card rounded-2xl p-5 lg:sticky lg:top-24 sm:p-6">
@@ -712,12 +1026,21 @@ function OrderSummary({
         variant="gradient"
         className="mt-6 w-full"
         disabled={
-          submitting || pendingPayment || !selectedPlan || !receipt
+          submitting ||
+          pendingPayment ||
+          !selectedPlan ||
+          (paymentMethod === "bank" && !receipt)
         }
-        onClick={() => void onSubmit()}
+        onClick={() =>
+          paymentMethod === "card"
+            ? onCardContinue()
+            : void onBankSubmit()
+        }
       >
         {submitting ? (
           <Loader2 className="size-4 animate-spin" />
+        ) : paymentMethod === "card" ? (
+          <CreditCard className="size-4" />
         ) : (
           <Upload className="size-4" />
         )}
@@ -725,11 +1048,15 @@ function OrderSummary({
           ? "Submitting..."
           : pendingPayment
             ? "Payment under review"
-            : "Submit for Review"}
+            : paymentMethod === "card"
+              ? "Continue to PayHere"
+              : "Submit for Review"}
       </Button>
       <div className="mt-4 flex items-start gap-2 text-xs leading-5 text-muted-foreground">
         <ShieldCheck className="mt-0.5 size-4 shrink-0 text-primary" />
-        The amount and plan are verified securely before activation.
+        {paymentMethod === "card"
+          ? "You will enter your card details securely in the PayHere checkout."
+          : "The amount and plan are verified securely before activation."}
       </div>
     </aside>
   );

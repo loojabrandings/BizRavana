@@ -123,6 +123,66 @@ export interface Database {
         };
         Relationships: [];
       };
+      payhere_payments: {
+        Row: {
+          id: string; business_id: string; user_id: string | null; plan_id: string;
+          order_id: string; merchant_id: string; item_name: string;
+          amount: number; currency: string;
+          status: "created" | "pending" | "success" | "canceled" | "failed" | "chargedback" | "invalid";
+          payhere_payment_id: string | null; payment_method: string | null;
+          status_code: number | null; status_message: string | null;
+          customer_first_name: string; customer_last_name: string;
+          customer_email: string; customer_phone: string;
+          customer_address: string; customer_city: string; customer_country: string;
+          card_holder_name: string | null; card_no: string | null; card_expiry: string | null;
+          signature_verified: boolean; notification_payload: Json;
+          previous_plan_id: string | null; previous_account_status: string | null;
+          previous_subscription_started_at: string | null;
+          previous_subscription_ends_at: string | null;
+          initiated_at: string; last_notified_at: string | null;
+          paid_at: string | null; activated_at: string | null;
+          created_at: string; updated_at: string;
+        };
+        Insert: {
+          id?: string; business_id: string; user_id?: string | null; plan_id: string;
+          order_id: string; merchant_id: string; item_name: string;
+          amount: number; currency?: string;
+          status?: "created" | "pending" | "success" | "canceled" | "failed" | "chargedback" | "invalid";
+          payhere_payment_id?: string | null; payment_method?: string | null;
+          status_code?: number | null; status_message?: string | null;
+          customer_first_name: string; customer_last_name: string;
+          customer_email: string; customer_phone: string;
+          customer_address: string; customer_city: string; customer_country: string;
+          card_holder_name?: string | null; card_no?: string | null; card_expiry?: string | null;
+          signature_verified?: boolean; notification_payload?: Json;
+          previous_plan_id?: string | null; previous_account_status?: string | null;
+          previous_subscription_started_at?: string | null;
+          previous_subscription_ends_at?: string | null;
+          initiated_at?: string; last_notified_at?: string | null;
+          paid_at?: string | null; activated_at?: string | null;
+          created_at?: string; updated_at?: string;
+        };
+        Update: {
+          id?: string; business_id?: string; user_id?: string | null; plan_id?: string;
+          order_id?: string; merchant_id?: string; item_name?: string;
+          amount?: number; currency?: string;
+          status?: "created" | "pending" | "success" | "canceled" | "failed" | "chargedback" | "invalid";
+          payhere_payment_id?: string | null; payment_method?: string | null;
+          status_code?: number | null; status_message?: string | null;
+          customer_first_name?: string; customer_last_name?: string;
+          customer_email?: string; customer_phone?: string;
+          customer_address?: string; customer_city?: string; customer_country?: string;
+          card_holder_name?: string | null; card_no?: string | null; card_expiry?: string | null;
+          signature_verified?: boolean; notification_payload?: Json;
+          previous_plan_id?: string | null; previous_account_status?: string | null;
+          previous_subscription_started_at?: string | null;
+          previous_subscription_ends_at?: string | null;
+          initiated_at?: string; last_notified_at?: string | null;
+          paid_at?: string | null; activated_at?: string | null;
+          created_at?: string; updated_at?: string;
+        };
+        Relationships: [];
+      };
       products: {
         Row: {
           id: string; business_id: string; name: string; category: string | null;
@@ -597,6 +657,19 @@ export interface Database {
           p_payment_id: string;
           p_action: "approve" | "reject";
           p_admin_note?: string | null;
+        };
+        Returns: Json;
+      };
+      complete_payhere_payment: {
+        Args: {
+          p_order_id: string;
+          p_payhere_payment_id: string;
+          p_status_message: string;
+          p_payment_method: string;
+          p_card_holder_name: string;
+          p_card_no: string;
+          p_card_expiry: string;
+          p_notification_payload: Json;
         };
         Returns: Json;
       };
