@@ -90,6 +90,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { CourierSettings } from "@/components/delivery/courier-settings";
+import { CloudBackupSettings } from "@/components/settings/cloud-backup-settings";
 import { WhatsAppTemplatesSettings } from "@/components/whatsapp/whatsapp-templates-settings";
 import { TeamSettings } from "@/components/team/team-settings";
 
@@ -647,8 +648,6 @@ function ProfileSettings({ activeSection }: { activeSection: string | null }) {
   const [avatarCropSrc, setAvatarCropSrc] = useState("");
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [avatarConfirmOpen, setAvatarConfirmOpen] = useState(false);
-  const [logoCropOpen, setLogoCropOpen] = useState(false);
-  const [logoCropSrc, setLogoCropSrc] = useState("");
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [logoConfirmOpen, setLogoConfirmOpen] = useState(false);
 
@@ -732,25 +731,45 @@ function ProfileSettings({ activeSection }: { activeSection: string | null }) {
 
   // ── Logo Handlers ──
 
-  const handleLogoFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleLogoFileSelect = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => { setLogoCropSrc(reader.result as string); setLogoCropOpen(true); };
-    reader.readAsDataURL(file);
     e.target.value = "";
-  }, []);
-
-  const handleLogoCropComplete = useCallback(async (croppedBlob: Blob) => {
+    if (!file) return;
     if (!businessId) return;
+
+    const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
+    if (!allowedTypes.includes(file.type)) {
+      toast.error("Select a JPG, PNG, or WEBP logo.");
+      return;
+    }
+    if (file.size <= 0 || file.size > 2 * 1024 * 1024) {
+      toast.error("Logo must be smaller than 2 MB.");
+      return;
+    }
+
     setUploadingLogo(true);
     try {
       const supabase = createClient();
-      const filePath = `logos/${businessId}/logo-${Date.now()}.png`;
-      const { error: uploadError } = await supabase.storage.from(SUPABASE_STORAGE_BUCKET).upload(filePath, croppedBlob, { upsert: true });
+      const extension =
+        file.type === "image/jpeg"
+          ? "jpg"
+          : file.type === "image/webp"
+            ? "webp"
+            : "png";
+      const filePath = `logos/${businessId}/logo-${Date.now()}.${extension}`;
+      const { error: uploadError } = await supabase.storage
+        .from(SUPABASE_STORAGE_BUCKET)
+        .upload(filePath, file, {
+          contentType: file.type,
+          upsert: true,
+        });
       if (uploadError) throw uploadError;
       const { data: { publicUrl } } = supabase.storage.from(SUPABASE_STORAGE_BUCKET).getPublicUrl(filePath);
-      await supabase.from("businesses").update({ logo_url: publicUrl }).eq("id", businessId);
+      const { error: updateError } = await supabase
+        .from("businesses")
+        .update({ logo_url: publicUrl })
+        .eq("id", businessId);
+      if (updateError) throw updateError;
       setBusinessLogoUrl(publicUrl);
       toast.success("Logo updated successfully");
     } catch (err) {
@@ -877,7 +896,6 @@ function ProfileSettings({ activeSection }: { activeSection: string | null }) {
       {/* Crop & Confirm Dialogs */}
       <ImageCropDialog open={avatarCropOpen} onOpenChange={setAvatarCropOpen} imageSrc={avatarCropSrc} onCropComplete={handleAvatarCropComplete} cropShape="round" title="Crop Profile Photo" />
       <ConfirmDialog open={avatarConfirmOpen} onOpenChange={setAvatarConfirmOpen} title="Remove Profile Photo" description="Are you sure you want to remove your profile photo?" confirmLabel="Remove" variant="destructive" onConfirm={handleAvatarDelete} />
-      <ImageCropDialog open={logoCropOpen} onOpenChange={setLogoCropOpen} imageSrc={logoCropSrc} onCropComplete={handleLogoCropComplete} cropShape="rect" title="Crop Business Logo" />
       <ConfirmDialog open={logoConfirmOpen} onOpenChange={setLogoConfirmOpen} title="Remove Business Logo" description="Are you sure you want to remove your business logo?" confirmLabel="Remove" variant="destructive" onConfirm={handleLogoDelete} />
 
       {loading ? (
@@ -1056,11 +1074,11 @@ function ProfileSettings({ activeSection }: { activeSection: string | null }) {
                       uploading={uploadingLogo}
                       shape="rect"
                     />
-                    <input ref={logoInputRef} type="file" accept="image/*" onChange={handleLogoFileSelect} className="sr-only" tabIndex={-1} />
+                    <input ref={logoInputRef} type="file" accept="image/jpeg,image/png,image/webp" onChange={handleLogoFileSelect} className="sr-only" tabIndex={-1} />
                   </div>
                   <div>
                     <p className="text-sm font-medium text-foreground">Business Logo</p>
-                    <p className="text-xs text-muted-foreground/60">Square image, max 2MB</p>
+                    <p className="text-xs text-muted-foreground/60">JPG, PNG or WEBP, max 2MB</p>
                   </div>
                 </div>
                 <div className="flex-1 grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -1291,6 +1309,40 @@ function OperationalSettings({ activeSection }: { activeSection: string | null }
               }
               className="h-10 w-28 text-right"
             />
+          </SettingsRow>
+          <SettingsRow label="Default Discount Mode" hint="Applied when creating a new order or quotation">
+            <div className="flex items-center gap-1 rounded-xl border border-border/30 bg-card p-1">
+              <button
+                type="button"
+                onClick={() => {
+                  ordersSettings.setDefaultDiscountMode("percentage");
+                  quotationSettings.setDefaultDiscountMode("percentage");
+                }}
+                className={cn(
+                  "rounded-lg px-3 py-1.5 text-sm font-medium transition-all duration-200",
+                  ordersSettings.defaultDiscountMode === "percentage"
+                    ? "bg-primary text-primary-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground",
+                )}
+              >
+                Percentage (%)
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  ordersSettings.setDefaultDiscountMode("fixed");
+                  quotationSettings.setDefaultDiscountMode("fixed");
+                }}
+                className={cn(
+                  "rounded-lg px-3 py-1.5 text-sm font-medium transition-all duration-200",
+                  ordersSettings.defaultDiscountMode === "fixed"
+                    ? "bg-primary text-primary-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground",
+                )}
+              >
+                Fixed (Rs.)
+              </button>
+            </div>
           </SettingsRow>
         </div>
 
@@ -2076,22 +2128,7 @@ function DataSecuritySettings({ activeSection }: { activeSection: string | null 
 
       {/* Cloud Backup */}
       {activeSection === "cloud-backup" && (
-      <CollapsibleCard id="settings-cloud-backup" collapsible={false} icon={Database} title="Cloud Backup & Restore" description="Automatically backup your data to the cloud." badge="Coming Soon">
-        <div className="flex items-center gap-4 rounded-xl bg-muted/10 border border-border/10 p-4">
-          <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-muted/30">
-            <Database className="size-5 text-muted-foreground/40" />
-          </div>
-          <div>
-            <p className="text-sm font-medium text-foreground">
-              Automatic Cloud Backups
-            </p>
-            <p className="text-xs text-muted-foreground/60 mt-0.5 leading-relaxed">
-              Scheduled backups will be available in a future update. Your data
-              is always securely stored with Supabase.
-            </p>
-          </div>
-        </div>
-      </CollapsibleCard>
+        <CloudBackupSettings />
       )}
 
       {/* Danger Zone — Reset System Data */}
@@ -2299,7 +2336,7 @@ const TAB_VALUES = TABS.map((t) => t.value) as readonly string[];
 
 function SettingsSidebar({ activeTab, activeSection, onTabChange }: { activeTab: string; activeSection: string | null; onTabChange: (tab: string, sectionId?: string) => void }) {
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [expandedTabs, setExpandedTabs] = useState<Set<string>>(new Set(["general", "profile", "operational"]));
+  const [expandedTabs, setExpandedTabs] = useState<Set<string>>(new Set(TABS.map((t) => t.value)));
   const isMobile = useIsMobile();
 
   const toggleExpanded = (value: string) => {
