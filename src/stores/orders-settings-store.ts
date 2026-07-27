@@ -22,6 +22,7 @@ export interface OrdersSettings {
   allowPartialPayments: boolean;
   defaultAdvancePercent: number;
   defaultDeliveryCharge: number;
+  defaultDiscountMode: "percentage" | "fixed";
 }
 
 interface OrdersSettingsStore extends OrdersSettings {
@@ -46,6 +47,7 @@ interface OrdersSettingsStore extends OrdersSettings {
   setAllowPartialPayments: (v: boolean) => void;
   setDefaultAdvancePercent: (v: number) => void;
   setDefaultDeliveryCharge: (v: number) => void;
+  setDefaultDiscountMode: (v: "percentage" | "fixed") => void;
 }
 
 const allStatuses = [
@@ -79,6 +81,7 @@ export const useOrdersSettings = create<OrdersSettingsStore>()(
       allowPartialPayments: true,
       defaultAdvancePercent: 50,
       defaultDeliveryCharge: 0,
+      defaultDiscountMode: "percentage",
 
       setOrderNumberPrefix: (v) => set({ orderNumberPrefix: v }),
       setOrderNumberStart: (v) => set({ orderNumberStart: v || "1" }),
@@ -121,6 +124,7 @@ export const useOrdersSettings = create<OrdersSettingsStore>()(
       setAllowPartialPayments: (v) => set({ allowPartialPayments: v }),
       setDefaultAdvancePercent: (v) => set({ defaultAdvancePercent: v }),
       setDefaultDeliveryCharge: (v) => set({ defaultDeliveryCharge: v }),
+      setDefaultDiscountMode: (v) => set({ defaultDiscountMode: v }),
     }),
     { name: "freebuff-orders-settings" },
   ),
