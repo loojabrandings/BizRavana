@@ -244,7 +244,7 @@ const cardVariants = {
     opacity: 1,
     y: 0,
     scale: 1,
-    transition: { delay: i * 0.04, duration: 0.3, ease: "easeOut" },
+    transition: { delay: i * 0.04, duration: 0.3, ease: "easeOut" as const },
   }),
 };
 
