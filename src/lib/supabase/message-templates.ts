@@ -3,8 +3,7 @@
 // ─── Types ─────────────────────────────────────────────────────────
 
 export type TemplateContext =
-  | "order_table_whatsapp"
-  | "order_preview_whatsapp"
+  | "order_whatsapp"
   | "quotation_preview_whatsapp";
 
 export interface MessageTemplate {

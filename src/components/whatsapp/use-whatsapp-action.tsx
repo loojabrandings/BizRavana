@@ -14,7 +14,7 @@ import type { TemplateData } from "@/lib/template-engine";
 
 // ─── Types ─────────────────────────────────────────────────────────
 
-type TemplateContext = "order_table_whatsapp" | "order_preview_whatsapp" | "quotation_preview_whatsapp";
+type TemplateContext = "order_whatsapp" | "quotation_preview_whatsapp";
 
 interface PendingAction {
   context: TemplateContext;

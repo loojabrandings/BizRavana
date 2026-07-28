@@ -28,6 +28,7 @@ export interface OrderTableRow {
   delivery_charge: number;
   subtotal: number;
   discount: number;
+  waybill_id: string | null;
   status: string;
   payment_status: string;
   payment_method: string | null;
@@ -141,6 +142,7 @@ export function orderRowToTemplateData(row: OrderTableRow): TemplateData {
     remaining_balance: Math.max(0, row.total - row.advance_paid),
     cod_amount: row.payment_method === "cod" ? row.total : undefined,
     total_quantity: totalQty,
+    tracking_number: row.waybill_id || "",
     items,
   };
 }

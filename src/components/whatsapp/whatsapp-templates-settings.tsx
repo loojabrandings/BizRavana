@@ -54,7 +54,7 @@ import { toast } from "sonner";
 
 // ─── Types ─────────────────────────────────────────────────────────
 
-type TemplateContext = "order_table" | "order_preview" | "quotation_preview";
+type TemplateContext = "order" | "quotation_preview";
 
 interface PlaceholderGroup {
   label: string;
@@ -65,14 +65,9 @@ interface PlaceholderGroup {
 
 const CONTEXTS: { value: TemplateContext; label: string; description: string }[] = [
   {
-    value: "order_table",
-    label: "Order Table",
-    description: "Used by the WhatsApp icon in each Orders table row.",
-  },
-  {
-    value: "order_preview",
-    label: "Order Preview",
-    description: "Used by the WhatsApp button on the Order Preview page.",
+    value: "order",
+    label: "Orders",
+    description: "Used by both the WhatsApp icon in each Orders table row and the WhatsApp button on the Order Preview page.",
   },
   {
     value: "quotation_preview",
@@ -82,14 +77,7 @@ const CONTEXTS: { value: TemplateContext; label: string; description: string }[]
 ];
 
 const PLACEHOLDER_GROUPS: Record<TemplateContext, PlaceholderGroup[]> = {
-  order_table: [
-    { label: "Customer", items: ["{{customer_name}}", "{{address}}", "{{whatsapp}}", "{{phone}}", "{{email}}", "{{nearest_city}}", "{{district}}"] },
-    { label: "Order", items: ["{{order_number}}", "{{order_date}}", "{{order_status}}", "{{notes}}"] },
-    { label: "Items", items: ["{{item_details}}", "{{total_quantity}}"] },
-    { label: "Payment", items: ["{{subtotal}}", "{{discount}}", "{{delivery_charge}}", "{{grand_total}}", "{{advance_payment}}", "{{remaining_balance}}", "{{cod_amount}}", "{{payment_method}}", "{{payment_status}}"] },
-    { label: "Delivery", items: ["{{scheduled_delivery_date}}", "{{tracking_number}}", "{{courier}}"] },
-  ],
-  order_preview: [
+  order: [
     { label: "Customer", items: ["{{customer_name}}", "{{address}}", "{{whatsapp}}", "{{phone}}", "{{email}}", "{{nearest_city}}", "{{district}}"] },
     { label: "Order", items: ["{{order_number}}", "{{order_date}}", "{{order_status}}", "{{notes}}"] },
     { label: "Items", items: ["{{item_details}}", "{{total_quantity}}"] },
@@ -264,13 +252,18 @@ function validatePlaceholders(content: string): PlaceholderWarning[] {
 }
 
 function dbToUiTemplate(db: MessageTemplate): SavedTemplate {
+  const rawContext = db.template_context.replace("_whatsapp", "");
+  // Map old order contexts (order_table, order_preview) to the unified "order"
+  const mappedContext = (rawContext === "order_table" || rawContext === "order_preview")
+    ? "order"
+    : rawContext;
   return {
     id: db.id,
     title: db.title,
     content: db.content,
     isDefault: db.is_default,
     updatedAt: db.updated_at,
-    context: db.template_context.replace("_whatsapp", "") as TemplateContext,
+    context: mappedContext as TemplateContext,
   };
 }
 
@@ -625,7 +618,7 @@ export function WhatsAppTemplatesSettings() {
   const [templates, setTemplates] = useState<MessageTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [activeContext, setActiveContext] = useState<TemplateContext>("order_preview");
+  const [activeContext, setActiveContext] = useState<TemplateContext>("order");
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState("");
   const [editContent, setEditContent] = useState("");
@@ -698,10 +691,13 @@ export function WhatsAppTemplatesSettings() {
 
   // ── Derived data ───────────────────────────────────────────────
   // Filter the full template list by the active context
-  const dbContext = toDbContext(activeContext);
-  const templatesForCurrentContext = templates.filter(
-    (t) => t.template_context === dbContext
-  );
+  // For the unified "order" context, also include legacy templates from old contexts
+  const templatesForCurrentContext = templates.filter((t) => {
+    if (activeContext === "order") {
+      return t.template_context.startsWith("order");
+    }
+    return t.template_context === toDbContext(activeContext);
+  });
   const templatesForContext = templatesForCurrentContext.map(dbToUiTemplate);
   const selectedTemplate = templatesForContext.find((t) => t.id === selectedTemplateId) ?? null;
   const groups = PLACEHOLDER_GROUPS[activeContext];
@@ -960,7 +956,12 @@ export function WhatsAppTemplatesSettings() {
             key={ctx.value}
             context={ctx}
             active={activeContext === ctx.value}
-            count={templates.filter((t) => t.template_context === toDbContext(ctx.value)).length}
+            count={templates.filter((t) => {
+              if (ctx.value === "order") {
+                return t.template_context.startsWith("order");
+              }
+              return t.template_context === toDbContext(ctx.value);
+            }).length}
             onClick={() => switchContext(ctx.value)}
           />
         ))}

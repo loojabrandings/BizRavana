@@ -1,56 +1,47 @@
+// ─── Courier Utils — Provider-Aware Dispatch Layer ───────────────────
+//
+// This module is the public API for courier operations. It delegates
+// to registered providers via the provider registry. To add a new courier,
+// create a provider module in ./providers/ and register it there.
+//
+// All types are re-exported from ./types.ts for backward compatibility.
+// ──────────────────────────────────────────────────────────────────────
+
+// Import providers so they auto-register
+import "./providers/index";
+
 import { createClient } from "@/lib/supabase/client";
+import {
+  getProvider,
+  extractCredentials,
+  getAllProviders,
+  SHARED_SETTINGS_KEYS,
+} from "@/lib/delivery/provider-registry";
+import type {
+  CourierConfig,
+  CourierLocations,
+  TrackingEvent,
+  OrderFinanceInfo,
+  ShipOrderParams,
+  ShipOrderResult,
+} from "@/lib/delivery/types";
 
-const SETTINGS_KEYS = {
-  selected_courier: "courier_selected_provider",
-  royal_express_tenant: "courier_royal_express_tenant",
-  royal_express_email: "courier_royal_express_email",
-  royal_express_password: "courier_royal_express_password",
-  royal_express_origin_city: "courier_royal_express_origin_city",
-  royal_express_origin_state: "courier_royal_express_origin_state",
-  location_states: "courier_location_states",
-  location_cities: "courier_location_cities",
-  location_synced_at: "courier_location_synced_at",
-} as const;
+// ─── Re-export types for backward compatibility ──────────────────────
 
-export interface CourierState {
-  id: number;
-  name: string;
-}
+export type {
+  CourierState,
+  CourierCity,
+  CourierConfig,
+  CourierLocations,
+  TrackingEvent,
+  OrderFinanceInfo,
+} from "@/lib/delivery/types";
 
-export interface CourierCity {
-  id: number;
-  name: string;
-  state_id: number;
-}
+// ─── Provider Discovery ──────────────────────────────────────────────
 
-export interface CourierLocations {
-  states: CourierState[];
-  cities: CourierCity[];
-  syncedAt: string | null;
-}
+export { getAllProviders } from "@/lib/delivery/provider-registry";
 
-export interface CourierConfig {
-  provider: string | null;
-  providerLabel: string | null;
-  credentials: Record<string, string>;
-}
-
-export interface TrackingEvent {
-  status: string;
-  dateTime: string;
-  dateTimeAgo: string;
-  user: string;
-}
-
-export interface OrderFinanceInfo {
-  financeStatus: string;
-  invoiceRefNo: string | null;
-  invoiceNo: string | null;
-}
-
-const PROVIDER_LABELS: Record<string, string> = {
-  royal_express: "Royal Express",
-};
+// ─── Config Loader ───────────────────────────────────────────────────
 
 /** Load the courier configuration for the current user's business. */
 export async function loadCourierConfig(): Promise<CourierConfig | null> {
@@ -77,319 +68,268 @@ export async function loadCourierConfig(): Promise<CourierConfig | null> {
     const map: Record<string, string> = {};
     settings.forEach((s) => { map[s.key] = String(s.value); });
 
-    const provider = map[SETTINGS_KEYS.selected_courier] || null;
-    if (!provider || provider === "none") {
+    const providerId = map[SHARED_SETTINGS_KEYS.selected_courier] || null;
+    if (!providerId || providerId === "none") {
       return { provider: null, providerLabel: null, credentials: {} };
     }
 
-    const credentials: Record<string, string> = {};
-    if (provider === "royal_express") {
-      credentials.tenant = map[SETTINGS_KEYS.royal_express_tenant] || "";
-      credentials.email = map[SETTINGS_KEYS.royal_express_email] || "";
-      credentials.password = map[SETTINGS_KEYS.royal_express_password] || "";
-      credentials.origin_city = map[SETTINGS_KEYS.royal_express_origin_city] || "";
-      credentials.origin_state = map[SETTINGS_KEYS.royal_express_origin_state] || "";
-    }
+    const provider = getProvider(providerId);
+    const credentials = provider
+      ? extractCredentials(providerId, map)
+      : {};
 
-    return { provider, providerLabel: PROVIDER_LABELS[provider] || provider, credentials };
+    return {
+      provider: providerId,
+      providerLabel: provider?.label || providerId,
+      credentials,
+    };
   } catch (err) {
     console.error("Failed to load courier config:", err);
     return null;
   }
 }
 
-/** Authenticate with Royal Express and return a bearer token. */
-async function getRoyalExpressToken(
-  credentials: Record<string, string>,
-): Promise<string> {
-  const loginRes = await fetch("https://v1.api.curfox.com/api/public/merchant/login", {
-    method: "POST",
-    headers: {
-      Accept: "application/json",
-      "Content-Type": "application/json",
-      "X-tenant": credentials.tenant || "royalexpress",
-    },
-    body: JSON.stringify({ email: credentials.email, password: credentials.password }),
-  });
+// ─── Dispatch ────────────────────────────────────────────────────────
 
-  if (!loginRes.ok) {
-    const errData = await loginRes.json().catch(() => ({}));
-    throw new Error(errData.message || "Failed to authenticate with courier");
-  }
-
-  const loginData = await loginRes.json();
-  return loginData.token;
-}
-
-/** Send an order to the courier service. Returns the waybill number. */
+/**
+ * Send an order to the courier service. Returns the waybill number.
+ * Delegates to the registered provider matching `config.provider`.
+ */
 export async function shipWithCourier(
-  order: {
-    id: string;
-    order_number: string;
-    customer_name: string;
-    customer_phone: string | null;
-    customer_address: string | null;
-    customer_city: string | null;
-    customer_district: string | null;
-    total: number;
-    advance_paid: number;
-    waybill_id: string | null;
-    items: { product_name: string; quantity: number; unit_price: number }[];
-  },
+  order: ShipOrderParams,
   config: CourierConfig,
-): Promise<{ waybill: string }> {
-  if (config.provider === "royal_express") {
-    return shipViaRoyalExpress(order, config.credentials);
+): Promise<ShipOrderResult> {
+  const provider = getProvider(config.provider ?? "");
+  if (!provider) {
+    throw new Error(`Unknown courier provider: ${config.provider}`);
   }
-  throw new Error(`Unknown courier provider: ${config.provider}`);
+  return provider.ship(order, config.credentials);
 }
 
-async function shipViaRoyalExpress(
-  order: {
-    order_number: string;
-    customer_name: string;
-    customer_phone: string | null;
-    customer_address: string | null;
-    customer_city: string | null;
-    customer_district: string | null;
-    total: number;
-    advance_paid: number;
-    waybill_id: string | null;
-    items: { product_name: string; quantity: number; unit_price: number }[];
-  },
-  credentials: Record<string, string>,
-): Promise<{ waybill: string }> {
-  const token = await getRoyalExpressToken(credentials);
-  const cod = Math.max(0, order.total - order.advance_paid);
-  const description = order.items.map((i) => `${i.product_name} x${i.quantity}`).join(", ");
+// ─── Tracking ────────────────────────────────────────────────────────
 
-  const bizRes = await fetch("https://v1.api.curfox.com/api/public/merchant/business?noPagination=1", {
-    method: "GET",
-    headers: {
-      Accept: "application/json", "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`, "X-tenant": credentials.tenant || "royalexpress",
-    },
-  });
-
-  if (!bizRes.ok) {
-    const errData = await bizRes.json().catch(() => ({}));
-    throw new Error(errData.message || "Failed to fetch merchant businesses");
-  }
-
-  const bizData = await bizRes.json();
-  const businesses = bizData.data || [];
-  const defaultBusiness = businesses.find((b: any) => b.is_default) || businesses[0];
-  if (!defaultBusiness) {
-    throw new Error("No business found in your Royal Express account. Please set up a business in the Royal Express merchant portal first.");
-  }
-
-  const merchantBusinessId = String(defaultBusiness.id);
-
-  const requestBody = {
-    general_data: {
-      merchant_business_id: merchantBusinessId,
-      origin_city_name: credentials.origin_city || "Kotte",
-      origin_state_name: credentials.origin_state || "Colombo",
-    },
-    order_data: [{
-      ...(order.waybill_id ? { waybill_number: order.waybill_id } : {}),
-      order_no: order.order_number,
-      customer_name: order.customer_name,
-      customer_address: order.customer_address || "",
-      customer_phone: order.customer_phone || "",
-      destination_city_name: order.customer_city || "Colombo 01",
-      destination_state_name: order.customer_district || "Colombo",
-      cod,
-      description: description.slice(0, 255),
-      weight: 1,
-      remark: "",
-    }],
-  };
-
-  console.log("🔍 [RoyalExpress] Request body:", JSON.stringify(requestBody, null, 2));
-
-  const shipRes = await fetch("https://v1.api.curfox.com/api/public/merchant/order/single", {
-    method: "POST",
-    headers: {
-      Accept: "application/json", "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`, "X-tenant": credentials.tenant || "royalexpress",
-    },
-    body: JSON.stringify(requestBody),
-  });
-
-  if (!shipRes.ok) {
-    let errorMsg = "Failed to create shipment with courier";
-    try {
-      console.error("🔍 [RoyalExpress] Response status:", shipRes.status, shipRes.statusText);
-      const responseText = await shipRes.text();
-      console.error("🔍 [RoyalExpress] Response body:", responseText);
-      const errData = JSON.parse(responseText);
-      if (errData.errors && typeof errData.errors === "object") {
-        const fieldErrors: string[] = [];
-        for (const [, messages] of Object.entries(errData.errors)) {
-          if (Array.isArray(messages)) fieldErrors.push(...messages);
-        }
-        if (fieldErrors.length > 0) errorMsg = fieldErrors.join("; ");
-      } else if (errData.message) {
-        errorMsg = errData.message;
-      }
-    } catch { /* ignore */ }
-    throw new Error(errorMsg);
-  }
-
-  const shipData = await shipRes.json();
-  const waybill = shipData.data?.[0];
-  if (!waybill) throw new Error("No waybill returned from courier");
-  return { waybill };
-}
-
-/** Fetch tracking history for a waybill number from Royal Express. */
+/**
+ * Fetch tracking history for a waybill number from the specified provider.
+ *
+ * @param waybillNumber - The waybill/tracking number
+ * @param credentials - Provider credentials (from loadCourierConfig)
+ * @param providerId - Provider ID (e.g. "royal_express")
+ */
 export async function trackShipment(
   waybillNumber: string,
   credentials: Record<string, string>,
+  providerId: string,
 ): Promise<TrackingEvent[]> {
-  const token = await getRoyalExpressToken(credentials);
-
-  const res = await fetch(
-    "https://v1.api.curfox.com/api/public/merchant/order/tracking-info?waybill_number=" + encodeURIComponent(waybillNumber),
-    {
-      method: "GET",
-      headers: {
-        Accept: "application/json",
-        "Content-Type": "application/json",
-        Authorization: "Bearer " + token,
-        "X-tenant": credentials.tenant || "royalexpress",
-      },
-    },
-  );
-
-  if (!res.ok) {
-    let errorMsg = "Failed to fetch tracking info";
-    try {
-      const errData = await res.json();
-      if (errData.message) errorMsg = errData.message;
-    } catch { /* ignore */ }
-    throw new Error(errorMsg);
+  const provider = getProvider(providerId);
+  if (!provider) {
+    throw new Error(`Unknown courier provider: ${providerId}`);
   }
-
-  const data = await res.json();
-  const events: any[] = data.data || [];
-
-  return events.map((e: any) => ({
-    status: e.status?.name || "Unknown",
-    dateTime: e.date_time || "",
-    dateTimeAgo: e.date_time_ago || "",
-    user: e.user ? (e.user.first_name || "") + " " + (e.user.last_name || "") : "",
-  }));
+  return provider.track(waybillNumber, credentials);
 }
 
 /**
- * Fetch financial status for a waybill from Royal Express.
- * Returns finance status, invoice ref, and invoice number.
+ * Fetch financial info for a waybill from the specified provider.
+ *
+ * @param waybillNumber - The waybill/tracking number
+ * @param credentials - Provider credentials (from loadCourierConfig)
+ * @param providerId - Provider ID (e.g. "royal_express")
  */
 export async function fetchOrderFinance(
   waybillNumber: string,
   credentials: Record<string, string>,
+  providerId: string,
 ): Promise<OrderFinanceInfo> {
-  const token = await getRoyalExpressToken(credentials);
-
-  const res = await fetch(
-    "https://v1.api.curfox.com/api/merchant/order/waybill-finance-status?waybill_number=" + encodeURIComponent(waybillNumber),
-    {
-      method: "GET",
-      headers: {
-        Accept: "application/json",
-        "Content-Type": "application/json",
-        Authorization: "Bearer " + token,
-        "X-tenant": credentials.tenant || "royalexpress",
-      },
-    },
-  );
-
-  if (!res.ok) {
-    let errorMsg = "Failed to fetch finance info";
-    try {
-      const errData = await res.json();
-      if (errData.message) errorMsg = errData.message;
-    } catch { /* ignore */ }
-    throw new Error(errorMsg);
+  const provider = getProvider(providerId);
+  if (!provider) {
+    throw new Error(`Unknown courier provider: ${providerId}`);
   }
-
-  const data = await res.json();
-  const d = data.data || {};
-
-  return {
-    financeStatus: d.finance_status || "Unknown",
-    invoiceRefNo: d.invoice_ref_no || null,
-    invoiceNo: d.invoice_no || null,
-  };
+  return provider.fetchFinance(waybillNumber, credentials);
 }
 
-/** Fetch and cache states & cities from Royal Express. */
+// ─── Location Sync ───────────────────────────────────────────────────
+
+/**
+ * Sync location data from the specified courier provider.
+ *
+ * @param businessId - Business ID
+ * @param credentials - Provider credentials
+ * @param providerId - Provider ID (e.g. "royal_express")
+ */
 export async function syncCourierLocations(
   businessId: string,
   credentials: Record<string, string>,
+  providerId: string,
 ): Promise<CourierLocations> {
-  const token = await getRoyalExpressToken(credentials);
-
-  const statesRes = await fetch("https://v1.api.curfox.com/api/public/merchant/state?noPagination=1", {
-    method: "GET",
-    headers: {
-      Accept: "application/json", "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`, "X-tenant": credentials.tenant || "royalexpress",
-    },
-  });
-
-  if (!statesRes.ok) {
-    const errData = await statesRes.json().catch(() => ({}));
-    throw new Error(errData.message || "Failed to fetch states from courier");
+  const provider = getProvider(providerId);
+  if (!provider) {
+    throw new Error(`Unknown courier provider: ${providerId}`);
   }
-
-  const statesData = await statesRes.json();
-  const states: CourierState[] = (statesData.data || []).map((s: any) => ({
-    id: s.id, name: s.name,
-  }));
-
-  const citiesRes = await fetch("https://v1.api.curfox.com/api/public/merchant/city?noPagination=1", {
-    method: "GET",
-    headers: {
-      Accept: "application/json", "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`, "X-tenant": credentials.tenant || "royalexpress",
-    },
-  });
-
-  if (!citiesRes.ok) {
-    const errData = await citiesRes.json().catch(() => ({}));
-    throw new Error(errData.message || "Failed to fetch cities from courier");
-  }
-
-  const citiesData = await citiesRes.json();
-  const cities: CourierCity[] = (citiesData.data || []).map((c: any) => ({
-    id: c.id, name: c.name, state_id: c.state_id,
-  }));
-
-  const supabase = createClient();
-  const now = new Date().toISOString();
-
-  await Promise.all([
-    supabase.from("business_settings").upsert(
-      { business_id: businessId, key: SETTINGS_KEYS.location_states, value: JSON.stringify(states) },
-      { onConflict: "business_id, key" },
-    ),
-    supabase.from("business_settings").upsert(
-      { business_id: businessId, key: SETTINGS_KEYS.location_cities, value: JSON.stringify(cities) },
-      { onConflict: "business_id, key" },
-    ),
-    supabase.from("business_settings").upsert(
-      { business_id: businessId, key: SETTINGS_KEYS.location_synced_at, value: now },
-      { onConflict: "business_id, key" },
-    ),
-  ]);
-
-  return { states, cities, syncedAt: now };
+  return provider.syncLocations(businessId, credentials);
 }
 
-/** Load cached locations from business_settings. */
+// ─── Delivery Status Sync ───────────────────────────────────────────
+
+/**
+ * Map a courier API status name to the internal deliveries.status value.
+ * Uses keyword matching so it works generically across providers.
+ */
+function mapApiStatusToDeliveryStatus(apiStatus: string): string | null {
+  const s = apiStatus.toLowerCase();
+  // fail check must come BEFORE deliver — "FAILED TO DELIVER" contains both words
+  if (s.includes("fail")) return "returned";
+  if (s.includes("deliver")) return "delivered";
+  if (s.includes("cancel")) return "cancelled";
+  if (s.includes("return")) return "returned";
+  if (s.includes("reschedule")) return "to_dispatch";
+  if (s.includes("rider") || s.includes("assign")) return "assigned_to_rider";
+  if (s.includes("confirm") || s.includes("draft") || s.includes("pending")) return "confirmed";
+  if (
+    s.includes("pick") ||
+    s.includes("branch") ||
+    s.includes("warehouse") ||
+    s.includes("transit") ||
+    s.includes("dispatch") ||
+    s.includes("collected")
+  ) {
+    return "in_branch";
+  }
+  return null; // no mapping — keep existing status
+}
+
+/**
+ * Fetch the latest tracking status for all active deliveries from the courier API
+ * and update the local deliveries table with the latest status.
+ *
+ * Also discovers orders that have waybill IDs but no delivery record yet,
+ * creates delivery records for them so they appear on the courier dashboard.
+ *
+ * @returns Summary of how many deliveries were updated, failed, or had no change.
+ */
+export async function syncDeliveryStatuses(
+  businessId: string,
+  credentials: Record<string, string>,
+  providerId: string,
+): Promise<{ updated: number; failed: number; unchanged: number }> {
+  const supabase = createClient();
+  const provider = getProvider(providerId);
+  if (!provider) return { updated: 0, failed: 0, unchanged: 0 };
+
+  // ── 1. Get existing deliveries with waybills ────────────────
+  const { data: deliveries, error: fetchError } = await supabase
+    .from("deliveries")
+    .select("id, waybill_id, status, order_id")
+    .eq("business_id", businessId)
+    .eq("courier", providerId)
+    .not("waybill_id", "is", null);
+
+  if (fetchError) {
+    console.error("Failed to fetch deliveries for sync:", fetchError);
+    return { updated: 0, failed: 0, unchanged: 0 };
+  }
+
+  // ── 2. Discover orders with waybills that aren't in deliveries yet ──
+  const existingOrderIds = new Set((deliveries || []).map((d) => d.order_id).filter(Boolean));
+
+  const { data: ordersWithWaybills } = await supabase
+    .from("orders")
+    .select("id, order_number, customer_name, waybill_id, delivery_charge, created_at")
+    .eq("business_id", businessId)
+    .not("waybill_id", "is", null)
+    .order("created_at", { ascending: false })
+    .limit(50);
+
+  // Create delivery records for orders that don't have one yet
+  if (ordersWithWaybills && ordersWithWaybills.length > 0) {
+    const ordersToCreate: {
+      business_id: string;
+      order_id: string;
+      waybill_id: string;
+      courier: string;
+      courier_charge: number;
+      status: string;
+    }[] = [];
+
+    for (const order of ordersWithWaybills) {
+      if (!order.waybill_id) continue;
+      // Skip if this order already has a delivery record
+      if (existingOrderIds.has(order.id)) continue;
+
+      ordersToCreate.push({
+        business_id: businessId,
+        order_id: order.id,
+        waybill_id: order.waybill_id,
+        courier: providerId,
+        courier_charge: order.delivery_charge ?? 0,
+        status: "confirmed",
+      });
+    }
+
+    if (ordersToCreate.length > 0) {
+      const { error: insertError } = await supabase
+        .from("deliveries")
+        .insert(ordersToCreate);
+
+      if (insertError) {
+        console.error("Failed to create delivery records:", insertError);
+      }
+    }
+  }
+
+  // ── 3. Re-fetch deliveries to include newly created ones ────
+  const { data: allDeliveries } = await supabase
+    .from("deliveries")
+    .select("id, waybill_id, status")
+    .eq("business_id", businessId)
+    .eq("courier", providerId)
+    .not("waybill_id", "is", null);
+
+  if (!allDeliveries || allDeliveries.length === 0) {
+    return { updated: 0, failed: 0, unchanged: 0 };
+  }
+
+  // ── 4. Track each waybill ───────────────────────────────────
+  let updated = 0;
+  let failed = 0;
+  let unchanged = 0;
+
+  for (const delivery of allDeliveries) {
+    if (!delivery.waybill_id) continue;
+
+    try {
+      const events = await provider.track(delivery.waybill_id, credentials);
+      if (events.length === 0) {
+        unchanged++;
+        continue;
+      }
+
+      // First event is the most recent status
+      const latestApiStatus = events[0].status;
+      const mappedStatus = mapApiStatusToDeliveryStatus(latestApiStatus);
+
+      if (mappedStatus && mappedStatus !== delivery.status) {
+        await supabase
+          .from("deliveries")
+          .update({ status: mappedStatus, updated_at: new Date().toISOString() })
+          .eq("id", delivery.id);
+        updated++;
+      } else {
+        unchanged++;
+      }
+    } catch (err) {
+      console.error(`Failed to track waybill ${delivery.waybill_id}:`, err);
+      failed++;
+    }
+  }
+
+  return { updated, failed, unchanged };
+}
+
+// ─── Cached Locations ────────────────────────────────────────────────
+
+/**
+ * Load cached locations from business_settings.
+ * This is provider-agnostic — same cache is used regardless of provider.
+ */
 export async function loadCachedLocations(
   businessId: string,
 ): Promise<CourierLocations | null> {
@@ -399,22 +339,26 @@ export async function loadCachedLocations(
       .from("business_settings")
       .select("key, value")
       .eq("business_id", businessId)
-      .in("key", [SETTINGS_KEYS.location_states, SETTINGS_KEYS.location_cities, SETTINGS_KEYS.location_synced_at]);
+      .in("key", [
+        SHARED_SETTINGS_KEYS.location_states,
+        SHARED_SETTINGS_KEYS.location_cities,
+        SHARED_SETTINGS_KEYS.location_synced_at,
+      ]);
 
     if (!settings) return null;
 
     const map: Record<string, string> = {};
     settings.forEach((s) => { map[s.key] = String(s.value); });
 
-    const statesJson = map[SETTINGS_KEYS.location_states];
-    const citiesJson = map[SETTINGS_KEYS.location_cities];
+    const statesJson = map[SHARED_SETTINGS_KEYS.location_states];
+    const citiesJson = map[SHARED_SETTINGS_KEYS.location_cities];
 
     if (!statesJson || !citiesJson) return null;
 
     return {
       states: JSON.parse(statesJson),
       cities: JSON.parse(citiesJson),
-      syncedAt: map[SETTINGS_KEYS.location_synced_at] || null,
+      syncedAt: map[SHARED_SETTINGS_KEYS.location_synced_at] || null,
     };
   } catch (err) {
     console.error("Failed to load cached locations:", err);

@@ -41,7 +41,12 @@ export async function GET(req: NextRequest) {
     .order("created_at", { ascending: false });
 
   if (context) {
-    query = query.eq("template_context", context);
+    // For the unified "order_whatsapp" context, also include legacy order contexts
+    if (context === "order_whatsapp") {
+      query = query.in("template_context", ["order_whatsapp", "order_table_whatsapp", "order_preview_whatsapp"]);
+    } else {
+      query = query.eq("template_context", context);
+    }
   }
 
   const { data, error } = await query;

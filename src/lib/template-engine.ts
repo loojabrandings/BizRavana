@@ -68,8 +68,7 @@ export interface TemplateData {
 }
 
 export type TemplateContext =
-  | "order_table_whatsapp"
-  | "order_preview_whatsapp"
+  | "order_whatsapp"
   | "quotation_preview_whatsapp";
 
 export interface PlaceholderGroup {
@@ -209,59 +208,7 @@ function renderItemDetailsFlat(items?: TemplateLineItem[]): string {
 // ─── Placeholder Definitions by Context ──────────────────────────
 
 export const ALL_PLACEHOLDERS: Record<string, PlaceholderGroup[]> = {
-  order_table_whatsapp: [
-    {
-      label: "Customer",
-      items: [
-        "{{customer_name}}",
-        "{{address}}",
-        "{{whatsapp}}",
-        "{{phone}}",
-        "{{email}}",
-        "{{nearest_city}}",
-        "{{district}}",
-      ],
-    },
-    {
-      label: "Order",
-      items: [
-        "{{order_number}}",
-        "{{order_date}}",
-        "{{order_status}}",
-        "{{notes}}",
-      ],
-    },
-    {
-      label: "Items",
-      items: [
-        "{{item_details}}",
-        "{{total_quantity}}",
-      ],
-    },
-    {
-      label: "Payment",
-      items: [
-        "{{subtotal}}",
-        "{{discount}}",
-        "{{delivery_charge}}",
-        "{{grand_total}}",
-        "{{advance_payment}}",
-        "{{remaining_balance}}",
-        "{{cod_amount}}",
-        "{{payment_method}}",
-        "{{payment_status}}",
-      ],
-    },
-    {
-      label: "Delivery",
-      items: [
-        "{{scheduled_delivery_date}}",
-        "{{tracking_number}}",
-        "{{courier}}",
-      ],
-    },
-  ],
-  order_preview_whatsapp: [
+  order_whatsapp: [
     {
       label: "Customer",
       items: [
@@ -357,7 +304,7 @@ export const ALL_PLACEHOLDERS: Record<string, PlaceholderGroup[]> = {
 export function getPlaceholdersForContext(
   context: TemplateContext
 ): PlaceholderGroup[] {
-  return ALL_PLACEHOLDERS[context] || ALL_PLACEHOLDERS.order_table_whatsapp;
+  return ALL_PLACEHOLDERS[context] || ALL_PLACEHOLDERS.order_whatsapp;
 }
 
 // ─── Main Renderer ────────────────────────────────────────────────
@@ -456,10 +403,10 @@ export function renderMessageTemplate(params: {
 // ─── Presets ──────────────────────────────────────────────────────
 
 /**
- * Default WhatsApp template for Order Table context.
- * Short and compact customer confirmation.
+ * Default WhatsApp template for Order context.
+ * Short and compact customer confirmation (used by both table + preview).
  */
-export const DEFAULT_ORDER_TABLE_TEMPLATE = [
+export const DEFAULT_ORDER_WHATSAPP_TEMPLATE = [
   "🛒 *Order #{{order_number}}*",
   "",
   "*Customer:* {{customer_name}}",
@@ -471,8 +418,8 @@ export const DEFAULT_ORDER_TABLE_TEMPLATE = [
 ].join("\n");
 
 /**
- * Default WhatsApp template for Order Preview context.
- * Detailed order confirmation.
+ * Default WhatsApp template for Order context.
+ * Detailed order confirmation (used by both table row + preview page).
  */
 export const DEFAULT_ORDER_PREVIEW_TEMPLATE = [
   "🛒 *Order #{{order_number}}*",
@@ -528,26 +475,22 @@ export const DEFAULT_QUOTATION_PREVIEW_TEMPLATE = [
 ].join("\n");
 
 export const DEFAULT_TEMPLATES: Record<TemplateContext, string> = {
-  order_table_whatsapp: DEFAULT_ORDER_TABLE_TEMPLATE,
-  order_preview_whatsapp: DEFAULT_ORDER_PREVIEW_TEMPLATE,
+  order_whatsapp: DEFAULT_ORDER_PREVIEW_TEMPLATE,
   quotation_preview_whatsapp: DEFAULT_QUOTATION_PREVIEW_TEMPLATE,
 };
 
 export const TEMPLATE_CONTEXT_LABELS: Record<TemplateContext, string> = {
-  order_table_whatsapp: "Order Table",
-  order_preview_whatsapp: "Order Preview",
+  order_whatsapp: "Orders",
   quotation_preview_whatsapp: "Quotation Preview",
 };
 
 export const TEMPLATE_CONTEXT_DESCRIPTIONS: Record<TemplateContext, string> = {
-  order_table_whatsapp:
-    "Used by the WhatsApp icon shown in each Orders table row.",
-  order_preview_whatsapp:
-    "Used by the WhatsApp button on the Order Preview page.",
+  order_whatsapp:
+    "Used by both the WhatsApp icon in the Orders table and the WhatsApp button on the Order Preview page.",
   quotation_preview_whatsapp:
     "Used by the WhatsApp button on the Quotation Preview page.",
 };
 
-// Backward compatibility exports
-export const DEFAULT_ORDER_WHATSAPP_TEMPLATE = DEFAULT_ORDER_PREVIEW_TEMPLATE;
+// Backward compatibility exports (keep for any code that imports them)
+export const DEFAULT_ORDER_TABLE_TEMPLATE = DEFAULT_ORDER_WHATSAPP_TEMPLATE;
 export const DEFAULT_QUOTATION_WHATSAPP_TEMPLATE = DEFAULT_QUOTATION_PREVIEW_TEMPLATE;

@@ -34,7 +34,8 @@ export function NoTemplateDialog({
     const params = new URLSearchParams();
     if (context) {
       params.set("tab", "whatsapp-templates");
-      params.set("template_context", context);
+      // Strip _whatsapp suffix to match the UI context format (e.g. "order_whatsapp" → "order")
+      params.set("template_context", context.replace("_whatsapp", ""));
     }
     router.push(`/dashboard/settings?${params.toString()}`);
   };

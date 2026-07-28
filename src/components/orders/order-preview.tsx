@@ -822,7 +822,7 @@ export function OrderPreview({
     const phone = data.whatsapp || data.phone;
     if (!phone) return;
     const templateData = orderPreviewToTemplateData(data);
-    handleAction("order_preview_whatsapp", templateData, phone);
+    handleAction("order_whatsapp", templateData, phone);
   }, [data, handleAction]);
 
   // ─── Escape key exits preview ─────────────────────────────────

@@ -81,14 +81,14 @@ export function ShipmentStatusPanel({ data }: ShipmentStatusPanelProps) {
     setFinanceError(null);
     try {
       const config = await loadCourierConfig();
-      if (!config?.provider || !config.credentials.email) {
+      if (!config?.provider) {
         setTrackingError("Courier not configured");
         setFinanceError("Courier not configured");
         return;
       }
       const [events, finance] = await Promise.all([
-        trackShipment(data.waybill_id, config.credentials),
-        fetchOrderFinance(data.waybill_id, config.credentials),
+        trackShipment(data.waybill_id, config.credentials, config.provider),
+        fetchOrderFinance(data.waybill_id, config.credentials, config.provider),
       ]);
       setTrackingEvents(events);
       setFinanceInfo(finance);

@@ -457,7 +457,7 @@ function OrdersPageInner() {
     const phone = order.customer_whatsapp || order.customer_phone;
     if (!phone) return;
     const templateData = orderRowToTemplateData(order);
-    handleWhatsAppAction("order_table_whatsapp", templateData, phone);
+    handleWhatsAppAction("order_whatsapp", templateData, phone);
   }, [handleWhatsAppAction]);
 
   // ─── Available Manual Waybills State ────────────────────
@@ -471,14 +471,15 @@ function OrdersPageInner() {
     }
   }, [businessId]);
 
-  // ─── Fetch available manual waybills when dialog opens ───
+  // ─── Fetch available manual waybills when dialog opens, filtered by provider ───
   useEffect(() => {
     if (waybillDialogOpen && businessId && waybillMethod === "manual") {
-      fetchManualWaybills(businessId, { status: "available", limit: 50 })
+      const providerId = courierConfig?.provider ?? null;
+      fetchManualWaybills(businessId, { status: "available", limit: 50, providerId })
         .then(({ waybills }) => setAvailableWaybills(waybills))
         .catch(() => setAvailableWaybills([]));
     }
-  }, [waybillDialogOpen, businessId, waybillMethod]);
+  }, [waybillDialogOpen, businessId, waybillMethod, courierConfig?.provider]);
 
   // ─── Load courier config on mount ────────────────────────
   useEffect(() => {
@@ -669,7 +670,8 @@ const handleStatusChange = useCallback(async (orderId: string, newStatus: string
 
       // If manual waybill mode, mark the waybill as used in manual_waybills
       if (waybillMethod === "manual") {
-        const assignResult = await assignWaybillToOrder(waybillId, orderId);
+        const providerId = courierConfig?.provider ?? null;
+        const assignResult = await assignWaybillToOrder(waybillId, orderId, providerId);
         if (!assignResult.success) {
           console.warn("Failed to assign waybill to order:", assignResult.error);
         }
@@ -687,7 +689,7 @@ const handleStatusChange = useCallback(async (orderId: string, newStatus: string
       toast.error("Failed to update order", { description: msg });
       return false;
     }
-  }, [pendingWaybillOrderId, pendingWaybillNewStatus, waybillMethod]);
+  }, [pendingWaybillOrderId, pendingWaybillNewStatus, waybillMethod, courierConfig?.provider]);
 
   const handlePaymentChange = useCallback(async (orderId: string, newPayment: string) => {
     if (guard("changing payment status")) return;

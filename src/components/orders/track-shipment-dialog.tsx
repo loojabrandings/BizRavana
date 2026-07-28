@@ -34,10 +34,10 @@ export function TrackShipmentDialog({
     setError(null);
     try {
       const config = await loadCourierConfig();
-      if (!config?.provider || !config.credentials.email) {
-        throw new Error("Courier not configured. Set up Royal Express in Settings first.");
+      if (!config?.provider) {
+        throw new Error("Courier not configured. Set up a courier in Settings first.");
       }
-      const result = await trackShipment(waybillNumber, config.credentials);
+      const result = await trackShipment(waybillNumber, config.credentials, config.provider);
       setEvents(result);
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Failed to fetch tracking info";

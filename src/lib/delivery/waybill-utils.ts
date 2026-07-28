@@ -8,6 +8,7 @@ export interface ManualWaybill {
   id: string;
   business_id: string;
   waybill_id: string;
+  provider_id: string | null;
   status: WaybillStatus;
   assigned_order_id: string | null;
   created_by: string | null;
@@ -50,7 +51,7 @@ export async function getWaybillMethod(
       .select("value")
       .eq("business_id", businessId)
       .eq("key", SETTINGS_KEY_WAYBILL_METHOD)
-      .single();
+      .maybeSingle();
 
     if (data?.value === "auto") return "auto";
     return "manual";
@@ -77,12 +78,13 @@ export async function setWaybillMethod(
 
 // ─── CRUD ───────────────────────────────────────────────────────────
 
-/** Fetch all manual waybills for a business, optionally filtering by status and search query. */
+/** Fetch all manual waybills for a business, optionally filtering by status, search, and provider. */
 export async function fetchManualWaybills(
   businessId: string,
   options?: {
     status?: WaybillStatus | "all";
     search?: string;
+    providerId?: string | null;
     limit?: number;
     offset?: number;
     /** Sort column and direction. Defaults to ["waybill_id", "asc"]. */
@@ -93,6 +95,7 @@ export async function fetchManualWaybills(
   const {
     status,
     search,
+    providerId,
     limit = 100,
     offset = 0,
     sortBy = ["waybill_id", "asc"],
@@ -106,6 +109,14 @@ export async function fetchManualWaybills(
 
   if (status && status !== "all") {
     query = query.eq("status", status);
+  }
+
+  if (providerId !== undefined) {
+    if (providerId === null) {
+      query = query.is("provider_id", null);
+    } else {
+      query = query.eq("provider_id", providerId);
+    }
   }
 
   if (search && search.trim()) {
@@ -126,6 +137,7 @@ export async function fetchManualWaybills(
     id: row.id,
     business_id: row.business_id,
     waybill_id: row.waybill_id,
+    provider_id: row.provider_id ?? null,
     status: row.status as WaybillStatus,
     assigned_order_id: row.assigned_order_id,
     created_by: row.created_by,
@@ -139,17 +151,28 @@ export async function fetchManualWaybills(
   return { waybills, total: count || 0 };
 }
 
-/** Get summary counts for manual waybills. */
+/** Get summary counts for manual waybills, optionally filtered by provider. */
 export async function getWaybillSummary(
   businessId: string,
+  providerId?: string | null,
 ): Promise<WaybillSummary> {
   const supabase = createClient();
 
-  const { data, error } = await supabase
+  let query = supabase
     .from("manual_waybills")
-    .select("status")
+    .select("status, provider_id")
     .eq("business_id", businessId)
     .is("deleted_at", null);
+
+  if (providerId !== undefined) {
+    if (providerId === null) {
+      query = query.is("provider_id", null);
+    } else {
+      query = query.eq("provider_id", providerId);
+    }
+  }
+
+  const { data, error } = await query;
 
   if (error) {
     console.error("Failed to get waybill summary:", error);
@@ -165,11 +188,12 @@ export async function getWaybillSummary(
   return { total, available, assigned, used, invalid };
 }
 
-/** Add a single manual waybill ID. Returns false if duplicate. */
+/** Add a single manual waybill ID. */
 export async function addManualWaybill(
   businessId: string,
   waybillId: string,
   userId?: string | null,
+  providerId?: string | null,
 ): Promise<{ success: boolean; error?: string }> {
   const trimmed = waybillId.trim();
   if (!trimmed) {
@@ -178,13 +202,22 @@ export async function addManualWaybill(
 
   const supabase = createClient();
 
-  // Check for existing (including soft-deleted)
-  const { data: existing } = await supabase
+  // Check for existing (including soft-deleted) — match by business + provider + waybill_id
+  let existingQuery = supabase
     .from("manual_waybills")
     .select("id, deleted_at")
     .eq("business_id", businessId)
-    .eq("waybill_id", trimmed)
-    .maybeSingle();
+    .eq("waybill_id", trimmed);
+
+  if (providerId !== undefined) {
+    if (providerId === null) {
+      existingQuery = existingQuery.is("provider_id", null);
+    } else {
+      existingQuery = existingQuery.eq("provider_id", providerId);
+    }
+  }
+
+  const { data: existing } = await existingQuery.maybeSingle();
 
   if (existing) {
     if (existing.deleted_at) {
@@ -195,19 +228,20 @@ export async function addManualWaybill(
         .eq("id", existing.id);
       return { success: true };
     }
-    return { success: false, error: "This waybill ID already exists." };
+    return { success: false, error: "This waybill ID already exists for this courier." };
   }
 
   const { error } = await supabase.from("manual_waybills").insert({
     business_id: businessId,
     waybill_id: trimmed,
+    provider_id: providerId ?? null,
     status: "available",
     created_by: userId || null,
   });
 
   if (error) {
     if (error.code === "23505") {
-      return { success: false, error: "This waybill ID already exists." };
+      return { success: false, error: "This waybill ID already exists for this courier." };
     }
     return { success: false, error: error.message };
   }
@@ -220,6 +254,7 @@ export async function addMultipleWaybills(
   businessId: string,
   input: string,
   userId?: string | null,
+  providerId?: string | null,
 ): Promise<AddWaybillResult> {
   // Parse input: split by newlines or commas
   const rawIds = input
@@ -252,11 +287,21 @@ export async function addMultipleWaybills(
 
   // Check existing IDs in DB
   const supabase = createClient();
-  const { data: existingRows } = await supabase
+  let existingQuery = supabase
     .from("manual_waybills")
     .select("waybill_id, deleted_at")
     .eq("business_id", businessId)
     .in("waybill_id", uniqueIds);
+
+  if (providerId !== undefined) {
+    if (providerId === null) {
+      existingQuery = existingQuery.is("provider_id", null);
+    } else {
+      existingQuery = existingQuery.eq("provider_id", providerId);
+    }
+  }
+
+  const { data: existingRows } = await existingQuery;
 
   const existingMap = new Map<string, boolean>();
   if (existingRows) {
@@ -271,9 +316,6 @@ export async function addMultipleWaybills(
       if (existingMap.get(lower)) {
         // Active duplicate
         result.duplicates++;
-      } else {
-        // Soft-deleted — treat as non-duplicate for restoration
-        return true;
       }
       return false;
     }
@@ -284,10 +326,11 @@ export async function addMultipleWaybills(
     return result;
   }
 
-  // Batch insert
+  // Batch insert — include provider_id
   const insertData = toInsert.map((id) => ({
     business_id: businessId,
     waybill_id: id,
+    provider_id: providerId ?? null,
     status: "available" as const,
     created_by: userId || null,
   }));
@@ -362,23 +405,33 @@ export async function updateWaybillStatus(
   return { success: true };
 }
 
-/** Mark a waybill as assigned to an order. */
+/** Mark a waybill as assigned to an order. Also validates provider match if specified. */
 export async function assignWaybillToOrder(
   waybillId: string,
   orderId: string,
+  providerId?: string | null,
 ): Promise<{ success: boolean; error?: string }> {
   const supabase = createClient();
 
-  const { data: waybill } = await supabase
+  let query = supabase
     .from("manual_waybills")
-    .select("id, status")
+    .select("id, status, provider_id")
     .eq("waybill_id", waybillId)
     .eq("status", "available")
-    .is("deleted_at", null)
-    .single();
+    .is("deleted_at", null);
+
+  if (providerId !== undefined) {
+    if (providerId === null) {
+      query = query.is("provider_id", null);
+    } else {
+      query = query.eq("provider_id", providerId);
+    }
+  }
+
+  const { data: waybill } = await query.single();
 
   if (!waybill) {
-    return { success: false, error: "Waybill not available." };
+    return { success: false, error: "Waybill not available for this courier." };
   }
 
   const { error } = await supabase
@@ -441,6 +494,7 @@ export interface GenerateRangeResult {
  * @param to - Ending number (inclusive)
  * @param prefix - Optional fixed prefix (e.g. "RA")
  * @param userId - Optional user ID for created_by tracking
+ * @param providerId - Optional courier provider ID to associate these waybills with
  * @returns Summary of the operation
  */
 export async function generateWaybillRange(
@@ -449,6 +503,7 @@ export async function generateWaybillRange(
   to: string,
   prefix?: string,
   userId?: string | null,
+  providerId?: string | null,
 ): Promise<GenerateRangeResult> {
   const result: GenerateRangeResult = {
     requested: 0,
@@ -520,11 +575,21 @@ export async function generateWaybillRange(
 
   // ── Check existing ───────────────────────────────────────────
   const supabase = createClient();
-  const { data: existingRows } = await supabase
+  let existingQuery = supabase
     .from("manual_waybills")
     .select("waybill_id, deleted_at")
     .eq("business_id", businessId)
     .in("waybill_id", generatedIds);
+
+  if (providerId !== undefined) {
+    if (providerId === null) {
+      existingQuery = existingQuery.is("provider_id", null);
+    } else {
+      existingQuery = existingQuery.eq("provider_id", providerId);
+    }
+  }
+
+  const { data: existingRows } = await existingQuery;
 
   const existingMap = new Map<string, boolean>();
   if (existingRows) {
@@ -552,6 +617,7 @@ export async function generateWaybillRange(
   const insertData = toInsert.map((id) => ({
     business_id: businessId,
     waybill_id: id,
+    provider_id: providerId ?? null,
     status: "available" as const,
     created_by: userId || null,
   }));
@@ -629,10 +695,11 @@ export async function bulkDeleteWaybills(
   return { success: true, deleted: ids.length, errors: [] };
 }
 
-/** Get available manual waybills for suggestion. */
+/** Get available manual waybills for suggestion, optionally filtered by provider. */
 export async function getAvailableWaybills(
   businessId: string,
   searchQuery?: string,
+  providerId?: string | null,
 ): Promise<ManualWaybill[]> {
   const supabase = createClient();
 
@@ -644,6 +711,14 @@ export async function getAvailableWaybills(
     .is("deleted_at", null)
     .order("waybill_id", { ascending: true })
     .limit(20);
+
+  if (providerId !== undefined) {
+    if (providerId === null) {
+      query = query.is("provider_id", null);
+    } else {
+      query = query.eq("provider_id", providerId);
+    }
+  }
 
   if (searchQuery && searchQuery.trim()) {
     query = query.ilike("waybill_id", `%${searchQuery.trim()}%`);
@@ -660,6 +735,7 @@ export async function getAvailableWaybills(
     id: row.id,
     business_id: row.business_id,
     waybill_id: row.waybill_id,
+    provider_id: row.provider_id ?? null,
     status: row.status as WaybillStatus,
     assigned_order_id: row.assigned_order_id,
     created_by: row.created_by,

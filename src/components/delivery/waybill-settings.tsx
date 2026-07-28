@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
+  ArrowRight,
   Check,
   ChevronDown,
   Copy,
@@ -12,6 +13,7 @@ import {
   Plus,
   Search,
   Trash2,
+  Truck,
   X,
   Zap,
 } from "lucide-react";
@@ -64,6 +66,10 @@ import {
 interface WaybillSettingsProps {
   businessId: string | null;
   userId?: string | null;
+  /** Optional courier provider ID to filter waybills by (e.g. "royal_express"). */
+  providerId?: string | null;
+  /** Callback to navigate to the Courier Provider section when no provider is selected. */
+  onNavigateToProvider?: () => void;
 }
 
 // ─── Constants ──────────────────────────────────────────────────────
@@ -108,7 +114,7 @@ function SummaryCard({
 
 // ─── Main Component ─────────────────────────────────────────────────
 
-export function WaybillSettings({ businessId, userId }: WaybillSettingsProps) {
+export function WaybillSettings({ businessId, userId, providerId, onNavigateToProvider }: WaybillSettingsProps) {
   const isMobile = useIsMobile();
 
   // ── State ──────────────────────────────────────────────────────
@@ -203,10 +209,11 @@ export function WaybillSettings({ businessId, userId }: WaybillSettingsProps) {
         fetchManualWaybills(businessId, {
           status: statusFilter,
           search: debouncedFilter || undefined,
+          providerId: providerId,
           limit: pageSize,
           offset: (currentPage - 1) * pageSize,
         }),
-        getWaybillSummary(businessId),
+        getWaybillSummary(businessId, providerId),
       ]);
 
       setMethod(fetchedMethod);
@@ -255,7 +262,7 @@ export function WaybillSettings({ businessId, userId }: WaybillSettingsProps) {
     if (!businessId || !value) return;
     setAddingSingle(true);
     try {
-      const result = await addManualWaybill(businessId, value, userId);
+      const result = await addManualWaybill(businessId, value, userId, providerId);
       if (result.success) {
         toast.success(`Waybill "${value}" added`);
         handleClearSearch(); // Clear input which also resets the list filter
@@ -289,7 +296,7 @@ export function WaybillSettings({ businessId, userId }: WaybillSettingsProps) {
     if (!businessId || !multipleInput.trim()) return;
     setAddingMultiple(true);
     try {
-      const result = await addMultipleWaybills(businessId, multipleInput, userId);
+      const result = await addMultipleWaybills(businessId, multipleInput, userId, providerId);
       if (result.inserted > 0) {
         toast.success(`${result.inserted} waybill(s) added`, {
           description:
@@ -379,6 +386,7 @@ export function WaybillSettings({ businessId, userId }: WaybillSettingsProps) {
         rangeTo,
         rangePrefix || undefined,
         userId,
+        providerId,
       );
 
       if (result.inserted > 0) {
@@ -544,6 +552,33 @@ export function WaybillSettings({ businessId, userId }: WaybillSettingsProps) {
       setBulkDeleteConfirmOpen(false);
     }
   }, [selectedIds, loadData]);
+
+  // ── No courier provider selected ────────────────────────────
+  if (!providerId) {
+    return (
+      <div className="rounded-xl border border-info/20 bg-info/5 p-6 text-center">
+        <div className="mx-auto flex size-12 items-center justify-center rounded-xl bg-info/10">
+          <Truck className="size-6 text-info" />
+        </div>
+        <h3 className="mt-4 text-base font-semibold text-foreground">
+          No Courier Provider Selected
+        </h3>
+        <p className="mt-2 text-sm text-muted-foreground max-w-sm mx-auto leading-relaxed">
+          Select a courier provider first to start managing waybill IDs
+          for your shipments and deliveries.
+        </p>
+        <button
+          type="button"
+          onClick={() => onNavigateToProvider?.()}
+          className="mt-5 inline-flex items-center gap-2 rounded-lg bg-info px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-info/90 active:scale-[0.97]"
+        >
+          <Truck className="size-4" />
+          Go to Courier Provider Settings
+          <ArrowRight className="size-4" />
+        </button>
+      </div>
+    );
+  }
 
   // ── Loading state ──────────────────────────────────────────────
   if (loading) {
