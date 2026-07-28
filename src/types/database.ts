@@ -39,6 +39,48 @@ export interface Database {
         };
         Relationships: [];
       };
+      ad_campaigns: {
+        Row: {
+          id: string; title: string; description: string; label: "Special Offer" | "Announcement" | "New Feature" | "Upgrade" | "Recommended for You";
+          image_path: string | null; image_fit: "cover" | "contain";
+          cta_text: string | null; cta_url: string | null; target_plan_ids: string[];
+          website_target: "all" | "missing" | "present"; target_business_id: string | null;
+          priority: number; starts_at: string | null; ends_at: string | null;
+          is_active: boolean; created_by: string | null; created_at: string; updated_at: string;
+        };
+        Insert: {
+          id?: string; title: string; description: string; label?: "Special Offer" | "Announcement" | "New Feature" | "Upgrade" | "Recommended for You";
+          image_path?: string | null; image_fit?: "cover" | "contain";
+          cta_text?: string | null; cta_url?: string | null; target_plan_ids?: string[];
+          website_target?: "all" | "missing" | "present"; target_business_id?: string | null;
+          priority?: number; starts_at?: string | null; ends_at?: string | null;
+          is_active?: boolean; created_by?: string | null; created_at?: string; updated_at?: string;
+        };
+        Update: {
+          id?: string; title?: string; description?: string; label?: "Special Offer" | "Announcement" | "New Feature" | "Upgrade" | "Recommended for You";
+          image_path?: string | null; image_fit?: "cover" | "contain";
+          cta_text?: string | null; cta_url?: string | null; target_plan_ids?: string[];
+          website_target?: "all" | "missing" | "present"; target_business_id?: string | null;
+          priority?: number; starts_at?: string | null; ends_at?: string | null;
+          is_active?: boolean; created_by?: string | null; created_at?: string; updated_at?: string;
+        };
+        Relationships: [];
+      };
+      ad_dismissals: {
+        Row: {
+          ad_id: string; user_id: string; business_id: string;
+          dismissed_until: string; created_at: string;
+        };
+        Insert: {
+          ad_id: string; user_id: string; business_id: string;
+          dismissed_until: string; created_at?: string;
+        };
+        Update: {
+          ad_id?: string; user_id?: string; business_id?: string;
+          dismissed_until?: string; created_at?: string;
+        };
+        Relationships: [];
+      };
       businesses: {
         Row: {
           id: string; owner_id: string; name: string; type: string | null;
@@ -442,6 +484,7 @@ export interface Database {
           payment_method: "cash" | "bank_transfer" | "card" | "online" | null;
           payment_status: "pending" | "paid";
           add_to_inventory: boolean; inventory_item_id: string | null;
+          source_order_id: string | null;
           remarks: string | null; created_by: string | null;
           created_at: string; updated_at: string; deleted_at: string | null;
         };
@@ -453,6 +496,7 @@ export interface Database {
           payment_method?: "cash" | "bank_transfer" | "card" | "online" | null;
           payment_status?: "pending" | "paid";
           add_to_inventory?: boolean; inventory_item_id?: string | null;
+          source_order_id?: string | null;
           remarks?: string | null; created_by?: string | null;
           created_at?: string; updated_at?: string; deleted_at?: string | null;
         };
@@ -464,8 +508,38 @@ export interface Database {
           payment_method?: "cash" | "bank_transfer" | "card" | "online" | null;
           payment_status?: "pending" | "paid";
           add_to_inventory?: boolean; inventory_item_id?: string | null;
+          source_order_id?: string | null;
           remarks?: string | null; created_by?: string | null;
           created_at?: string; updated_at?: string; deleted_at?: string | null;
+        };
+        Relationships: [];
+      };
+      bug_reports: {
+        Row: {
+          id: string; business_id: string; user_id: string;
+          title: string; description: string; expected_result: string | null;
+          page_url: string | null; browser_info: string | null;
+          screenshot_path: string | null;
+          status: "new" | "reviewing" | "in_progress" | "resolved" | "closed";
+          admin_notes: string | null; resolved_at: string | null;
+          created_at: string; updated_at: string;
+        };
+        Insert: {
+          id?: string; business_id: string; user_id: string;
+          title: string; description: string; expected_result?: string | null;
+          page_url?: string | null; browser_info?: string | null;
+          screenshot_path?: string | null;
+          status?: "new" | "reviewing" | "in_progress" | "resolved" | "closed";
+          admin_notes?: string | null; resolved_at?: string | null;
+          created_at?: string; updated_at?: string;
+        };
+        Update: {
+          title?: string; description?: string; expected_result?: string | null;
+          page_url?: string | null; browser_info?: string | null;
+          screenshot_path?: string | null;
+          status?: "new" | "reviewing" | "in_progress" | "resolved" | "closed";
+          admin_notes?: string | null; resolved_at?: string | null;
+          updated_at?: string;
         };
         Relationships: [];
       };

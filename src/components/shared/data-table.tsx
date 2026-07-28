@@ -67,6 +67,10 @@ export interface DataTableProps<T> {
   selection?: DataTableSelectionProps;
   /** Set of row keys that are currently being deleted (show loading bar instead of content) */
   deletingKeys?: Set<string | number>;
+  /** Callback for double-clicking a row (desktop only) */
+  onRowDoubleClick?: (row: T) => void;
+  /** Callback for right-clicking a row (desktop only) — receives the row and mouse event for positioning */
+  onRowContextMenu?: (row: T, e: React.MouseEvent) => void;
   /** Additional className for the container */
   className?: string;
 }
@@ -351,6 +355,8 @@ export function DataTable<T extends Record<string, any>>({
   renderMobileCard,
   selection,
   deletingKeys,
+  onRowDoubleClick,
+  onRowContextMenu,
   className,
 }: DataTableProps<T>) {
   const isMobile = useIsMobile();
@@ -702,10 +708,22 @@ export function DataTable<T extends Record<string, any>>({
                       ? "cursor-pointer hover:bg-muted/30"
                       : "hover:bg-muted/20",
                     selected && "bg-primary/10 hover:bg-primary/15",
+                    !selectionMode && onRowDoubleClick && "cursor-pointer",
                   )}
                   onClick={() => {
                     if (selectionMode) {
                       toggleRowSelection(rowId);
+                    }
+                  }}
+                  onDoubleClick={() => {
+                    if (!selectionMode && onRowDoubleClick) {
+                      onRowDoubleClick(row);
+                    }
+                  }}
+                  onContextMenu={(e) => {
+                    if (!selectionMode && onRowContextMenu) {
+                      e.preventDefault();
+                      onRowContextMenu(row, e);
                     }
                   }}
                 >
