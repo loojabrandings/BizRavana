@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import {
   Bell,
+  Bug,
   Building2,
   ChevronDown,
   LifeBuoy,
@@ -42,6 +43,7 @@ import {
   setupAutoSync,
 } from "@/lib/settings-sync";
 import { UserRoleProvider } from "@/hooks/use-user-role";
+import { BugReportDialog } from "@/components/shared/bug-report-dialog";
 
 // ─── Shared Avatar Dropdown (used on both mobile and desktop) ─────
 
@@ -82,6 +84,7 @@ function HeaderAvatarDropdown({
   compact?: boolean;
 }) {
   const router = useRouter();
+  const [bugReportOpen, setBugReportOpen] = useState(false);
 
   return (
     <DropdownMenu>
@@ -193,6 +196,12 @@ function HeaderAvatarDropdown({
             </span>
             <span className="text-sm font-medium">Help Center</span>
           </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => setBugReportOpen(true)} className="gap-3 rounded-xl px-2.5 py-2.5">
+            <span className="flex size-8 items-center justify-center rounded-lg bg-primary/5 text-primary">
+              <Bug className="size-4" />
+            </span>
+            <span className="text-sm font-medium">Report a Bug</span>
+          </DropdownMenuItem>
 
           <DropdownMenuSeparator className="mx-1 my-1.5" />
 
@@ -204,6 +213,7 @@ function HeaderAvatarDropdown({
           </DropdownMenuItem>
         </div>
       </DropdownMenuContent>
+      <BugReportDialog open={bugReportOpen} onOpenChange={setBugReportOpen} />
     </DropdownMenu>
   );
 }

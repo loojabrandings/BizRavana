@@ -927,6 +927,91 @@ export default function SubscriptionPage() {
       )}
 
       {/* ═══════════════════════════════════════════════════════════════
+          3. PAYMENT HISTORY
+         ═══════════════════════════════════════════════════════════════ */}
+      <section className="rounded-2xl border border-border/30 bg-card overflow-hidden">
+        <div className="flex items-center justify-between border-b border-border/20 px-5 py-4 sm:px-6">
+          <div>
+            <h2 className="text-lg font-semibold text-foreground">Payment History</h2>
+            <p className="mt-0.5 text-sm text-muted-foreground">Your latest card and bank-transfer payments.</p>
+          </div>
+          <FileText className="size-5 text-muted-foreground/50" />
+        </div>
+
+        {paymentHistory.length === 0 ? (
+          <div className="flex flex-col items-center px-5 py-10 text-center">
+            <div className="flex size-11 items-center justify-center rounded-full bg-muted/20">
+              <FileText className="size-5 text-muted-foreground/40" />
+            </div>
+            <p className="mt-3 text-sm font-medium text-foreground">No payments submitted yet</p>
+            <p className="mt-1 text-xs text-muted-foreground">Your card payments and bank-transfer reviews will appear here.</p>
+          </div>
+        ) : (
+          <div className="divide-y divide-border/15">
+            {paymentHistory.slice(0, 8).map((payment) => {
+              const plan = plans.find((item) => item.id === payment.planId);
+              return (
+                <div key={payment.id} className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+                  <div className="flex items-start gap-3">
+                    <div className={cn(
+                      "flex size-9 shrink-0 items-center justify-center rounded-lg",
+                      payment.successful
+                        ? "bg-success/10 text-success"
+                        : payment.failed
+                          ? "bg-destructive/10 text-destructive"
+                          : "bg-warning/10 text-warning",
+                    )}>
+                      {payment.successful
+                        ? <CheckCircle2 className="size-4" />
+                        : payment.failed
+                          ? <XCircle className="size-4" />
+                          : payment.methodLabel.startsWith("Card")
+                            ? <CreditCard className="size-4" />
+                            : <Clock className="size-4" />}
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-foreground">{plan?.name || "Subscription"} plan</p>
+                      <p className="mt-0.5 text-xs text-muted-foreground">
+                        {formatDate(payment.createdAt)} · {payment.methodLabel}
+                      </p>
+                      {payment.reference && (
+                        <p className="mt-1 font-mono text-xs text-muted-foreground">
+                          Order: {payment.reference}
+                        </p>
+                      )}
+                      {payment.paymentId && (
+                        <p className="mt-0.5 font-mono text-xs text-muted-foreground">
+                          PayHere ID: {payment.paymentId}
+                        </p>
+                      )}
+                      {payment.note && (
+                        <p className="mt-1.5 text-xs text-muted-foreground">
+                          {payment.note}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between gap-4 pl-12 sm:pl-0">
+                    <p className="text-sm font-bold tabular-nums text-foreground">Rs. {payment.amount.toLocaleString()}</p>
+                    <span className={cn(
+                      "rounded-full border px-2.5 py-1 text-xs font-semibold capitalize",
+                      payment.successful
+                        ? "border-success/20 bg-success/10 text-success"
+                        : payment.failed
+                          ? "border-destructive/20 bg-destructive/10 text-destructive"
+                          : "border-warning/20 bg-warning/10 text-warning",
+                    )}>
+                      {payment.statusLabel}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </section>
+
+      {/* ═══════════════════════════════════════════════════════════════
           3. PRICING SECTION
          ═══════════════════════════════════════════════════════════════ */}
 
@@ -1420,100 +1505,7 @@ export default function SubscriptionPage() {
 
 
 
-      {/* ═══════════════════════════════════════════════════════════════
-          4. PAYMENT & BILLING
-             (hidden for now)
-         ═══════════════════════════════════════════════════════════════ */}
 
-      {/* ═══════════════════════════════════════════════════════════════
-          5. PAYMENT HISTORY
-             (hidden for now)
-         ═══════════════════════════════════════════════════════════════ */}
-
-      {/* ═══════════════════════════════════════════════════════════════
-          UPGRADE PLAN DIALOG (unchanged)
-         ═══════════════════════════════════════════════════════════════ */}
-      <section className="rounded-2xl border border-border/30 bg-card overflow-hidden">
-        <div className="flex items-center justify-between border-b border-border/20 px-5 py-4 sm:px-6">
-          <div>
-            <h2 className="text-lg font-semibold text-foreground">Payment History</h2>
-            <p className="mt-0.5 text-sm text-muted-foreground">Your latest card and bank-transfer payments.</p>
-          </div>
-          <FileText className="size-5 text-muted-foreground/50" />
-        </div>
-
-        {paymentHistory.length === 0 ? (
-          <div className="flex flex-col items-center px-5 py-10 text-center">
-            <div className="flex size-11 items-center justify-center rounded-full bg-muted/20">
-              <FileText className="size-5 text-muted-foreground/40" />
-            </div>
-            <p className="mt-3 text-sm font-medium text-foreground">No payments submitted yet</p>
-            <p className="mt-1 text-xs text-muted-foreground">Your card payments and bank-transfer reviews will appear here.</p>
-          </div>
-        ) : (
-          <div className="divide-y divide-border/15">
-            {paymentHistory.slice(0, 8).map((payment) => {
-              const plan = plans.find((item) => item.id === payment.planId);
-              return (
-                <div key={payment.id} className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
-                  <div className="flex items-start gap-3">
-                    <div className={cn(
-                      "flex size-9 shrink-0 items-center justify-center rounded-lg",
-                      payment.successful
-                        ? "bg-success/10 text-success"
-                        : payment.failed
-                          ? "bg-destructive/10 text-destructive"
-                          : "bg-warning/10 text-warning",
-                    )}>
-                      {payment.successful
-                        ? <CheckCircle2 className="size-4" />
-                        : payment.failed
-                          ? <XCircle className="size-4" />
-                          : payment.methodLabel.startsWith("Card")
-                            ? <CreditCard className="size-4" />
-                            : <Clock className="size-4" />}
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold text-foreground">{plan?.name || "Subscription"} plan</p>
-                      <p className="mt-0.5 text-xs text-muted-foreground">
-                        {formatDate(payment.createdAt)} · {payment.methodLabel}
-                      </p>
-                      {payment.reference && (
-                        <p className="mt-1 font-mono text-xs text-muted-foreground">
-                          Order: {payment.reference}
-                        </p>
-                      )}
-                      {payment.paymentId && (
-                        <p className="mt-0.5 font-mono text-xs text-muted-foreground">
-                          PayHere ID: {payment.paymentId}
-                        </p>
-                      )}
-                      {payment.note && (
-                        <p className="mt-1.5 text-xs text-muted-foreground">
-                          {payment.note}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between gap-4 pl-12 sm:pl-0">
-                    <p className="text-sm font-bold tabular-nums text-foreground">Rs. {payment.amount.toLocaleString()}</p>
-                    <span className={cn(
-                      "rounded-full border px-2.5 py-1 text-xs font-semibold capitalize",
-                      payment.successful
-                        ? "border-success/20 bg-success/10 text-success"
-                        : payment.failed
-                          ? "border-destructive/20 bg-destructive/10 text-destructive"
-                          : "border-warning/20 bg-warning/10 text-warning",
-                    )}>
-                      {payment.statusLabel}
-                    </span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </section>
 
       <Dialog open={!!upgradePlan} onOpenChange={(open) => !open && setUpgradePlan(null)}>
         <DialogContent className="sm:max-w-md">

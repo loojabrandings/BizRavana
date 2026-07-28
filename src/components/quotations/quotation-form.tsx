@@ -18,6 +18,7 @@ import { QuotationItemsSection } from "./quotation-items-section";
 import { QuotationFinancialSection } from "./quotation-financial-section";
 import { useCourierLocations } from "@/hooks/use-courier-locations";
 import { useIsMobile } from "@/hooks/use-media-query";
+import { useQuotationSettings } from "@/stores/quotation-settings-store";
 import { QuotationFormWizard } from "./quotation-form-wizard";
 
 // ─── Props ─────────────────────────────────────────────────────────
@@ -66,7 +67,13 @@ function createDefaultForm(): QuotationFormData {
 // ─── Main Component ───────────────────────────────────────────────
 
 export function QuotationForm({ onSubmit, onCancel, initialData, isEditing }: QuotationFormProps) {
-  const [form, setForm] = useState<QuotationFormData>(() => initialData || createDefaultForm());
+  const quotationSettings = useQuotationSettings();
+  const [form, setForm] = useState<QuotationFormData>(() => {
+    if (initialData) return initialData;
+    const defaults = createDefaultForm();
+    defaults.discount_type = quotationSettings.defaultDiscountMode;
+    return defaults;
+  });
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isDirty, setIsDirty] = useState(false);

@@ -15,6 +15,7 @@ import {
   Plus,
   Settings,
   ShoppingCart,
+  Truck,
   type LucideIcon,
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -49,6 +50,7 @@ interface NavGroup {
 const coreNav: (NavItem | NavGroup)[] = [
   { label: "Dashboard", href: "/dashboard", icon: Home },
   { label: "Orders", href: "/dashboard/orders", icon: ShoppingCart },
+  { label: "Courier", href: "/dashboard/courier", icon: Truck },
   { label: "Expenses", href: "/dashboard/expenses", icon: Package },
   { label: "Quotations", href: "/dashboard/quotations", icon: FileText },
   { label: "Products", href: "/dashboard/products", icon: Package },

@@ -40,6 +40,7 @@ import {
 import { MiniBarChart } from "@/components/charts/mini-bar-chart";
 import { RankedBarList } from "@/components/charts/ranked-bar-list";
 import { DashboardSkeleton } from "@/components/dashboard/dashboard-skeleton";
+import { DashboardAdBanner } from "@/components/dashboard/dashboard-ad-banner";
 
 interface PeriodTrend {
   ordersCurrent: number;
@@ -241,7 +242,7 @@ export default function DashboardPage() {
         const lowStockItems = inventory
           .filter((item) => item.current <= item.minimum);
 
-        const toDispatch = deliveries.filter((d) => String(d.status) === "to_dispatch").length;
+        const toDispatch = orders.filter((o) => ["new_order", "ready", "packed"].includes(o.status)).length;
         const toBeDelivered = deliveries.filter(
           (d) => ["in_branch", "assigned_to_rider"].includes(String(d.status)),
         ).length;
@@ -493,6 +494,8 @@ export default function DashboardPage() {
       initial="hidden"
       animate="show"
     >
+      <DashboardAdBanner />
+
       {/* ========================================================= */}
       {/* MOBILE HERO — compact greeting + metrics with hero bg     */}
       {/* ========================================================= */}

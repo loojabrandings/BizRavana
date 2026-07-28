@@ -184,6 +184,14 @@ export function PaymentSection({
           <Input type="text" placeholder="Bank transfer reference" className="h-9" />
         </div>
       )}
+
+      {form.payment_method === "cod" && (
+        <div className="rounded-lg bg-warning/10 border border-warning/20 px-3 py-2.5">
+          <p className="text-xs font-medium text-warning">
+            COD — collect {formatCurrency(calculations.total)} at delivery
+          </p>
+        </div>
+      )}
     </>
   );
 }

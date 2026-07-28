@@ -28,6 +28,7 @@ import { useCourierLocations } from "@/hooks/use-courier-locations";
 import { useOrdersSettings } from "@/stores/orders-settings-store";
 import { useIsMobile } from "@/hooks/use-media-query";
 import { OrderFormWizard } from "./order-form-wizard";
+import type { ProductResult } from "./product-search-popover";
 // ─── Props ─────────────────────────────────────────────────────────
 
 export interface OrderFormProps {
@@ -56,6 +57,7 @@ function createDefaultForm(): OrderFormData {
     items: [
       {
         id: generateItemId(),
+        product_id: null,
         product_name: "",
         category: "",
         quantity: 1,
@@ -99,6 +101,7 @@ export function OrderForm({ onSubmit, onCancel, initialData, isEditing }: OrderF
     }
     const defaults = createDefaultForm();
     defaults.delivery_charge = ordersSettings.courierCharge;
+    defaults.discount_type = ordersSettings.defaultDiscountMode;
     defaults.payment_method = ordersSettings.defaultPaymentMethod as "cod" | "bank_transfer" | "cash" | "other";
     return defaults;
   });
@@ -217,12 +220,25 @@ export function OrderForm({ onSubmit, onCancel, initialData, isEditing }: OrderF
     }));
   }, [calculations]);
 
-  // Auto-set payment status to "advanced" when advance payment is entered
+  // Auto-set payment status based on payment method and advance payment
   useEffect(() => {
-    if (form.advance_paid > 0 && form.payment_status !== "advanced") {
-      setForm((prev) => ({ ...prev, payment_status: "advanced" }));
+    if (form.payment_method === "bank_transfer") {
+      setForm((prev) => {
+        if (prev.payment_status === "paid") return prev;
+        return { ...prev, payment_status: "paid" };
+      });
+    } else if (form.advance_paid > 0) {
+      setForm((prev) => {
+        if (prev.payment_status === "advanced") return prev;
+        return { ...prev, payment_status: "advanced" };
+      });
+    } else if (form.payment_method === "cod") {
+      setForm((prev) => {
+        if (prev.payment_status === "pending") return prev;
+        return { ...prev, payment_status: "pending" };
+      });
     }
-  }, [form.advance_paid, form.payment_status]);
+  }, [form.payment_method, form.advance_paid]);
 
   // ─── Items ────────────────────────────────────────────────────
   const handleAddItem = useCallback(() => {
@@ -232,6 +248,7 @@ export function OrderForm({ onSubmit, onCancel, initialData, isEditing }: OrderF
         ...prev.items,
         {
           id: generateItemId(),
+          product_id: null,
           product_name: "",
           category: "",
           quantity: 1,
@@ -272,13 +289,14 @@ export function OrderForm({ onSubmit, onCancel, initialData, isEditing }: OrderF
   }, []);
 
   // ─── Product Select (from search popover) ────────────────────
-  const handleProductSelect = useCallback((product: { name: string; category: string | null; selling_price: number }) => {
+  const handleProductSelect = useCallback((product: ProductResult) => {
     setForm((prev) => {
       const emptyIndex = prev.items.findIndex((item) => !item.product_name.trim());
       if (emptyIndex !== -1) {
         const updated = [...prev.items];
         updated[emptyIndex] = {
           ...updated[emptyIndex],
+          product_id: product.id,
           product_name: product.name,
           category: product.category || "",
           unit_price: product.selling_price,
@@ -291,6 +309,7 @@ export function OrderForm({ onSubmit, onCancel, initialData, isEditing }: OrderF
           ...prev.items,
           {
             id: generateItemId(),
+            product_id: product.id,
             product_name: product.name,
             category: product.category || "",
             quantity: 1,

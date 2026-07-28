@@ -3,9 +3,11 @@
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import {
+  Check,
   ChevronDown,
   Eye,
   FileDown,
+  FileText,
   Layers3,
   MessageCircle,
   MoreHorizontal,
@@ -46,11 +48,21 @@ import { TrackShipmentDialog } from "@/components/orders/track-shipment-dialog";
 import { EnterWaybillDialog } from "@/components/orders/enter-waybill-dialog";
 import { useOrdersSettings } from "@/stores/orders-settings-store";
 import { loadCourierConfig, shipWithCourier, type CourierConfig } from "@/lib/delivery/courier-utils";
+import { ContextMenu, type ContextMenuSection, type ContextMenuItem } from "@/components/shared/context-menu";
 import { HoverPopover } from "@/components/shared/hover-popover";
 import { useIsMobile } from "@/hooks/use-media-query";
 import { useReadOnlyMode } from "@/providers/readonly-mode-provider";
 import { useWhatsAppAction } from "@/components/whatsapp/use-whatsapp-action";
 import { orderRowToTemplateData } from "@/components/whatsapp/whatsapp-actions";
+import {
+  Dialog,
+  DialogContent,
+} from "@/components/ui/dialog";
+import {
+  InvoiceTemplate,
+  fetchBusinessProfile,
+  type BusinessProfile,
+} from "@/components/orders/invoice-template";
 import { fetchManualWaybills, getWaybillMethod, assignWaybillToOrder, markWaybillAsUsed, type ManualWaybill } from "@/lib/delivery/waybill-utils";
 
 // ─── Storage helpers ──────────────────────────────────────────────
@@ -422,6 +434,18 @@ function OrdersPageInner() {
   const [trackingWaybill, setTrackingWaybill] = useState<string | null>(null);
   const [trackingDialogOpen, setTrackingDialogOpen] = useState(false);
 
+  // ─── Invoice Dialog State ──────────────────────────────────
+  const [invoiceOpen, setInvoiceOpen] = useState(false);
+  const [invoiceTargetData, setInvoiceTargetData] = useState<OrderFormData | null>(null);
+  const [invoiceBusiness, setInvoiceBusiness] = useState<BusinessProfile | null>(null);
+
+  // ─── Context Menu State ──────────────────────────────────────
+  const [contextMenu, setContextMenu] = useState<{
+    order: Order;
+    x: number;
+    y: number;
+  } | null>(null);
+
   // ─── Mobile detection ────────────────────────────────────────
   const isMobile = useIsMobile();
 
@@ -704,7 +728,7 @@ const handleStatusChange = useCallback(async (orderId: string, newStatus: string
       // Fetch order items separately since Supabase may return them nested
       const { data: items } = await supabase
         .from("order_items")
-        .select("product_name, category, quantity, unit_price, notes")
+        .select("product_id, product_name, category, quantity, unit_price, notes")
         .eq("order_id", orderId)
         .order("sort_order");
 
@@ -715,6 +739,7 @@ const handleStatusChange = useCallback(async (orderId: string, newStatus: string
       // Build item list with stable IDs
       const orderItems = (items || []).map((item: Record<string, any>, i: number) => ({
         id: `preview_item_${i}`,
+        product_id: item.product_id ? String(item.product_id) : null,
         product_name: String(item.product_name || ""),
         category: String(item.category || ""),
         quantity: Number(item.quantity || 1),
@@ -781,6 +806,26 @@ const handleStatusChange = useCallback(async (orderId: string, newStatus: string
       return null;
     }
   }, []);
+
+  // ─── Handle Invoice from table row ──────────────────────
+  const handleInvoiceFromTable = useCallback(async (order: Order) => {
+    setInvoiceTargetData(null);
+    setInvoiceBusiness(null);
+    setInvoiceOpen(true);
+
+    try {
+      const profile = await fetchBusinessProfile();
+      setInvoiceBusiness(profile);
+    } catch (err) {
+      console.error("Failed to fetch business profile:", err);
+    }
+
+    // Fetch full order data for the invoice
+    const fullData = await fetchOrderForPreview(order.id);
+    if (fullData) {
+      setInvoiceTargetData(fullData);
+    }
+  }, [fetchOrderForPreview]);
 
   // ─── Selection ───────────────────────────────────────────────
   const [selectedIds, setSelectedIds] = useState<Set<string | number>>(new Set());
@@ -1006,6 +1051,7 @@ const handleStatusChange = useCallback(async (orderId: string, newStatus: string
           data.items.map((item, i) => ({
             order_id: orderId,
             business_id: businessId,
+            product_id: item.product_id || null,
             product_name: item.product_name,
             category: item.category || null,
             unit_price: item.unit_price,
@@ -1950,6 +1996,18 @@ const handleStatusChange = useCallback(async (orderId: string, newStatus: string
                   </DropdownMenuLabel>
                 </DropdownMenuGroup>
 
+                {/* Invoice */}
+                <DropdownMenuItem
+                  className="rounded-lg text-sm gap-2 py-1.5"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleInvoiceFromTable(order);
+                  }}
+                >
+                  <FileText className="size-3.5 text-blue-500" />
+                  Invoice
+                </DropdownMenuItem>
+
                 {/* WhatsApp */}
                 <DropdownMenuItem
                   className="rounded-lg text-sm gap-2 py-1.5"
@@ -1980,7 +2038,7 @@ const handleStatusChange = useCallback(async (orderId: string, newStatus: string
         ),
       },
     ],
-    [handleStatusChange, handlePaymentChange, repeatCustomerCounts, hoveredAction, handleWhatsAppClick],
+    [handleStatusChange, handlePaymentChange, repeatCustomerCounts, hoveredAction, handleWhatsAppClick, handleInvoiceFromTable],
   );
 
 
@@ -2013,10 +2071,160 @@ const handleStatusChange = useCallback(async (orderId: string, newStatus: string
     };
   }, [orders.length, activeStatusTab, activeDeliveryTab]);
 
+  // ─── Context Menu Sections Builder ───────────────────────────────
+  const buildContextMenuSections = useCallback(
+    (
+      order: Order,
+      handlers: {
+        onClose: () => void;
+        onView: (order: Order) => void;
+        onEdit: (order: Order) => void;
+        onInvoice: (order: Order) => void;
+        onWhatsApp: (order: Order) => void;
+        onDelete: (order: Order) => void;
+        onSelectThis: (order: Order) => void;
+      },
+    ): ContextMenuSection[] => [
+      {
+        id: "actions",
+        label: "Quick Actions",
+        items: [
+          {
+            id: "view",
+            label: "View",
+            icon: Eye,
+            onClick: () => handlers.onView(order),
+          },
+          {
+            id: "edit",
+            label: "Edit",
+            icon: Pencil,
+            onClick: () => handlers.onEdit(order),
+          },
+          {
+            id: "invoice",
+            label: "Invoice",
+            icon: FileText,
+            iconClassName: "text-blue-500",
+            onClick: () => handlers.onInvoice(order),
+          },
+          {
+            id: "whatsapp",
+            label: "WhatsApp",
+            icon: MessageCircle,
+            iconClassName: "text-green-500",
+            onClick: () => handlers.onWhatsApp(order),
+            disabled: !order.customer_whatsapp && !order.customer_phone,
+          },
+          ...(order.waybill_id
+            ? [
+                {
+                  id: "print-label",
+                  label: "Print Shipping Label",
+                  icon: Truck,
+                  iconClassName: "text-purple-500",
+                  onClick: () => handlers.onClose(),
+                } as ContextMenuItem,
+              ]
+            : []),
+          {
+            id: "delete",
+            label: "Delete",
+            icon: Trash2,
+            variant: "danger" as const,
+            onClick: () => handlers.onDelete(order),
+          },
+        ],
+      },
+      {
+        id: "select",
+        label: "Select",
+        items: [
+          {
+            id: "select-this",
+            label: "Select this order",
+            icon: Check,
+            onClick: () => handlers.onSelectThis(order),
+          },
+        ],
+      },
+    ],
+    [],
+  );
+
   // ─── Render ────────────────────────────────────────────────────
   return (
     <>
       {renderWhatsAppDialogs()}
+
+      {/* ═══ Invoice Dialog ═══════════════════════════════════ */}
+      <Dialog open={invoiceOpen} onOpenChange={setInvoiceOpen}>
+        <DialogContent
+          className="max-w-[210mm] w-full max-h-[90vh] overflow-auto p-2"
+          showCloseButton={true}
+        >
+          <div className="p-4 sm:p-6">
+            {invoiceTargetData ? (
+              <InvoiceTemplate
+                data={invoiceTargetData}
+                businessProfile={invoiceBusiness || undefined}
+              />
+            ) : (
+              <div className="flex items-center justify-center py-20">
+                <div className="flex flex-col items-center gap-3">
+                  <div className="size-6 animate-spin rounded-full border-2 border-muted-foreground/20 border-t-muted-foreground/50" />
+                  <p className="text-sm text-muted-foreground/60">Loading invoice...</p>
+                </div>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* ═══ Context Menu ─═══════════════════════════════════ */}
+      {contextMenu && !isMobile && (
+        <ContextMenu
+          sections={buildContextMenuSections(contextMenu.order, {
+            onClose: () => setContextMenu(null),
+            onView: (order) => {
+              setContextMenu(null);
+              fetchOrderForPreview(order.id).then((fd) => {
+                if (fd) { setPreviewData(fd); setSavedOrderId(order.id); }
+              });
+            },
+            onEdit: (order) => {
+              setContextMenu(null);
+              fetchOrderForPreview(order.id).then((fd) => {
+                if (fd) {
+                  setEditData(fd);
+                  setEditKey((k) => k + 1);
+                  setShowForm(true);
+                  setEditOrderId(order.id);
+                }
+              });
+            },
+            onInvoice: (order) => {
+              setContextMenu(null);
+              handleInvoiceFromTable(order);
+            },
+            onWhatsApp: (order) => {
+              setContextMenu(null);
+              handleWhatsAppClick(order);
+            },
+            onDelete: (order) => {
+              setContextMenu(null);
+              setDeleteTargetId(order.id);
+            },
+            onSelectThis: (order) => {
+              setContextMenu(null);
+              setSelectedIds(new Set([order.id]));
+            },
+          })}
+          x={contextMenu.x}
+          y={contextMenu.y}
+          onClose={() => setContextMenu(null)}
+        />
+      )}
 
       {/* ─── Mobile: full-screen overlay for form/preview ── */}
       {isMobile && (showForm || previewData) && (
@@ -2303,6 +2511,17 @@ const handleStatusChange = useCallback(async (orderId: string, newStatus: string
               bulkActions,
             }}
             deletingKeys={deletingIds}
+            onRowDoubleClick={(order) => {
+              fetchOrderForPreview(order.id).then((fd) => {
+                if (fd) {
+                  setPreviewData(fd);
+                  setSavedOrderId(order.id);
+                }
+              });
+            }}
+            onRowContextMenu={(order, e) => {
+              setContextMenu({ order, x: e.clientX, y: e.clientY });
+            }}
           />
         )}
       </motion.div>

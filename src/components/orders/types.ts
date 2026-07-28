@@ -1,5 +1,6 @@
 export interface OrderFormLineItem {
   id: string;
+  product_id?: string | null;
   product_name: string;
   category: string;
   quantity: number;

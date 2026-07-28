@@ -169,7 +169,7 @@ export function OrderItemCard({
                         key={cat}
                         value={cat}
                         onSelect={() => {
-                          onUpdate(index, { category: cat, product_name: "", unit_price: 0 });
+                          onUpdate(index, { category: cat, product_id: null, product_name: "", unit_price: 0 });
                           setCatOpen(false);
                         }}
                       >
@@ -225,6 +225,7 @@ export function OrderItemCard({
                         value={product.name}
                         onSelect={() => {
                           onUpdate(index, {
+                            product_id: product.id,
                             product_name: product.name,
                             category: item.category,
                             unit_price: product.selling_price,
