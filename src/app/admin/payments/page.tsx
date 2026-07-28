@@ -20,6 +20,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { fetchUserEmails } from "@/lib/admin-utils";
 import {
   Dialog,
   DialogContent,
@@ -64,6 +65,7 @@ interface PaymentProofRow {
   category: Exclude<FilterTab, "all">;
   business_id: string;
   business_name: string;
+  owner_email: string | null;
   plan_name: string;
   amount: number;
   payment_method: string;
@@ -348,16 +350,29 @@ export default function AdminPaymentsPage() {
         ),
       ];
       const [bizRes, planRes] = await Promise.all([
-        supabase.from("businesses").select("id, name").in("id", bizIds),
+        supabase.from("businesses").select("id, name, owner_id").in("id", bizIds),
         supabase.from("subscription_plans").select("id, name").in("id", planIds),
       ]);
-      const bizMap = new Map((bizRes.data || []).map((b) => [b.id, b.name]));
+      const ownerIds = [
+        ...new Set((bizRes.data || []).map((business) => business.owner_id)),
+      ];
+      const emailMap = await fetchUserEmails(ownerIds);
+      const bizMap = new Map(
+        (bizRes.data || []).map((business) => [
+          business.id,
+          {
+            name: business.name,
+            email: emailMap[business.owner_id] || null,
+          },
+        ]),
+      );
       const planMap = new Map((planRes.data || []).map((p) => [p.id, p.name]));
 
       const bankRows: PaymentProofRow[] = proofs.map((p) => ({
         id: p.id, source: "bank_transfer", category: p.status,
         business_id: p.business_id,
-        business_name: bizMap.get(p.business_id) || "Unknown",
+        business_name: bizMap.get(p.business_id)?.name || "Unknown",
+        owner_email: bizMap.get(p.business_id)?.email || null,
         plan_name: p.plan_id ? planMap.get(p.plan_id) || "—" : "—",
         amount: p.amount, payment_method: p.payment_method,
         proof_image_url: p.proof_image_url, proof_image_path: p.proof_image_path,
@@ -375,7 +390,8 @@ export default function AdminPaymentsPage() {
               ? "pending"
               : "rejected",
         business_id: payment.business_id,
-        business_name: bizMap.get(payment.business_id) || "Unknown",
+        business_name: bizMap.get(payment.business_id)?.name || "Unknown",
+        owner_email: bizMap.get(payment.business_id)?.email || null,
         plan_name: planMap.get(payment.plan_id) || "—",
         amount: payment.amount,
         payment_method: payment.payment_method
@@ -425,6 +441,7 @@ export default function AdminPaymentsPage() {
       const q = searchQuery.toLowerCase();
       result = result.filter(
         (p) => p.business_name.toLowerCase().includes(q) || p.plan_name.toLowerCase().includes(q) ||
+          p.owner_email?.toLowerCase().includes(q) ||
           p.payment_method.toLowerCase().includes(q) ||
           p.order_id?.toLowerCase().includes(q) ||
           p.payhere_payment_id?.toLowerCase().includes(q) ||
@@ -516,6 +533,11 @@ export default function AdminPaymentsPage() {
         </div>
       </div>
     )},
+    { header: "Email Address", hideBelow: "md", accessor: (p) => p.owner_email ? (
+      <span className="block max-w-[220px] truncate text-sm text-muted-foreground/80" title={p.owner_email}>
+        {p.owner_email}
+      </span>
+    ) : <span className="text-xs text-muted-foreground/50">—</span> },
     { header: "Plan", accessor: (p) => <span className="text-sm text-muted-foreground/80">{p.plan_name}</span> },
     { header: "Amount", accessor: (p) => <span className="text-sm font-semibold tabular-nums text-foreground">Rs. {p.amount.toLocaleString()}</span> },
     { header: "Method", hideBelow: "sm", accessor: (p) => <span className="text-sm text-muted-foreground/80 capitalize">{p.payment_method.replace("_", " ")}</span> },
@@ -547,6 +569,7 @@ export default function AdminPaymentsPage() {
       primary={payment.business_name}
       status={<PaymentStatusBadge status={payment.status} />}
       details={[
+        ...(payment.owner_email ? [{ label: "Email Address", value: <span>{payment.owner_email}</span> }] : []),
         { label: "Plan", value: <span className="font-medium">{payment.plan_name}</span> },
         { label: "Amount", value: <span className="font-semibold tabular-nums">Rs. {payment.amount.toLocaleString()}</span> },
         { label: "Method", value: <span className="capitalize">{payment.payment_method.replace("_", " ")}</span> },
