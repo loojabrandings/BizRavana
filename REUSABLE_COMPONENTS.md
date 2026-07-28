@@ -1,5 +1,20 @@
 # BizRavana Reusable Components & Utilities
 
+> Current-state addendum: 2026-07-26
+
+## Recently added reusable flows
+
+### `src/components/dashboard/dashboard-ad-banner.tsx`
+
+- Fetches the highest-priority campaign matching the current business.
+- Supports custom labels, a 40% artwork area, `cover`/`contain`, CTA links, and seven-day dismiss.
+
+### `src/components/shared/bug-report-dialog.tsx`
+
+- Combines bug submission and personal report history.
+- Uploads an optional private screenshot and opens authorized signed previews.
+- Includes a full submitted-report view with status and admin response.
+
 This file serves as a reference for the extracted modular components and utilities. By reusing these components, we maintain design consistency, avoid duplication, and ensure components can be optimized centrally.
 
 ## 1. Utilities

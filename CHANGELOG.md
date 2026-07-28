@@ -1,5 +1,32 @@
 # Bizravana — Changelog
 
+## Version 0.13.0 (2026-07-26)
+
+### Added
+
+- PayHere sandbox checkout, dedicated payment page, secure bank-transfer review, and idempotent subscription activation.
+- Permanent user/business deletion with schema-aware purge and Storage/Auth cleanup.
+- Team invitations and member-role management.
+- Bug reports with private screenshots, personal history, and admin review.
+- Targeted dashboard ads with scheduling, targeting, priority, image upload, live preview, labels, Fit/Fill, and seven-day dismiss.
+- Automatic order-linked product-cost expenses on dispatch.
+- Invoice action in the order table quick-action menu.
+
+### Changed
+
+- Super Admin and regular dashboard navigation/profile experiences are separated.
+- Admin “Pending Payments” navigation is now “Payments” with business email context.
+- Subscription upgrade uses a dedicated payment page instead of a dialog.
+- Dashboard ads use a compact fixed-height layout with a 40% artwork area.
+- Business logo upload no longer uses the removed cropping workflow.
+
+### Fixed
+
+- Schema-aware deletion tolerates absent optional tables.
+- PayHere reconciliation handles payments left in `started`.
+- Dispatch-cost expenses retain the correct product link.
+- Avatar trigger and dropdown styling now match the dashboard UI.
+
 All user-visible changes to Bizravana are documented here.
 
 ---

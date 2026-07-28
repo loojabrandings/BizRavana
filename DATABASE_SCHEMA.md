@@ -1,13 +1,56 @@
 # Bizravana — Database Schema
 
-> Last updated: 2026-07-23
+> Current-state addendum: 2026-07-26
+> Current migration range: `001` through `036`
+
+> Last updated: 2026-07-26
 > Database: PostgreSQL (Supabase)
 > RLS: Enabled on all business-scoped tables
-> Migrations: 25 total (001 through 025)
+> Migrations: 36 total (001 through 036)
 
 ---
 
 ## Migration History
+
+### Migrations 026–036
+
+| # | Name | Purpose |
+|---|------|---------|
+| 026 | `add_profile_delete_policy.sql` | Authorized profile cleanup |
+| 027 | `add_team_invitations.sql` | Team invitations, acceptance, roles, RLS, and RPCs |
+| 028 | `secure_bank_transfer_payments.sql` | Transactional bank-transfer creation/review and audit logging |
+| 029 | `allow_safe_auth_user_deletion.sql` | Prepare references for safe Auth user deletion |
+| 030 | `transactional_business_data_purge.sql` | Transactional business-data purge |
+| 031 | `schema_aware_business_data_purge.sql` | Cleanup that tolerates absent optional tables |
+| 032 | `add_payhere_checkout.sql` | PayHere checkout, reconciliation, activation, notification, and audit data |
+| 033 | `add_dispatched_order_cost_expenses.sql` | Order-linked cost expenses on dispatch |
+| 034 | `add_bug_reports.sql` | Bug reports and private screenshot Storage |
+| 035 | `add_dashboard_ads.sql` | Targeted dashboard campaigns, dismissals, and artwork Storage |
+| 036 | `add_ad_display_options.sql` | Ad labels and Fit/Fill artwork modes |
+
+### Tables added after migration 025
+
+| Table | Purpose | Access |
+|-------|---------|--------|
+| `team_invitations` | Team invitation lifecycle and member role | Business-scoped |
+| `payhere_payments` | PayHere checkout lifecycle and idempotent activation | Service/admin + business read |
+| `bug_reports` | User reports, status, screenshot path, and admin response | User-owned + Admin |
+| `ad_campaigns` | Scheduled and targeted dashboard promotions | Admin managed |
+| `ad_dismissals` | Per-user seven-day dismissal state | User-scoped |
+
+### Current payment and cleanup architecture
+
+- Bank transfers are created and reviewed through secured database functions.
+- PayHere initiation, browser events, notify callbacks, and status reconciliation use server routes.
+- Successful PayHere completion activates the selected plan for 30 days exactly once.
+- Permanent deletion cleans Storage, purges schema-aware business data, removes the Auth user, and records each stage in `admin_activity_log`.
+
+### Storage added after migration 025
+
+| Bucket | Visibility | Purpose |
+|--------|------------|---------|
+| `bug-report-screenshots` | Private | User bug-report screenshots via authorized signed URLs |
+| `dashboard-ads` | Public | Promotion artwork; upload/delete restricted to Super Admin |
 
 | # | Name | Purpose |
 |---|------|---------|

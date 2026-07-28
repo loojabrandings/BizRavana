@@ -1,5 +1,18 @@
 # Bizravana — Development Log & Guidelines
 
+## Entry: Payments, Account Operations, Support, and Dashboard Promotions
+
+**Date:** 2026-07-26
+
+- Replaced the subscription upgrade dialog with a dedicated payment page.
+- Hardened bank transfers and added PayHere sandbox checkout with idempotent activation.
+- Added permanent deletion across Storage, business tables, and Supabase Auth with activity-log diagnostics.
+- Separated Super Admin navigation/profile behavior from regular business dashboards.
+- Added team invitations, bug reporting with private screenshots, and admin review.
+- Added targeted dashboard ads with scheduling, targeting, live preview, image display modes, priority, and dismissals.
+- Added dispatched-order product-cost expense automation.
+- Verified recent work with targeted ESLint, `tsc --noEmit`, and successful Next.js production builds.
+
 ---
 
 ## Tech Stack

@@ -1,5 +1,7 @@
 # BizRavana
 
+> Current implementation snapshot: 2026-07-26. Database migrations are tracked through `036_add_ad_display_options.sql`.
+
 A modern, multi-tenant business management SaaS platform for Sri Lankan small and medium enterprises. Manage orders, products, inventory, expenses, quotations, deliveries, reports, and notifications — all in one place.
 
 ## Tech Stack
@@ -19,6 +21,16 @@ A modern, multi-tenant business management SaaS platform for Sri Lankan small an
 | **Hosting** | Vercel |
 
 ## Features
+
+### Current platform capabilities
+
+- **Subscription and payments** — Dedicated checkout, plan comparison, usage meters, secure bank-transfer proof/review, PayHere Checkout, payment history, and idempotent 30-day plan activation.
+- **Super Admin** — Businesses, payments, subscriptions, plans, trials, notifications, cleanup, storage, activity log, settings, bug reports, and targeted dashboard ads.
+- **Account cleanup** — Permanent user/business deletion with Storage cleanup, schema-aware database purge, Auth user deletion, and detailed activity-log stages.
+- **Team access** — Business invitations, invitation acceptance, and member-role management.
+- **Bug reporting** — User report form with private screenshot upload, personal history/full report view, status, and admin response.
+- **Dashboard ads** — Server-selected campaigns targeted by plan, website status, business, schedule, and priority; live admin preview, Fit/Fill artwork, CTA, and seven-day user dismiss.
+- **Dispatch costs** — Product costs are recorded as order-linked expenses when an order is dispatched.
 
 - **Smart Customer Parser** — Paste WhatsApp messages or any text to auto-extract customer name, phone, address, district, and city. Handles Sri Lankan phone formats, Sinhala transliteration variations ("Rathnapura" → "Ratnapura"), and reverse city lookup via courier data.
 - **Dashboard** — Revenue overview, order statistics, top sales, low stock alerts, scheduled deliveries
@@ -78,6 +90,12 @@ Open [http://localhost:3000](http://localhost:3000) to see the app.
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anonymous API key |
 | `SUPABASE_SERVICE_ROLE_KEY` | Service role key (admin-only routes) |
+| `DATABASE_URL` | Direct PostgreSQL connection used by maintenance scripts |
+| `NEXT_PUBLIC_APP_URL` | Browser-facing application URL |
+| `PAYHERE_MERCHANT_ID` | PayHere merchant ID (server only) |
+| `PAYHERE_MERCHANT_SECRET` | PayHere merchant secret (server only) |
+| `PAYHERE_SANDBOX` | `true` for sandbox checkout; `false` for live |
+| `APP_URL` | Public origin used for PayHere return/cancel/notify URLs |
 
 ## Project Structure
 
@@ -110,14 +128,18 @@ src/
 └── constants/           # App constants (districts, etc.)
 
 supabase/
-└── migrations/          # 26 SQL migrations (001–026)
+└── migrations/          # 36 ordered SQL migrations (001–036)
 
 > **Note:** 3 orphaned tables (`courier_cities`, `courier_districts`, `courier_waybills`) exist in Supabase with no migration coverage. See [DATABASE_SCHEMA.md](./DATABASE_SCHEMA.md).
 ```
 
 ## Database
 
-The project uses PostgreSQL via Supabase with 28 tables, Row Level Security, and 26 database migrations. See [DATABASE_SCHEMA.md](./DATABASE_SCHEMA.md) for full documentation.
+The current database history contains 36 ordered migrations (`001`–`036`). It includes RLS, Storage buckets, bank-transfer and PayHere workflows, account purging, team invitations, bug reports, dispatch-cost expenses, and targeted ads. See [DATABASE_SCHEMA.md](./DATABASE_SCHEMA.md).
+
+## API
+
+Authenticated Route Handler methods, authorization boundaries, and responsibilities are documented in [API.md](./API.md).
 
 ## Development
 

@@ -1,6 +1,8 @@
 # Bizravana — Component Documentation
 
-> Last updated: 2026-07-23
+> Current-state addendum: 2026-07-26
+
+> Last updated: 2026-07-26
 
 ---
 
@@ -59,6 +61,10 @@ The following shadcn/ui components are installed and available for use. These ar
 
 | Component | Purpose |
 |-----------|---------|
+| `DashboardAdBanner` | Compact targeted promotion with 40% artwork, Fit/Fill modes, CTA, and seven-day dismiss |
+
+| Component | Purpose |
+|-----------|---------|
 | `HeroStatCard` | Prominent metric card with trend badges and secondary content |
 | `StatsCard` | Compact stat card for stats strip |
 | `StatusListCard` | Card wrapper for listing operational statuses |
@@ -74,6 +80,10 @@ The following shadcn/ui components are installed and available for use. These ar
 | `DonutChart` | Donut/ring chart for distribution visualization |
 
 ### Shared Components (`src/components/shared/`)
+
+| Component | Purpose |
+|-----------|---------|
+| `BugReportDialog` | Submit bugs with screenshots, view personal history/full details, status, and admin response |
 
 | Component | Purpose |
 |-----------|---------|
@@ -115,6 +125,25 @@ The following shadcn/ui components are installed and available for use. These ar
 
 ## Admin Pages (`src/app/admin/`)
 
+Current additions:
+
+| Page | Route | Purpose |
+|------|-------|---------|
+| **Ads** | `/admin/ads` | Create, edit, preview, target, schedule, prioritize, pause, and delete campaigns |
+| **Bug Reports** | `/admin/bug-reports` | Review reports/screenshots, update status, and send admin responses |
+| **Payments** | `/admin/payments` | Combined bank-transfer and PayHere payment management |
+
+## Current API Routes
+
+| Area | Routes |
+|------|--------|
+| Payments | `/api/payments/bank-transfer`, `/api/payments/payhere/initiate`, `/notify`, `/status`, `/client-event` |
+| Admin payments | `/api/admin/payments/[id]/receipt`, `/api/admin/payments/[id]/review` |
+| Permanent cleanup | `/api/admin/businesses/[id]/permanent-delete` |
+| Team | `/api/invitations`, `/api/invitations/accept`, `/api/invitations/member-role` |
+| Bug reports | `/api/bug-reports`, `/api/bug-reports/[id]/screenshot` |
+| Dashboard ads | `/api/ads/current` |
+
 All admin pages are now mobile-responsive using shared Admin components:
 
 | Page | Route | Purpose |
@@ -123,7 +152,7 @@ All admin pages are now mobile-responsive using shared Admin components:
 | **Admin Dashboard** | `/admin/page.tsx` | Stats overview (businesses, subs, payments, revenue) |
 | **Business Management** | `/admin/businesses/page.tsx` | Business list with search, filter, activate/suspend |
 | **Business Detail** | `/admin/businesses/[id]/page.tsx` | Overview, subscription, usage, payments, danger zone |
-| **Pending Payments** | `/admin/payments/page.tsx` | Payment proof review with approve/reject |
+| **Payments** | `/admin/payments/page.tsx` | Bank-transfer and PayHere records, receipt review, approve/reject, and business email |
 | **Plans Management** | `/admin/plans/page.tsx` | Subscription plans CRUD |
 | **Trials Management** | `/admin/trials/page.tsx` | Trial accounts with extend, lock, delete |
 | **Subscription Management** | `/admin/subscriptions/page.tsx` | Subscription portfolio |

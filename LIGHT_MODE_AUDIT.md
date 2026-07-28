@@ -1,5 +1,7 @@
 # BizRavana — Light Mode Compatibility Audit
 
+> Historical note (2026-07-26): this is a pre-fix audit. Some findings have since been addressed. Re-run the audit against the current UI before using it as an active task list, especially for payment, admin, bug-report, and dashboard-ad screens added later.
+
 > Date: 2026-07-16
 > Status: Pre-fix audit (Phase 3) — Not yet actioned
 > Next: Phase 4 — Theme token refinement and CSS fix implementation

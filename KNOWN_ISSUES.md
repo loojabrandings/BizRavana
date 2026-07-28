@@ -1,16 +1,18 @@
 # Bizravana — Known Issues
 
+> Last reviewed: 2026-07-26
+
 This file tracks current limitations and technical debt.
 
 ## Current issues
 
-- Database migration state must be verified independently in each deployed Supabase environment (25 migrations).
+- Database migration state must be verified independently in each deployed Supabase environment (36 migrations).
 - **3 orphaned Supabase tables** exist with no migration coverage — `courier_cities`, `courier_districts`, `courier_waybills`. They default to `koombiyo_delivery` provider and are not referenced by any application code.
 - Account provisioning is idempotent but client-driven. A database function should eventually make business/profile creation fully transactional.
 - There is no automated test suite yet; lint and production builds are the current verification gates.
 - **Read Only Mode** is enforced client-side via a React provider. Server-side enforcement (middleware or RLS) would be a more robust approach for locking down expired accounts.
 - Soft-deleted records are hidden from the UI but not yet purged after the retention period.
-- No automated data cleanup process for deleted businesses (no permanent delete after retention expiry).
+- Scheduled retention-expiry auto-purge is not configured. Super Admin permanent deletion itself is implemented with Storage, schema-aware database, and Auth cleanup.
 - **Dialog blur applies to main content area only on pages wrapped in DashboardLayout** — non-dashboard pages (auth, standalone) won't get the blur effect when a dialog opens since they lack the `[data-main-content]` target.
 - **Toast per-type auto-dismiss durations** not configurable globally — default is 5000ms for all types. Success/info/warning/error/loading all share the same duration.
 - **Trial auto-expiry cron** (migration 020) requires `pg_cron` to be available on the Supabase project. If not available, trials must be expired manually via SQL.
@@ -25,7 +27,7 @@ This file tracks current limitations and technical debt.
 
 ## MVP limitations
 
-- Manual bank-transfer subscription flow only.
+- PayHere checkout is sandbox-ready; live use is pending merchant verification and live configuration.
 - No WhatsApp Business API integration (uses simple `wa.me` links).
 - No email, PWA, or offline mode yet.
 - No courier API integration beyond Royal Express (waybill tracking via API).
@@ -35,6 +37,11 @@ This file tracks current limitations and technical debt.
 - The "Preferences" page is at a separate sub-route (`/dashboard/settings/preferences`) which may confuse users navigating from the main settings page.
 
 ## Resolved
+
+- Manual-payment-only limitation: PayHere checkout, reconciliation, idempotent activation, history, and admin visibility are implemented.
+- Unsafe/incomplete admin deletion: permanent deletion now performs Storage cleanup, schema-aware database purge, Auth deletion, and detailed activity logging.
+- Users can submit bug reports with screenshots, view full report history/status, and receive admin responses.
+- Super Admin can create targeted, scheduled dashboard ads with live preview, Fit/Fill artwork, and seven-day dismiss.
 
 - Order numbering no longer skips numbers or changes when an order is updated.
 - Forgot password flow now lands on the password reset page instead of logging in directly.

@@ -1,14 +1,13 @@
 # Bizravana — Task Management
 
+> Last reviewed: 2026-07-26
+
 ## Todo
 
-- **Phase 5** — Advanced Features (AI Assistant, WhatsApp, Automations, Courier API, Team, PWA)
-- **Documentation** — Create API.md for any API endpoints
+- **Phase 5 remaining** — AI Assistant, advanced automations, additional courier integrations, PWA/offline support, and direct WhatsApp Business API
 - **Courier Snapshot** — Store courier metadata (provider, handling instructions, date option, note) on order at dispatch time for historical label accuracy
 - **Per-Shipment Override UI** — Allow adjusting handling instructions and optional note in the Shipping Label Dialog before printing
 - **Distinct Handling Icons** — Use per-type monochrome icons (⚠, ☂, ⬆, ◆, ⊘) instead of generic △ prefix
-- **Admin Activity Log** — filtering by action type, date range, and target business (page exists as placeholder)
-- **Admin Settings** — company info, bank details, trial duration, notification preferences (page exists as placeholder)
 - **Cleanup Auto-Purge** — automated data cleanup for deleted/expired accounts past retention period
 - **Email Delivery** — Email channel for notifications (database schema is future-ready)
 - **Realtime Notification to Unauthenticated Users** — Ensure notifications work for users who haven't opened the app recently (server-side email fallback)
@@ -18,6 +17,15 @@
 *(None)*
 
 ## Completed
+
+- **Targeted Dashboard Ads** (2026-07-26): Campaign CRUD, upload, live preview, targeting, scheduling, priority, Fit/Fill, labels, and seven-day dismiss.
+- **User Bug Reporting** (2026-07-26): User submission/history/full detail, private screenshots, and admin status/response.
+- **PayHere Checkout** (2026-07-26): Sandbox checkout, reconciliation, idempotent 30-day activation, history, notifications, and audit log.
+- **Secure Bank Transfer Checkout** (2026-07-26): Dedicated payment page, generated remark, receipt upload/preview, and transactional review.
+- **Permanent User & Business Deletion** (2026-07-26): Storage cleanup, schema-aware purge, Auth deletion, record counts, and failure logging.
+- **Super Admin Session Separation** (2026-07-26): Dedicated admin navigation/profile behavior without assuming a user dashboard.
+- **Team Invitations** (2026-07-26): Invitation creation, acceptance, and member-role management.
+- **Dispatched Product Cost Expenses** (2026-07-26): Product cost is recorded as an order-linked expense at dispatch.
 
 - **Phase 3 — Smart Customer Parser** (2026-07-22): Extracts customer name, phone, address, district, and city from unstructured pasted text (WhatsApp messages, SMS, etc.). Handles WhatsApp header stripping, Sri Lankan phone detection, district matching with Sinhala transliteration normalization, and two-phase city matching (forward match via courier-filtered cities + reverse lookup across all cities). Address preserved as-is. "Smart Parser" button in Order Form Customer Details heading with paste dialog, clipboard read button, accuracy warning, and Reset button in the form footer. Shared `parseCustomerText()` utility at `src/lib/customer-parser.ts`.
 - **1H-4 — Notifications Module** (2026-07-22): Complete notification system with:
