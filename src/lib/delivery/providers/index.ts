@@ -12,8 +12,9 @@
 
 import "./royal-express";
 
+import "./koombiyo";
+
 // Future providers will be imported here:
-// import "./koombiyo";
 // import "./domestic-courier";
 
 export {};

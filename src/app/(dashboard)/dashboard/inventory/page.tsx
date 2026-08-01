@@ -463,6 +463,7 @@ function InventoryPageInner() {
         else if (activeSort.key === "current_stock") cmp = a.current_stock - b.current_stock;
         else if (activeSort.key === "unit_cost") cmp = (a.unit_cost || 0) - (b.unit_cost || 0);
         else if (activeSort.key === "stock_value") cmp = (a.stock_value || 0) - (b.stock_value || 0);
+        else if (activeSort.key === "reorder_level") cmp = a.reorder_level - b.reorder_level;
         else if (activeSort.key === "supplier") cmp = (a.supplier || "").localeCompare(b.supplier || "");
         return activeSort.direction === "asc" ? cmp : -cmp;
       });
@@ -654,6 +655,27 @@ function InventoryPageInner() {
               )}
             >
               {item.current_stock}
+            </span>
+          );
+        },
+      },
+      {
+        id: "reorder_level",
+        label: "Reorder Level",
+        sortable: true,
+        sortKey: "reorder_level",
+        hideOnMobile: true,
+        renderCell: (item) => {
+          const atOrBelow = item.current_stock <= item.reorder_level;
+          return (
+            <span
+              className={cn(
+                "text-sm tabular-nums font-medium",
+                atOrBelow && item.reorder_level > 0 && "text-warning",
+                !atOrBelow && "text-foreground",
+              )}
+            >
+              {item.reorder_level}
             </span>
           );
         },

@@ -79,7 +79,7 @@ const CONTEXTS: { value: TemplateContext; label: string; description: string }[]
 const PLACEHOLDER_GROUPS: Record<TemplateContext, PlaceholderGroup[]> = {
   order: [
     { label: "Customer", items: ["{{customer_name}}", "{{address}}", "{{whatsapp}}", "{{phone}}", "{{email}}", "{{nearest_city}}", "{{district}}"] },
-    { label: "Order", items: ["{{order_number}}", "{{order_date}}", "{{order_status}}", "{{notes}}"] },
+    { label: "Order", items: ["{{order_number}}", "{{order_date}}", "{{dispatched_date}}", "{{order_status}}", "{{notes}}"] },
     { label: "Items", items: ["{{item_details}}", "{{total_quantity}}"] },
     { label: "Payment", items: ["{{subtotal}}", "{{discount}}", "{{delivery_charge}}", "{{grand_total}}", "{{advance_payment}}", "{{remaining_balance}}", "{{cod_amount}}", "{{payment_method}}", "{{payment_status}}"] },
     { label: "Delivery", items: ["{{scheduled_delivery_date}}", "{{tracking_number}}", "{{courier}}"] },
@@ -116,6 +116,7 @@ const SAMPLE_DATA: Record<string, string> = {
   payment_method: "Cash on Delivery",
   payment_status: "Pending",
   scheduled_delivery_date: "2024-12-20",
+  dispatched_date: "2024-12-19",
   tracking_number: "LK-987-654-321",
   courier: "DHL Express",
   quotation_number: "QTN-2024-0089",
@@ -150,7 +151,7 @@ function renderSamplePreview(content: string, dateFormat?: string): string {
   for (const [key, value] of Object.entries(SAMPLE_DATA)) {
     // Apply date formatting to date fields
     let displayValue = value;
-    if (dateFormat && ["order_date", "scheduled_delivery_date", "quotation_date", "expiry_date"].includes(key)) {
+    if (dateFormat && ["order_date", "scheduled_delivery_date", "dispatched_date", "quotation_date", "expiry_date"].includes(key)) {
       const d = new Date(value);
       if (!isNaN(d.getTime())) {
         const year = d.getFullYear();

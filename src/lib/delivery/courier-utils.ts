@@ -172,6 +172,9 @@ export async function syncCourierLocations(
 /**
  * Map a courier API status name to the internal deliveries.status value.
  * Uses keyword matching so it works generically across providers.
+ *
+ * NOTE: When a provider supplies its own `mapStatus`, that is used instead.
+ * This function is the shared fallback for providers that don't implement it.
  */
 function mapApiStatusToDeliveryStatus(apiStatus: string): string | null {
   const s = apiStatus.toLowerCase();
@@ -194,6 +197,21 @@ function mapApiStatusToDeliveryStatus(apiStatus: string): string | null {
     return "in_branch";
   }
   return null; // no mapping — keep existing status
+}
+
+/**
+ * Map a status using the provider's own logic, falling back to the shared
+ * keyword-based mapper if the provider doesn't implement mapStatus.
+ */
+function mapStatusWithProviderFallback(
+  apiStatus: string,
+  providerId: string,
+): string | null {
+  const provider = getProvider(providerId);
+  if (provider?.mapStatus) {
+    return provider.mapStatus(apiStatus);
+  }
+  return mapApiStatusToDeliveryStatus(apiStatus);
 }
 
 /**
@@ -230,10 +248,14 @@ export async function syncDeliveryStatuses(
   // ── 2. Discover orders with waybills that aren't in deliveries yet ──
   const existingOrderIds = new Set((deliveries || []).map((d) => d.order_id).filter(Boolean));
 
+  // Only discover orders that were dispatched through THIS courier provider.
+  // Orders without courier_provider set (pre-migration) are skipped to avoid
+  // incorrectly assigning them to a different provider.
   const { data: ordersWithWaybills } = await supabase
     .from("orders")
     .select("id, order_number, customer_name, waybill_id, delivery_charge, created_at")
     .eq("business_id", businessId)
+    .eq("courier_provider", providerId)
     .not("waybill_id", "is", null)
     .order("created_at", { ascending: false })
     .limit(50);
@@ -278,7 +300,7 @@ export async function syncDeliveryStatuses(
   // ── 3. Re-fetch deliveries to include newly created ones ────
   const { data: allDeliveries } = await supabase
     .from("deliveries")
-    .select("id, waybill_id, status")
+    .select("id, waybill_id, status, order_id")
     .eq("business_id", businessId)
     .eq("courier", providerId)
     .not("waybill_id", "is", null);
@@ -304,7 +326,8 @@ export async function syncDeliveryStatuses(
 
       // First event is the most recent status
       const latestApiStatus = events[0].status;
-      const mappedStatus = mapApiStatusToDeliveryStatus(latestApiStatus);
+      // Use provider-level mapping if available; fall back to generic keyword matching
+      const mappedStatus = mapStatusWithProviderFallback(latestApiStatus, providerId);
 
       if (mappedStatus && mappedStatus !== delivery.status) {
         await supabase
@@ -312,12 +335,71 @@ export async function syncDeliveryStatuses(
           .update({ status: mappedStatus, updated_at: new Date().toISOString() })
           .eq("id", delivery.id);
         updated++;
+
+        // ── Auto-update linked order status when delivered ──
+        if (mappedStatus === "delivered" && delivery.order_id) {
+          const { error: orderUpdateError } = await supabase
+            .from("orders")
+            .update({
+              status: "delivered",
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", delivery.order_id)
+            .neq("status", "delivered");
+
+          if (orderUpdateError) {
+            console.error(
+              `Failed to auto-update order ${delivery.order_id} status to delivered:`,
+              orderUpdateError,
+            );
+          } else {
+            console.log(
+              `Auto-updated order ${delivery.order_id} status to delivered`,
+            );
+          }
+        }
       } else {
         unchanged++;
       }
     } catch (err) {
       console.error(`Failed to track waybill ${delivery.waybill_id}:`, err);
       failed++;
+    }
+  }
+
+  // ── 5. Clean up legacy raw API statuses ─────────────────────
+  // Deliveries may have old raw status values (e.g. "rescheduled", "assigned")
+  // stored from earlier code versions before the mapApiStatusToDeliveryStatus
+  // mapping existed, or from code paths that didn't go through the mapper.
+  // Normalize them to the expected internal status set so the dashboard
+  // correctly groups them under the right cards.
+  const validStatuses = [
+    "confirmed",
+    "in_branch",
+    "assigned_to_rider",
+    "to_dispatch",
+    "delivered",
+    "returned",
+    "cancelled",
+  ] as const;
+
+  const { data: legacyDeliveries } = await supabase
+    .from("deliveries")
+    .select("id, status")
+    .eq("business_id", businessId)
+    .eq("courier", providerId)
+    .not("status", "in", `(${validStatuses.map((s) => `'${s}'`).join(",")})`);
+
+  if (legacyDeliveries && legacyDeliveries.length > 0) {
+    for (const ld of legacyDeliveries) {
+      const mapped = mapStatusWithProviderFallback(ld.status, providerId);
+      if (mapped && mapped !== ld.status) {
+        await supabase
+          .from("deliveries")
+          .update({ status: mapped, updated_at: new Date().toISOString() })
+          .eq("id", ld.id);
+        console.log(`Normalized delivery ${ld.id}: ${ld.status} → ${mapped}`);
+      }
     }
   }
 

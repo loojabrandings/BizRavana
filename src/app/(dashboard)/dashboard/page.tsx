@@ -41,6 +41,7 @@ import { MiniBarChart } from "@/components/charts/mini-bar-chart";
 import { RankedBarList } from "@/components/charts/ranked-bar-list";
 import { DashboardSkeleton } from "@/components/dashboard/dashboard-skeleton";
 import { DashboardAdBanner } from "@/components/dashboard/dashboard-ad-banner";
+import { useCourierStore } from "@/stores/courier-store";
 
 interface PeriodTrend {
   ordersCurrent: number;
@@ -161,7 +162,7 @@ export default function DashboardPage() {
 
         const dateRange = getDateRange(dateFilter, dateFrom, dateTo);
 
-        const [ordersRes, expensesRes, inventoryRes, deliveriesRes, orderItemsRes] =
+        const [ordersRes, allOrdersRes, expensesRes, allExpensesRes, inventoryRes, deliveriesRes, orderItemsRes] =
           await Promise.all([
             (() => {
               let q = supabase
@@ -175,6 +176,17 @@ export default function DashboardPage() {
               if (dateRange) q = q.gte("created_at", dateRange.start.toISOString()).lte("created_at", dateRange.end.toISOString());
               return q;
             })(),
+            // All-time orders (ignores the date filter) — powers the hero cards
+            // "New Orders" and "Pending Payments", plus the Delivery Status cards
+            // and Scheduled Deliveries, which must always reflect totals.
+            (() => {
+              let q = supabase
+                .from("orders")
+                .select("id, order_number, customer_name, total, balance_remaining, status, payment_status, expected_delivery_date, created_at")
+                .eq("business_id", businessId)
+                .order("created_at", { ascending: false });
+              return q;
+            })(),
             (() => {
               let q = supabase
                 .from("expenses")
@@ -185,6 +197,13 @@ export default function DashboardPage() {
               if (dateRange) q = q.gte("expense_date", dateRange.start.toISOString().slice(0, 10)).lte("expense_date", dateRange.end.toISOString().slice(0, 10));
               return q;
             })(),
+            // All-time expenses (no date filter) — keeps the Net Profit
+            // "vs last month" trend badge consistent with the all-time orders trends.
+            supabase
+              .from("expenses")
+              .select("total_cost, expense_date, category")
+              .eq("business_id", businessId)
+              .order("expense_date", { ascending: false }),
             supabase
               .from("inventory_items")
               .select("name, current_stock, reorder_level")
@@ -214,10 +233,32 @@ export default function DashboardPage() {
           created_at: String(order.created_at),
         }));
 
+        // All-time order metrics (no date filter) — used by the "New Orders" and
+        // "Pending Payments" hero cards, the Delivery Status cards, and Scheduled
+        // Deliveries so they all show totals, not just the filter window.
+        const allOrders = (allOrdersRes.data || []).map((order) => ({
+          id: String(order.id),
+          order_number: String(order.order_number),
+          customer_name: String(order.customer_name || "Walk-in customer"),
+          total: Number(order.total || 0),
+          balance: Number(order.balance_remaining || 0),
+          status: String(order.status || "new_order"),
+          payment_status: String(order.payment_status || "pending"),
+          expected_delivery_date: order.expected_delivery_date as string | null,
+          created_at: String(order.created_at),
+        }));
+
         const expenses = (expensesRes.data || []).map((expense) => ({
           amount: Number(expense.total_cost || 0),
           expense_date: String(expense.expense_date),
           category: String(expense.category || "other"),
+        }));
+
+        // All-time expenses (no date filter) — used for the month-over-month
+        // trend comparison so "vs last month" is correct regardless of the filter.
+        const allExpenses = (allExpensesRes.data || []).map((expense) => ({
+          amount: Number(expense.total_cost || 0),
+          expense_date: String(expense.expense_date),
         }));
 
         const inventory = (inventoryRes.data || []).map((item) => ({
@@ -237,19 +278,38 @@ export default function DashboardPage() {
         }));
 
         const totalRevenue = orders.reduce((sum, order) => sum + order.total, 0);
-        const newOrdersValue = orders.filter((o) => o.status === "new_order").reduce((sum, o) => sum + o.total, 0);
+        const newOrdersValue = allOrders.filter((o) => o.status === "new_order").reduce((sum, o) => sum + o.total, 0);
         const totalExpenses = expenses.reduce((sum, expense) => sum + expense.amount, 0);
         const lowStockItems = inventory
           .filter((item) => item.current <= item.minimum);
 
-        const toDispatch = orders.filter((o) => ["new_order", "ready", "packed"].includes(o.status)).length;
-        const toBeDelivered = deliveries.filter(
-          (d) => ["in_branch", "assigned_to_rider"].includes(String(d.status)),
-        ).length;
-        const rescheduled = deliveries.filter((d) => String(d.status) === "confirmed").length;
-        const toBeReturned = deliveries.filter((d) => String(d.status) === "returned").length;
+        const toDispatch = allOrders.filter((o) => ["new_order", "ready", "packed"].includes(o.status)).length;
 
-        // ─── Compute month-over-month trends ──────────────────────
+        // ── Courier counts: prefer cached MERGED breakdown from courier page ──
+        // The courier page writes the merged/standardised breakdown (same data
+        // the courier cards display) to the shared store. The dashboard reads
+        // from there so counts match the courier page's cards exactly.
+        // Fall back to direct DB query when the store has no data yet.
+        const courierCached = useCourierStore.getState();
+        const hasCourierData = courierCached.lastUpdated !== null;
+
+        const toBeDelivered = hasCourierData
+          ? courierCached.toBeDelivered
+          : deliveries.filter(
+              (d) => !["delivered", "cancelled", "returned"].includes(String(d.status)),
+            ).length;
+
+        const rescheduled = hasCourierData
+          ? (courierCached.statusBreakdown.find((b) => b.id === "rescheduled")?.count ?? 0)
+          : deliveries.filter((d) => String(d.status) === "confirmed").length;
+
+        const toBeReturned = hasCourierData
+          ? (courierCached.statusBreakdown.find((b) => b.id === "to_be_returned")?.count ?? 0)
+          : deliveries.filter((d) => String(d.status) === "returned").length;
+
+        // ─── Compute month-over-month trends (from ALL orders, so the
+        //     "vs last month" badges on the hero cards are correct regardless
+        //     of the page's date filter) ────────────────────────────
         const now = new Date();
         const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
         const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
@@ -260,10 +320,10 @@ export default function DashboardPage() {
           return d >= start && d <= end;
         };
 
-        const currentOrders = orders.filter((o) => inRange(o.created_at, thisMonthStart, new Date()));
-        const previousOrders = orders.filter((o) => inRange(o.created_at, lastMonthStart, lastMonthEnd));
-        const currentExpenses = expenses.filter((e) => inRange(e.expense_date + "T00:00:00", thisMonthStart, new Date()));
-        const previousExpenses = expenses.filter((e) => inRange(e.expense_date + "T00:00:00", lastMonthStart, lastMonthEnd));
+        const currentOrders = allOrders.filter((o) => inRange(o.created_at, thisMonthStart, new Date()));
+        const previousOrders = allOrders.filter((o) => inRange(o.created_at, lastMonthStart, lastMonthEnd));
+        const currentExpenses = allExpenses.filter((e) => inRange(e.expense_date + "T00:00:00", thisMonthStart, new Date()));
+        const previousExpenses = allExpenses.filter((e) => inRange(e.expense_date + "T00:00:00", lastMonthStart, lastMonthEnd));
 
         const periodTrend: PeriodTrend = {
           ordersCurrent: currentOrders.length,
@@ -321,7 +381,7 @@ export default function DashboardPage() {
           return { percentage: formatted, direction, color, label: "vs last month" };
         };
 
-        const openInvoicesCount = orders.filter(
+        const openInvoicesCount = allOrders.filter(
           (order) => order.payment_status !== "paid",
         ).length;
 
@@ -331,11 +391,11 @@ export default function DashboardPage() {
             session.user.user_metadata?.full_name ||
             "there",
           stats: {
-            newOrders: orders.filter((order) => order.status === "new_order").length,
+            newOrders: allOrders.filter((order) => order.status === "new_order").length,
             itemsToDispatch: orders.filter((order) => order.status === "packed").length,
             totalOrders: ordersRes.count || orders.length,
             netProfit: totalRevenue - totalExpenses,
-            pendingPayments: orders
+            pendingPayments: allOrders
               .filter((order) => order.payment_status !== "paid")
               .reduce((sum, order) => sum + order.balance, 0),
             openInvoices: openInvoicesCount,
@@ -359,12 +419,12 @@ export default function DashboardPage() {
           lowStockItems,
           deliveryTotalCount: (() => {
             const today = new Date().toISOString().slice(0, 10);
-            return orders              .filter((o) => o.expected_delivery_date && o.expected_delivery_date >= today && ['new_order', 'ready', 'packed'].includes(o.status))
+            return allOrders              .filter((o) => o.expected_delivery_date && o.expected_delivery_date >= today && ['new_order', 'ready', 'packed'].includes(o.status))
               .length;
           })(),
           deliveryItems: (() => {
             const today = new Date().toISOString().slice(0, 10);
-            return orders
+            return allOrders
               .filter((o) => o.expected_delivery_date && o.expected_delivery_date >= today && ['new_order', 'ready', 'packed'].includes(o.status))
               .map((o) => ({
                 id: o.id,
@@ -574,8 +634,8 @@ export default function DashboardPage() {
             </div>
           )}
 
-          {/* 1×4 metric grid — mobile-optimized cards */}
-          <div className="mt-4 flex flex-col gap-2.5">
+          {/* 2×2 metric grid on tablet, stacked on phone */}
+          <div className="mt-4 grid gap-2.5 sm:grid-cols-2">
             {heroMetrics.map((metric) => {
               const Icon = metric.icon;
               const href = metric.href;
@@ -721,7 +781,7 @@ export default function DashboardPage() {
             </div>
           )}
 
-          <div className="mt-6 grid gap-3 md:grid-cols-4">
+          <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {heroMetrics.map((metric) => (
               <HeroStatCard key={metric.label} {...metric} />
             ))}
@@ -730,49 +790,37 @@ export default function DashboardPage() {
       </motion.section>
 
       {/* ========================================================= */}
-      {/* OPERATIONAL STATUS CARDS                                   */}
+      {/* DELIVERY STATUS OVERVIEW                                   */}
       {/* ========================================================= */}
-
-      {/* Mobile: horizontally scrollable row */}
-      <motion.section
-        variants={safeItemVariants}
-        className="lg:hidden"
-      >
-        <div
-          className="flex gap-3 overflow-x-auto snap-x snap-mandatory pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-        >
-          {compactStats.map((stat) => (
-            <div
-              key={stat.label}
-              className="min-w-[155px] w-[155px] shrink-0 snap-start"
-            >
-              <StatsCard
-                label={stat.label}
-                value={stat.value}
-                icon={stat.icon}
-                iconColor={stat.color}
-                compact
-              />
+      <motion.section variants={safeItemVariants}>
+        <div className="mb-4">
+          <div className="flex items-center gap-2.5">
+            <div className="flex size-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
+              <Truck className="size-4" />
             </div>
+            <div>
+              <h2 className="text-base font-semibold text-foreground">
+                Delivery Status
+              </h2>
+              <p className="text-sm text-muted-foreground">
+                Overview of your order fulfilment and courier deliveries
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {compactStats.map((stat) => (
+            <StatsCard
+              key={stat.label}
+              label={stat.label}
+              value={stat.value}
+              icon={stat.icon}
+              iconColor={stat.color}
+              compact
+            />
           ))}
         </div>
-      </motion.section>
-
-      {/* Desktop: existing grid layout */}
-      <motion.section
-        variants={safeItemVariants}
-        className="hidden lg:grid grid-cols-2 gap-3 xl:grid-cols-4"
-      >
-        {compactStats.map((stat) => (
-          <StatsCard
-            key={stat.label}
-            label={stat.label}
-            value={stat.value}
-            icon={stat.icon}
-            iconColor={stat.color}
-            compact
-          />
-        ))}
       </motion.section>
 
       {/* ========================================================= */}

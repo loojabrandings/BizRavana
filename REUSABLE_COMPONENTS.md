@@ -39,9 +39,22 @@ Helper functions for calculating array data into charting structures.
 - `createRevenueFlow(orders, expenses, window)`: Processes orders and expenses to create a sequential dataset for charting revenue vs expenses.
 - `summarizeBy(rows, getLabel, getValue)`: Aggregates list data by label (e.g., Top Products, Top Categories) and sorts top 5.
 
-### `src/lib/delivery/courier-utils.ts`
-Utility functions for delivery/courier operations.
-- Courier location data and helpers for Sri Lankan districts.
+### `src/lib/delivery/` — Courier Provider Architecture
+
+The courier system uses a **strategy pattern** with a centralized provider registry.
+
+**Key files:**
+
+| File | Purpose |
+|------|---------|
+| `provider-registry.ts` | `CourierProvider` interface (with `credentialFields`, `mapStatus`, `statusDisplayConfig`) + `registerProvider()`, `getProvider()`, `extractCredentials()` |
+| `courier-utils.ts` | Public dispatch layer — `loadCourierConfig()`, `shipWithCourier()`, `syncDeliveryStatuses()`, `trackShipment()`, `fetchOrderFinance()`, `syncCourierLocations()`, `loadCachedLocations()` |
+| `types.ts` | Shared types (`CourierConfig`, `TrackingEvent`, `ShipOrderParams`, `CourierDashboardData`, `CourierStatusBreakdown`, etc.) |
+| `waybill-utils.ts` | Manual/auto waybill CRUD (`fetchManualWaybills()`, `addWaybills()`, `markWaybillAsUsed()`, etc.) |
+| `providers/royal-express.ts` | Royal Express (Curfox DMS) implementation with precise `mapStatus()` and `statusDisplayConfig` |
+| `providers/index.ts` | Auto-registration — add `import "./<name>"` to register a new courier |
+
+**Adding a new courier**: Create a provider module implementing `CourierProvider`, define `credentialFields` for the auto-generated form, optionally `mapStatus()` and `statusDisplayConfig` for dashboard cards, then register in `providers/index.ts`. No other files need changes.
 
 ## 2. Dashboard Components
 

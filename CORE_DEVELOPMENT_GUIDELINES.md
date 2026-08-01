@@ -222,7 +222,65 @@ Active → Archived → Scheduled for Deletion → Permanently Deleted
 
 ---
 
-## 16. Future-Proof Architecture
+## 16. Courier Provider Architecture
+
+The courier system uses a **strategy pattern** with a centralized **provider registry**. Each courier (Royal Express, future providers) implements the `CourierProvider` interface and auto-registers via `registerProvider()`. The shared shell (settings UI, courier page, dispatch, tracking, finance tab) delegates to the selected provider at runtime.
+
+### CourierProvider Interface (`src/lib/delivery/provider-registry.ts`)
+
+| Property | Required | Purpose |
+|----------|----------|---------|
+| `id` / `label` | ✅ | Unique identifier and display name |
+| `settingsKeys` | ✅ | Maps logical fields → `business_settings` DB keys |
+| `credentialFields` | ✅ | Metadata for auto-generating the credential form (label, type, placeholder, readonly, required, hint) |
+| `testConnection()` | ✅ | Verify API credentials |
+| `ship()` | ✅ | Create shipment → returns waybill number |
+| `track()` | ✅ | Fetch tracking history for a waybill |
+| `fetchFinance()` | ✅ | Fetch COD/finance info for a waybill |
+| `syncLocations()` | ✅ | Sync districts/cities from courier API |
+| `validateCredentials()` | ❌ | Provider-specific field validation |
+| `fetchDashboard()` | ❌ | Provider dashboard summary data |
+| `mapStatus()` | ❌ | Map API status string → internal delivery status (avoids fragile keyword matching) |
+| `statusDisplayConfig` | ❌ | Declare dashboard card groupings (id, label, matchPatterns, category) — replaces hardcoded `STANDARD_EVENT_STATUSES` |
+
+### Adding a New Courier Provider
+
+Adding a new courier requires just **two steps**:
+
+1. **Create provider module** — `src/lib/delivery/providers/<name>.ts`
+   - Implement `CourierProvider` interface
+   - Define `credentialFields` (field metadata for auto-generated forms)
+   - Optionally define `mapStatus()` and `statusDisplayConfig` to avoid the generic keyword-matching fallback
+   - Call `registerProvider(<yourProvider>)` at the bottom
+
+2. **Register in index** — Add `import "./<name>"` to `src/lib/delivery/providers/index.ts`
+
+**No changes needed** to the settings UI, courier dashboard page, finance tab, waybill settings, bulk dispatch, or any shared utilities. The credential form is auto-generated from `credentialFields` and the dashboard cards use `statusDisplayConfig`.
+
+### File Map
+
+```
+src/lib/delivery/
+├── provider-registry.ts    # CourierProvider interface + registry (getProvider, registerProvider, extractCredentials)
+├── courier-utils.ts        # Public dispatch layer (loadCourierConfig, shipWithCourier, syncDeliveryStatuses, etc.)
+├── types.ts                # Shared types (CourierConfig, TrackingEvent, ShipOrderParams, etc.)
+├── waybill-utils.ts        # Manual/auto waybill management
+└── providers/
+    ├── index.ts            # Provider auto-registration imports
+    ├── royal-express.ts    # Royal Express (Curfox DMS) implementation
+    └── ...future providers
+
+src/components/delivery/
+├── courier-settings.tsx    # Settings UI — provider selector + auto-generated credential form
+├── courier-finance-tab.tsx # COD finance tracking on courier page
+├── waybill-settings.tsx    # Waybill method selector + CRUD
+
+src/app/(dashboard)/dashboard/courier/page.tsx  # Courier dashboard (orders + finance tabs)
+```
+
+---
+
+## 17. Future-Proof Architecture
 
 The system should be designed so these features can be added without major refactoring:
 
@@ -230,7 +288,6 @@ The system should be designed so these features can be added without major refac
 - Team Management
 - WhatsApp Integration
 - Smart Automations
-- Courier API
 - Payment Gateway
 - Email Notifications
 - Push Notifications

@@ -40,7 +40,7 @@ A modern, multi-tenant business management SaaS platform for Sri Lankan small an
 - **Expenses** — Full CRUD, category & payment filters, optional inventory stock linking
 - **Quotations** — Full CRUD, preview panel, conversion to orders
 - **Reports** — Orders analytics, expense analytics, financial P&L with Recharts visualizations
-- **Delivery** — Courier settings, shipment status tracking, Royal Express API integration
+- **Delivery** — Courier settings, shipment status tracking, Royal Express API integration. **Extensible provider architecture** — add new couriers by implementing a single provider module with credential metadata, status mapping, and display config. No UI or shared-code changes needed.
 - **Subscription** — Pricing comparison table, usage meters, payment proof upload, payment history
 - **Settings** — Business profile, appearance (themes/accent/font), preferences, courier config, WhatsApp templates, data export/import/reset (deletes orders, products, categories, inventory, expenses, customers, quotations, deliveries, and user profiles)
 - **WhatsApp** — Message template management (3 contexts), template selection dialogs, one-click send via wa.me

@@ -315,4 +315,52 @@ The WhatsApp templates settings page desktop layout was restructured to make bot
 
 ---
 
+---
+
+## Entry: Courier System Extensibility — Provider-Level Isolations
+**Date:** 2026-07-28
+
+**Summary:**
+Two high-impact isolations were made to the courier system to reduce the effort of adding new courier providers from ~150 lines + 2 files to just the transport logic in a single provider module.
+
+### Isolation #1 — Credential Form Metadata (Auto-Generated Forms)
+
+**Before:** Each provider needed a custom React credential component (~100 lines, `RoyalExpressCredentials.tsx`), an import in `courier-settings.tsx`, and a registration in the `PROVIDER_CREDENTIAL_FORMS` registry.
+
+**After:** The `CourierProvider` interface now has a `credentialFields: CredentialField[]` property. Each field declares `{ key, label, type, placeholder, required, readonly, hint }`. The new generic `AutoCredentialForm` component in `courier-settings.tsx` renders the form from this metadata — no custom React component needed.
+
+**Files changed:**
+- `src/lib/delivery/provider-registry.ts` — Added `CredentialField` interface, added `credentialFields` to `CourierProvider`
+- `src/lib/delivery/providers/royal-express.ts` — Implemented `credentialFields` (tenant readonly, email, password)
+- `src/components/delivery/courier-settings.tsx` — Replaced `PROVIDER_CREDENTIAL_FORMS` registry with generic `AutoCredentialForm`. Added `cn` import. Improved save/sync ordering (sync runs before success toast).
+- `src/components/delivery/royal-express-credentials.tsx` — **Deleted** (no longer needed)
+
+### Isolation #2 — Status Mapping (Keyword Matching Moved to Provider)
+
+**Before:** Three fragile keyword-matching artifacts were scattered across shared code:
+1. `mapApiStatusToDeliveryStatus()` in courier-utils — fragile order-dependent checks (`fail` before `deliver` for "Failed to Deliver")
+2. `STANDARD_EVENT_STATUSES` + `mergeWithStandardStatuses()` in courier page — pattern matching for 7 dashboard cards
+3. `guessStatusStyle()` / `guessStatusIcon()` in courier page — color/icon selection via `n.includes("deliver")` etc.
+
+**After:** The `CourierProvider` interface has two new optional properties:
+- `mapStatus(apiStatus)` — Precise API status → internal delivery status mapping (exact matches first, then partial)
+- `statusDisplayConfig` — Declares dashboard card groupings with `{ id, label, matchPatterns, category }`
+
+The courier page replaced keyword-guessing with `categoryStyle()` / `categoryIcon()` — semantic category-based style/icon selection. The `mergeWithStatusDisplayConfig()` function uses the provider's config instead of a hardcoded list. Fallback hardcoded config is kept for providers without `statusDisplayConfig`.
+
+**Files changed:**
+- `src/lib/delivery/provider-registry.ts` — Added `StatusCategory`, `StatusDisplayEntry` types, `mapStatus?` and `statusDisplayConfig?` to `CourierProvider`
+- `src/lib/delivery/providers/royal-express.ts` — Implemented `mapStatus` (precise Curfox mappings) and `statusDisplayConfig` (7 standard cards with categories)
+- `src/lib/delivery/courier-utils.ts` — Added `mapStatusWithProviderFallback()` that delegates to `provider.mapStatus`. Both call sites in `syncDeliveryStatuses` updated.
+- `src/app/(dashboard)/dashboard/courier/page.tsx` — Replaced `guessStatusStyle`/`guessStatusIcon`/`STANDARD_EVENT_STATUSES`/`mergeWithStandardStatuses` with `categoryStyle`/`categoryIcon`/`getStatusDisplayConfig`/`mergeWithStatusDisplayConfig`. Added `getCategoryForStatus()` for recent activity items. Properly typed with `StatusWithCategory`. Added `"branch"` to fallback config.
+
+### Result
+
+Adding a new courier now requires only:
+1. Create `providers/koombiyo.ts` — implement `CourierProvider` (API calls + `credentialFields` + optional `mapStatus`/`statusDisplayConfig`)
+2. Add `import "./koombiyo"` to `providers/index.ts`
+3. ✅ Done — no UI changes, no keyword matching to maintain, no custom credential forms
+
+---
+
 *Previous entries truncated for brevity — see full file history for complete log.*

@@ -331,6 +331,11 @@ function CustomerInformationCard({
                   ))}
                 </SelectContent>
               </Select>
+              {data.dispatched_date && (
+                <p className="mt-0.5 text-micro font-medium text-success/70">
+                  Dispatched {formatDate(data.dispatched_date)}
+                </p>
+              )}
             </div>
             <div className="flex-1">
               <label className="block text-xs font-medium text-muted-foreground mb-1">Payment Status</label>
@@ -417,6 +422,11 @@ function CustomerInformationCard({
                   ))}
                 </SelectContent>
               </Select>
+              {data.dispatched_date && (
+                <p className="mt-1 text-micro font-medium text-success/70">
+                  Dispatched {formatDate(data.dispatched_date)}
+                </p>
+              )}
             </div>
             <div className="flex-1">
               <label className="block text-xs font-medium tracking-wider text-muted-foreground/70">

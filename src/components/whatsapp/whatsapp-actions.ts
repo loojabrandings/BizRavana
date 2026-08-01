@@ -29,6 +29,7 @@ export interface OrderTableRow {
   subtotal: number;
   discount: number;
   waybill_id: string | null;
+  dispatched_date: string | null;
   status: string;
   payment_status: string;
   payment_method: string | null;
@@ -44,6 +45,7 @@ export interface OrderTableRow {
 export interface OrderPreviewData {
   order_number: string;
   created_date: string;
+  dispatched_date: string;
   customer_name: string;
   address: string;
   whatsapp: string;
@@ -134,6 +136,7 @@ export function orderRowToTemplateData(row: OrderTableRow): TemplateData {
     payment_status: row.payment_status,
     payment_method: row.payment_method || "",
     scheduled_delivery_date: row.expected_delivery_date || "",
+    dispatched_date: row.dispatched_date || "",
     delivery_charge: row.delivery_charge,
     discount: row.discount,
     subtotal: row.subtotal,
@@ -168,6 +171,7 @@ export function orderPreviewToTemplateData(data: OrderPreviewData): TemplateData
     payment_status: data.payment_status,
     payment_method: data.payment_method,
     scheduled_delivery_date: data.expected_delivery_date,
+    dispatched_date: data.dispatched_date,
     delivery_charge: data.delivery_charge,
     discount: data.discount,
     discount_type: data.discount_type === "percentage" ? `${data.discount}%` : "Fixed",

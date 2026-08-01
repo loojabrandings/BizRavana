@@ -1,3 +1,33 @@
+## Version 0.14.0 (2026-07-28)
+
+### Added (Courier Provider Extensibility)
+
+- **Credential Form Metadata** —  lets providers declare credential inputs as metadata. The settings UI auto-generates the form — no custom React component needed.
+- **Provider-Level Status Mapping** — Provider-level  replaces fragile generic keyword matcher.
+- **Provider-Driven Dashboard Cards** —  replaces hardcoded .
+- **Category-Based Styling System** — / replace keyword-guessing /.
+- **Generic ** — Single component handles all providers via  metadata.
+
+### Changed
+
+- **Courier Provider Interface** — Now requires . Added optional , .
+- **Royal Express Provider** — Implements all three new members with Curfox-specific mappings.
+- **Courier Settings** — Uses  instead of provider-specific form components.
+- **Courier Dashboard** — Uses provider-driven  for card grouping.
+- **Delivery Status Sync** — Delegates to  with generic fallback.
+
+### Removed
+
+- **** — Replaced by generic .
+- ** registry** — No longer needed.
+- ** /  /  / ** — Replaced by category-based equivalents.
+
+### Notes
+
+Adding a new courier now requires only 2 steps: implement  + register in . No shared code changes needed.
+
+---
+
 # Bizravana — Changelog
 
 ## Version 0.13.0 (2026-07-26)

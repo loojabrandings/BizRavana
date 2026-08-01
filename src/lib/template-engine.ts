@@ -41,6 +41,7 @@ export interface TemplateData {
   payment_status?: string;
   payment_method?: string;
   scheduled_delivery_date?: string;
+  dispatched_date?: string;
 
   // Financial
   delivery_charge?: number;
@@ -227,6 +228,7 @@ export const ALL_PLACEHOLDERS: Record<string, PlaceholderGroup[]> = {
         "{{order_number}}",
         "{{order_date}}",
         "{{order_status}}",
+        "{{dispatched_date}}",
         "{{notes}}",
       ],
     },
@@ -350,6 +352,7 @@ export function renderTemplate(
     payment_status: data.payment_status ?? "",
     payment_method: data.payment_method ?? "",
     scheduled_delivery_date: formatDateWithPreference(data.scheduled_delivery_date, df),
+    dispatched_date: formatDateWithPreference(data.dispatched_date, df),
     delivery_charge:
       data.delivery_charge != null ? fmt(data.delivery_charge) : "",
     discount: data.discount != null ? fmt(data.discount) : "",

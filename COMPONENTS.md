@@ -164,6 +164,26 @@ All admin pages are now mobile-responsive using shared Admin components:
 
 ---
 
+### Delivery Components (`src/components/delivery/`)
+
+| Component | Purpose |
+|-----------|---------|
+| `CourierSettings` | Settings UI — provider selector dropdown + auto-generated credential form (renders inputs from `provider.credentialFields`). Replaces per-provider custom credential form components. |
+| `CourierFinanceTab` | COD finance tracking tab on the courier dashboard page. Shows pending/paid invoices with inline status toggle. |
+| `WaybillSettings` | Waybill management — auto/manual mode, waybill CRUD with status tracking, provider filtering. |
+
+### Courier Dashboard Page
+
+**Route:** `/dashboard/courier` (`src/app/(dashboard)/dashboard/courier/page.tsx`)
+
+Features:
+- Provider-aware status overview cards (styled via `StatusCategory` → `categoryStyle`/`categoryIcon`)
+- Recent activity table with status badges
+- Status statistics table with ratio bars
+- Orders tab + Finance tab
+- Dashboard data synced from courier API + local delivery records
+- Uses provider's `statusDisplayConfig` for card grouping; falls back to hardcoded defaults if not provided
+
 ## Providers (`src/providers/`)
 
 | Provider | Purpose |
@@ -173,6 +193,20 @@ All admin pages are now mobile-responsive using shared Admin components:
 | `ThemeProvider` | next-themes integration for light/dark/system |
 | `QueryProvider` | TanStack Query configuration |
 | `PreferencesProvider` | User preferences context |
+
+### Courier Provider Registry (`src/lib/delivery/provider-registry.ts`)
+
+This is **not** a React provider — it's a strategy-pattern registry for courier service implementations.
+
+| Export | Purpose |
+|--------|---------|
+| `CourierProvider` interface | Contract for courier integrations (ship, track, finance, sync, credential fields, status mapping, display config) |
+| `registerProvider()` | Register a provider at module import time |
+| `getProvider(id)` | Look up a provider by ID |
+| `getAllProviders()` | List all registered providers |
+| `extractCredentials()` | Extract provider credentials from a settings map |
+| `CredentialField` | Field metadata type for auto-generated credential forms |
+| `StatusCategory` / `StatusDisplayEntry` | Types for provider-declared dashboard card display config |
 
 ## Hooks
 

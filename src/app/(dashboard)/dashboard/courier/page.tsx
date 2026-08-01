@@ -6,6 +6,7 @@ import { motion } from "framer-motion";
 import {
   CalendarClock,
   Clock,
+  FileText,
   Loader2,
   MapPin,
   Package,
@@ -24,9 +25,21 @@ import {
   syncDeliveryStatuses,
 } from "@/lib/delivery/courier-utils";
 import { getProvider } from "@/lib/delivery/provider-registry";
+import type { StatusCategory, StatusDisplayEntry } from "@/lib/delivery/provider-registry";
+import {
+  buildLoadingSteps,
+  markLoadingStep,
+  type LoadingStep,
+} from "@/lib/delivery/loading-steps";
 import type { CourierDashboardData, CourierStatusBreakdown, CourierRecentActivity } from "@/lib/delivery/types";
+import { useCourierStore } from "@/stores/courier-store";
+import { CourierFinanceTab } from "@/components/delivery/courier-finance-tab";
+import { LoadingStepList } from "@/components/delivery/loading-step-list";
 
-// ─── Status colour/icon mapper ───────────────────────────────────
+// ─── Status Display Helpers ─────────────────────────────────────────
+// Category-based mapping replaces the fragile keyword guessing.
+// Each StatusCategory maps to a known colour scheme and icon.
+// Fallback functions are kept for providers without statusDisplayConfig.
 
 interface StatusStyle {
   bg: string;
@@ -36,105 +49,177 @@ interface StatusStyle {
   badge: string;
 }
 
-function guessStatusStyle(statusName: string): StatusStyle {
-  const n = statusName.toLowerCase();
-
-  if (n.includes("deliver") || n.includes("complete")) {
-    return {
-      bg: "bg-emerald-500/8",
-      text: "text-emerald-500",
-      dot: "bg-emerald-500",
-      icon: "bg-emerald-500/10 text-emerald-500",
-      badge: "bg-emerald-500/10 text-emerald-500",
-    };
+/** Maps a StatusCategory to its visual style. */
+function categoryStyle(category: StatusCategory): StatusStyle {
+  switch (category) {
+    case "completed":
+      return {
+        bg: "bg-emerald-500/8",
+        text: "text-emerald-500",
+        dot: "bg-emerald-500",
+        icon: "bg-emerald-500/10 text-emerald-500",
+        badge: "bg-emerald-500/10 text-emerald-500",
+      };
+    case "returned":
+      return {
+        bg: "bg-orange-500/8",
+        text: "text-orange-500",
+        dot: "bg-orange-500",
+        icon: "bg-orange-500/10 text-orange-500",
+        badge: "bg-orange-500/10 text-orange-500",
+      };
+    case "transit":
+      return {
+        bg: "bg-blue-500/8",
+        text: "text-blue-500",
+        dot: "bg-blue-500",
+        icon: "bg-blue-500/10 text-blue-500",
+        badge: "bg-blue-500/10 text-blue-500",
+      };
+    case "confirmed":
+      return {
+        bg: "bg-sky-500/8",
+        text: "text-sky-500",
+        dot: "bg-sky-500",
+        icon: "bg-sky-500/10 text-sky-500",
+        badge: "bg-sky-500/10 text-sky-500",
+      };
+    case "picked":
+      return {
+        bg: "bg-teal-500/8",
+        text: "text-teal-500",
+        dot: "bg-teal-500",
+        icon: "bg-teal-500/10 text-teal-500",
+        badge: "bg-teal-500/10 text-teal-500",
+      };
+    case "rider":
+      return {
+        bg: "bg-indigo-500/8",
+        text: "text-indigo-500",
+        dot: "bg-indigo-500",
+        icon: "bg-indigo-500/10 text-indigo-500",
+        badge: "bg-indigo-500/10 text-indigo-500",
+      };
+    case "rescheduled":
+      return {
+        bg: "bg-amber-500/8",
+        text: "text-amber-500",
+        dot: "bg-amber-500",
+        icon: "bg-amber-500/10 text-amber-500",
+        badge: "bg-amber-500/10 text-amber-500",
+      };
+    case "failed":
+      return {
+        bg: "bg-red-500/8",
+        text: "text-red-500",
+        dot: "bg-red-500",
+        icon: "bg-red-500/10 text-red-500",
+        badge: "bg-red-500/10 text-red-500",
+      };
+    case "pending":
+      return {
+        bg: "bg-amber-500/8",
+        text: "text-amber-500",
+        dot: "bg-amber-500",
+        icon: "bg-amber-500/10 text-amber-500",
+        badge: "bg-amber-500/10 text-amber-500",
+      };
+    default:
+      return {
+        bg: "bg-slate-500/8",
+        text: "text-slate-500",
+        dot: "bg-slate-500",
+        icon: "bg-slate-500/10 text-slate-500",
+        badge: "bg-slate-500/10 text-slate-500",
+      };
   }
-  if (n.includes("transit") || n.includes("dispatch") || n.includes("dispatched")) {
-    return {
-      bg: "bg-blue-500/8",
-      text: "text-blue-500",
-      dot: "bg-blue-500",
-      icon: "bg-blue-500/10 text-blue-500",
-      badge: "bg-blue-500/10 text-blue-500",
-    };
-  }
-  if (n.includes("confirm")) {
-    return {
-      bg: "bg-sky-500/8",
-      text: "text-sky-500",
-      dot: "bg-sky-500",
-      icon: "bg-sky-500/10 text-sky-500",
-      badge: "bg-sky-500/10 text-sky-500",
-    };
-  }
-  if (n.includes("pick") || n.includes("collected")) {
-    return {
-      bg: "bg-teal-500/8",
-      text: "text-teal-500",
-      dot: "bg-teal-500",
-      icon: "bg-teal-500/10 text-teal-500",
-      badge: "bg-teal-500/10 text-teal-500",
-    };
-  }
-  if (n.includes("out") || n.includes("rider") || n.includes("assign")) {
-    return {
-      bg: "bg-indigo-500/8",
-      text: "text-indigo-500",
-      dot: "bg-indigo-500",
-      icon: "bg-indigo-500/10 text-indigo-500",
-      badge: "bg-indigo-500/10 text-indigo-500",
-    };
-  }
-  if (n.includes("reschedule") || n.includes("hold")) {
-    return {
-      bg: "bg-amber-500/8",
-      text: "text-amber-500",
-      dot: "bg-amber-500",
-      icon: "bg-amber-500/10 text-amber-500",
-      badge: "bg-amber-500/10 text-amber-500",
-    };
-  }
-  if (n.includes("return") || n.includes("rto")) {
-    return {
-      bg: "bg-orange-500/8",
-      text: "text-orange-500",
-      dot: "bg-orange-500",
-      icon: "bg-orange-500/10 text-orange-500",
-      badge: "bg-orange-500/10 text-orange-500",
-    };
-  }
-  if (n.includes("cancel") || n.includes("fail")) {
-    return {
-      bg: "bg-red-500/8",
-      text: "text-red-500",
-      dot: "bg-red-500",
-      icon: "bg-red-500/10 text-red-500",
-      badge: "bg-red-500/10 text-red-500",
-    };
-  }
-
-  // Default
-  return {
-    bg: "bg-slate-500/8",
-    text: "text-slate-500",
-    dot: "bg-slate-500",
-    icon: "bg-slate-500/10 text-slate-500",
-    badge: "bg-slate-500/10 text-slate-500",
-  };
 }
 
-function guessStatusIcon(statusName: string): typeof Truck {
-  const n = statusName.toLowerCase();
+/** Maps a StatusCategory to its icon component. */
+function categoryIcon(category: StatusCategory): React.ComponentType<{ className?: string }> {
+  switch (category) {
+    case "completed":
+      return PackageCheck;
+    case "returned":
+      return Undo2;
+    case "transit":
+      return Truck;
+    case "confirmed":
+      return PackageCheck;
+    case "picked":
+      return Package;
+    case "rider":
+      return MapPin;
+    case "rescheduled":
+      return CalendarClock;
+    case "failed":
+      return X;
+    case "pending":
+      return Undo2;
+    default:
+      return Clock;
+  }
+}
 
-  if (n.includes("deliver") || n.includes("complete")) return PackageCheck;
-  if (n.includes("transit") || n.includes("dispatch") || n.includes("dispatched")) return Truck;
-  if (n.includes("confirm")) return PackageCheck;
-  if (n.includes("pick") || n.includes("collected")) return Package;
-  if (n.includes("out") || n.includes("rider") || n.includes("assign")) return MapPin;
-  if (n.includes("reschedule") || n.includes("hold")) return CalendarClock;
-  if (n.includes("return") || n.includes("rto")) return Undo2;
-  if (n.includes("cancel") || n.includes("fail")) return X;
+/**
+ * Get the provider's status display config, or a sensible default.
+ * This is the single source of truth for which cards to show.
+ */
+function getStatusDisplayConfig(providerId: string | null): StatusDisplayEntry[] {
+  if (providerId) {
+    const provider = getProvider(providerId);
+    if (provider?.statusDisplayConfig) {
+      return provider.statusDisplayConfig;
+    }
+  }
+  // Fallback: hardcoded default matches the old STANDARD_EVENT_STATUSES
+  return [
+    { id: "confirmed", label: "Confirmed", matchPatterns: ["confirmed"], category: "confirmed" },
+    { id: "dispatched", label: "Dispatched", matchPatterns: ["dispatched"], category: "transit" },
+    { id: "in_transit", label: "In Transit", matchPatterns: ["in transit", "transit", "branch"], category: "transit" },
+    { id: "to_be_delivered", label: "To Be Delivered", matchPatterns: ["to be delivered", "out for delivery", "rider assigned"], category: "rider" },
+    { id: "rescheduled", label: "Rescheduled", matchPatterns: ["rescheduled"], category: "rescheduled" },
+    { id: "to_be_returned", label: "To Be Returned", matchPatterns: ["to be returned", "returned", "rto"], category: "pending" },
+    { id: "delivered", label: "Delivered", matchPatterns: ["delivered", "completed"], category: "completed" },
+  ];
+}
 
-  return Clock;
+/**
+ * Normalize a status label for matching: lowercase and treat underscores
+ * as spaces. Local breakdown labels are built from internal statuses with
+ * underscores → spaces ("to dispatch"), while display config matchPatterns
+ * use the raw underscore form ("to_dispatch"). Normalizing both sides makes
+ * them comparable so cards like "Rescheduled" actually match.
+ */
+function normalizeStatusKey(value: string): string {
+  return value.toLowerCase().replace(/_/g, " ");
+}
+
+/**
+ * Merge raw status breakdown data with the provider's display config.
+ * Each config entry's matchPatterns are checked against the source labels
+ * to find the matching count and delivery charge.
+ */
+function mergeWithStatusDisplayConfig(
+  source: CourierStatusBreakdown[],
+  displayConfig: StatusDisplayEntry[],
+): (CourierStatusBreakdown & { category: StatusCategory })[] {
+  const sourceMap = new Map<string, CourierStatusBreakdown>();
+  for (const s of source) {
+    sourceMap.set(normalizeStatusKey(s.label), s);
+  }
+
+  return displayConfig.map((entry) => {
+    for (const pattern of entry.matchPatterns) {
+      const normalizedPattern = normalizeStatusKey(pattern);
+      for (const [sourceLabel, breakdown] of sourceMap) {
+        if (sourceLabel.includes(normalizedPattern)) {
+          return { ...breakdown, id: entry.id, label: entry.label, category: entry.category };
+        }
+      }
+    }
+    return { id: entry.id, label: entry.label, count: 0, deliveryCharge: 0, category: entry.category };
+  });
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────
@@ -152,8 +237,82 @@ function formatDate(dateStr: string): string {
   }
 }
 
+function formatDateTime(date: Date): string {
+  return date.toLocaleString("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
 const formatCurrency = (amount: number) =>
   "Rs. " + amount.toLocaleString("en-LK");
+
+/**
+ * Derive a StatusCategory from a status string by matching against
+ * the provider's display config (or fallback patterns).
+ */
+function getCategoryForStatus(
+  statusName: string,
+  providerId: string | null,
+): StatusCategory {
+  const config = getStatusDisplayConfig(providerId);
+  const n = normalizeStatusKey(statusName);
+  for (const entry of config) {
+    for (const pattern of entry.matchPatterns) {
+      if (n.includes(normalizeStatusKey(pattern))) return entry.category;
+    }
+  }
+  return "default";
+}
+
+/**
+ * Get the friendly display label for a status by matching it against the
+ * provider's display config (e.g. internal "to_dispatch" → "Rescheduled").
+ * Falls back to a title-cased version of the raw status when no pattern
+ * matches (e.g. "cancelled" → "Cancelled").
+ */
+function getDisplayStatusLabel(
+  statusName: string,
+  providerId: string | null,
+): string {
+  const config = getStatusDisplayConfig(providerId);
+  const n = normalizeStatusKey(statusName);
+  for (const entry of config) {
+    for (const pattern of entry.matchPatterns) {
+      if (n.includes(normalizeStatusKey(pattern))) return entry.label;
+    }
+  }
+  return statusName
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (c: string) => c.toUpperCase());
+}
+
+/** How long (ms) a cached courier breakdown is considered fresh. */
+const CACHE_TTL_MS = 30_000;
+
+// ─── Loading step helpers ─────────────────────────────────────────
+// Shared LoadingStep/markLoadingStep live in @/lib/delivery/loading-steps.
+
+/**
+ * Build the ordered checklist of loading steps for a courier-page fetch run.
+ * API steps (connect, dashboard) are only included when allowApiSync
+ * is true, so the checklist always reflects what will actually run.
+ */
+function buildCourierLoadingSteps(allowApiSync: boolean): LoadingStep[] {
+  return buildLoadingSteps([
+    { id: "config", label: "Checking your courier settings" },
+    ...(allowApiSync
+      ? [
+          { id: "connect", label: "Connecting to your courier" },
+          { id: "dashboard", label: "Pulling the latest courier dashboard" },
+        ]
+      : []),
+    { id: "orders", label: "Loading your order data" },
+  ]);
+}
 
 // ─── Animations ──────────────────────────────────────────────────
 
@@ -187,6 +346,8 @@ interface LocalDeliveryStats {
   recentActivity: CourierRecentActivity[];
   totalOrders: number;
   totalDeliveryCharge: number;
+  /** Orders dispatched via this courier that are not yet in a terminal state. */
+  toBeDelivered: number;
 }
 
 async function fetchLocalDeliveryStats(
@@ -195,7 +356,32 @@ async function fetchLocalDeliveryStats(
 ): Promise<LocalDeliveryStats> {
   const supabase = createClient();
 
-  // ── 1. Fetch deliveries for this courier ──────────────────────
+  // ── 0. Get valid order IDs for this provider ──────────────────
+  const { data: validOrders } = await supabase
+    .from("orders")
+    .select("id")
+    .eq("business_id", businessId)
+    .eq("courier_provider", providerId)
+    .not("waybill_id", "is", null);
+
+  const validOrderIds = new Set((validOrders || []).map((o) => String(o.id)));
+
+  // ── 0.5. Direct "To Be Delivered" count from the orders table ──
+  // Orders dispatched via this courier (have a waybill) that are not yet in a
+  // terminal state (delivered / cancelled / returned).
+  const { count: toBeDelivered, error: toBeDeliveredError } = await supabase
+    .from("orders")
+    .select("id", { count: "exact", head: true })
+    .eq("business_id", businessId)
+    .eq("courier_provider", providerId)
+    .not("waybill_id", "is", null)
+    .not("status", "in", "(delivered,cancelled,returned)");
+
+  if (toBeDeliveredError) {
+    console.error("Failed to count to-be-delivered orders:", toBeDeliveredError);
+  }
+
+  // ── 1. Fetch deliveries for this courier, filtered by valid orders ──
   const { data: deliveries } = await supabase
     .from("deliveries")
     .select("id, waybill_id, courier, courier_charge, status, created_at, order_id")
@@ -203,13 +389,22 @@ async function fetchLocalDeliveryStats(
     .eq("courier", providerId)
     .order("created_at", { ascending: false });
 
-  const existingOrderIds = new Set((deliveries || []).map((d) => d.order_id).filter(Boolean));
+  // Only include deliveries whose order_id matches a valid order for this provider.
+  // This excludes legacy delivery records that were incorrectly created for
+  // orders dispatched through a different courier.
+  const filteredDeliveries = (deliveries || []).filter(
+    (d) => !d.order_id || validOrderIds.has(String(d.order_id)),
+  );
+
+  const existingOrderIds = new Set(filteredDeliveries.map((d) => d.order_id).filter(Boolean));
 
   // ── 2. Also fetch orders that have waybill_id but no delivery record ──
+  // Only fetch orders that were dispatched through THIS provider.
   const { data: ordersWithWaybills } = await supabase
     .from("orders")
     .select("id, order_number, customer_name, waybill_id, created_at, status, delivery_charge")
     .eq("business_id", businessId)
+    .eq("courier_provider", providerId)
     .not("waybill_id", "is", null)
     .order("created_at", { ascending: false })
     .limit(50);
@@ -225,7 +420,7 @@ async function fetchLocalDeliveryStats(
   }>();
 
   // Add deliveries first
-  for (const d of deliveries || []) {
+  for (const d of filteredDeliveries) {
     if (d.waybill_id && !orderDataMap.has(d.waybill_id)) {
       orderDataMap.set(d.waybill_id, {
         waybill_id: d.waybill_id,
@@ -257,7 +452,13 @@ async function fetchLocalDeliveryStats(
   );
 
   if (allRecords.length === 0) {
-    return { breakdown: [], recentActivity: [], totalOrders: 0, totalDeliveryCharge: 0 };
+    return {
+      breakdown: [],
+      recentActivity: [],
+      totalOrders: 0,
+      totalDeliveryCharge: 0,
+      toBeDelivered: toBeDelivered ?? 0,
+    };
   }
 
   // ── 3. Group by status ───────────────────────────────────────
@@ -290,7 +491,7 @@ async function fetchLocalDeliveryStats(
   // ── 4. Recent activity: latest 10 ────────────────────────────
   // Fetch order names for delivery records that don't have them yet
   const recentRecords = allRecords.slice(0, 10);
-  const deliveryOrderIds = (deliveries || [])
+  const deliveryOrderIds = filteredDeliveries
     .filter((d) => d.order_id)
     .map((d) => d.order_id!);
 
@@ -316,7 +517,7 @@ async function fetchLocalDeliveryStats(
     let customerName = r.customer_name;
 
     // If we have a delivery that references this waybill, check the order_id
-    const matchingDelivery = (deliveries || []).find(
+    const matchingDelivery = filteredDeliveries.find(
       (d) => d.waybill_id === r.waybill_id && d.order_id,
     );
     if (matchingDelivery) {
@@ -338,7 +539,13 @@ async function fetchLocalDeliveryStats(
     });
   }
 
-  return { breakdown, recentActivity, totalOrders, totalDeliveryCharge };
+  return {
+    breakdown,
+    recentActivity,
+    totalOrders,
+    totalDeliveryCharge,
+    toBeDelivered: toBeDelivered ?? 0,
+  };
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -350,14 +557,22 @@ export default function CourierPage() {
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [hoveredCard, setHoveredCard] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<"orders" | "finance">("orders");
 
   const [providerLabel, setProviderLabel] = useState<string | null>(null);
   const [connected, setConnected] = useState(false);
   const [statusBreakdown, setStatusBreakdown] = useState<CourierStatusBreakdown[]>([]);
   const [recentActivity, setRecentActivity] = useState<CourierRecentActivity[]>([]);
   const [totalOrders, setTotalOrders] = useState(0);
-  const [totalDeliveryCharge, setTotalDeliveryCharge] = useState(0);
+  const [activeOrders, setActiveOrders] = useState(0);
   const [apiStatuses, setApiStatuses] = useState<CourierStatusBreakdown[]>([]);
+  const [lastRefreshed, setLastRefreshed] = useState<Date | null>(null);
+  const [loadingSteps, setLoadingSteps] = useState<LoadingStep[]>(() =>
+    markLoadingStep(buildCourierLoadingSteps(true), "config", "Checking your courier settings…"),
+  );
+
+  /** Local type alias for the merged breakdown that includes a category. */
+  type StatusWithCategory = CourierStatusBreakdown & { category: StatusCategory };
 
   // Refs to persist config across re-renders
   const configRef = useRef<{ providerId: string | null; credentials: Record<string, string> }>({
@@ -366,12 +581,20 @@ export default function CourierPage() {
   });
 
   // ── Fetch all data ─────────────────────────────────────────────
-  const fetchData = useCallback(async (isRefresh = false) => {
+  const fetchData = useCallback(async (options?: { isRefresh?: boolean; allowApiSync?: boolean }) => {
+    const isRefresh = options?.isRefresh ?? false;
+    const allowApiSync = options?.allowApiSync ?? true;
+
     if (isRefresh) setRefreshing(true);
     else setLoading(true);
     setError(null);
 
+    console.log(
+      `[CourierPage] fetchData: isRefresh=${isRefresh}, allowApiSync=${allowApiSync}`
+    );
+
     try {
+      setLoadingSteps(markLoadingStep(buildCourierLoadingSteps(allowApiSync), "config", "Checking your courier settings…"));
       const config = await loadCourierConfig();
       if (!config?.provider) {
         setProviderLabel(null);
@@ -379,9 +602,11 @@ export default function CourierPage() {
         setStatusBreakdown([]);
         setRecentActivity([]);
         setTotalOrders(0);
-        setTotalDeliveryCharge(0);
         setApiStatuses([]);
         configRef.current = { providerId: null, credentials: {} };
+        console.log("[CourierPage] No courier configured — clearing store");
+        // Clear shared store so the dashboard doesn't show stale counts
+        useCourierStore.getState().clear();
         return;
       }
 
@@ -405,40 +630,61 @@ export default function CourierPage() {
 
       if (!profile?.business_id) return;
 
-      // 1. Sync delivery statuses from the courier API → local deliveries table
-      //    This fetches the latest tracking status for each waybill from Curfox
-      //    and updates our local records so the dashboard shows fresh data.
-      await syncDeliveryStatuses(
-        profile.business_id,
-        config.credentials,
-        config.provider,
-      );
+      // 1. (Optional) Sync delivery statuses from the courier API.
+      //    Skipped on auto-mount when the store cache is still fresh.
+      if (allowApiSync) {
+        setLoadingSteps((prev) => markLoadingStep(prev, "connect", `Connecting to ${config.providerLabel || "your courier"}…`));
+        console.log("[CourierPage] allowApiSync=true → calling syncDeliveryStatuses & fetchDashboard");
+        await syncDeliveryStatuses(
+          profile.business_id,
+          config.credentials,
+          config.provider,
+        );
+      } else {
+        console.log("[CourierPage] allowApiSync=false → skipping API calls, using cached data");
+      }
 
-      // 2. Try fetching dashboard data from the provider API
+      // 2. (Optional) Try fetching dashboard data from the provider API.
       const provider = getProvider(config.provider);
       let dashboardData: CourierDashboardData | null = null;
 
-      if (provider?.fetchDashboard) {
+      if (allowApiSync && provider?.fetchDashboard) {
+        setLoadingSteps((prev) => markLoadingStep(prev, "dashboard", "Pulling the latest courier dashboard…"));
         try {
           dashboardData = await provider.fetchDashboard(config.credentials);
           setApiStatuses(dashboardData.statusBreakdown || []);
         } catch (err) {
           console.error("Provider dashboard fetch failed:", err);
-          // Non-critical — we still have local data
           setApiStatuses([]);
         }
       }
 
-      // 3. Fetch local delivery stats for real counts
+      // 3. Always fetch local delivery stats (lightweight DB query)
+      setLoadingSteps((prev) => markLoadingStep(prev, "orders", "Loading your order data…"));
       const localStats = await fetchLocalDeliveryStats(profile.business_id, config.provider);
 
       setStatusBreakdown(localStats.breakdown);
+
+      // ── "To Be Delivered" — direct count from the orders table ──
+      // Orders dispatched via this courier that are not yet delivered/cancelled/returned.
+      const rawBreakdown = localStats.breakdown;
+      const toBeDeliveredCount = localStats.toBeDelivered;
+
+      // ── Store the **merged** breakdown + toBeDelivered count ──
+      // The dashboard reads both to match the courier page cards exactly.
+      const displayConfig = getStatusDisplayConfig(config.provider);
+      const merged = mergeWithStatusDisplayConfig(rawBreakdown, displayConfig);
+      useCourierStore.getState().setBreakdown(merged, toBeDeliveredCount);
+
+      setActiveOrders(toBeDeliveredCount);
       setRecentActivity(localStats.recentActivity);
       setTotalOrders(localStats.totalOrders);
-      setTotalDeliveryCharge(localStats.totalDeliveryCharge);
+      setLastRefreshed(new Date());
     } catch (err) {
       console.error("Failed to load courier data:", err);
       setError(err instanceof Error ? err.message : "Failed to load courier data");
+      // Clear shared store so the dashboard doesn't show stale counts
+      useCourierStore.getState().clear();
     } finally {
       setLoading(false);
       if (isRefresh) setRefreshing(false);
@@ -447,20 +693,41 @@ export default function CourierPage() {
 
   // ── Load on mount ──────────────────────────────────────────────
   useEffect(() => {
-    fetchData();
+    const cached = useCourierStore.getState();
+    const age = cached.lastUpdated
+      ? Date.now() - new Date(cached.lastUpdated).getTime()
+      : Infinity;
+    const isStale = !cached.lastUpdated || age >= CACHE_TTL_MS;
+    console.log(
+      `[CourierPage] Mount: lastUpdated=${cached.lastUpdated}, ` +
+      `age=${age}ms, TTL=${CACHE_TTL_MS}ms, isStale=${isStale}, ` +
+      `allowApiSync=${isStale}`
+    );
+    // When the cache is fresh, skip the heavy API calls (syncDeliveryStatuses,
+    // fetchDashboard) but still run the lightweight DB queries so component
+    // state (connected, statusBreakdown, recentActivity, etc.) gets hydrated.
+    fetchData({ isRefresh: false, allowApiSync: isStale });
   }, [fetchData]);
 
   // ── Handle refresh ─────────────────────────────────────────────
   const handleRefresh = useCallback(() => {
-    fetchData(true);
+    // Manual refresh always does a full API sync.
+    fetchData({ isRefresh: true, allowApiSync: true });
   }, [fetchData]);
 
   // ── Active statuses to display ─────────────────────────────────
-  const activeStatuses = useMemo(() => {
-    // If we have local breakdown, use it; otherwise fall back to API statuses
-    if (statusBreakdown.length > 0) return statusBreakdown;
-    return apiStatuses;
-  }, [statusBreakdown, apiStatuses]);
+  const activeStatuses = useMemo((): StatusWithCategory[] => {
+    const source = statusBreakdown.length > 0 ? statusBreakdown : apiStatuses;
+    const config = getStatusDisplayConfig(configRef.current.providerId);
+    const merged = mergeWithStatusDisplayConfig(source, config);
+    // The "To Be Delivered" card uses the direct orders-table count
+    // (dispatched but not yet delivered) rather than the status-match count.
+    // This keeps the courier page card in sync with the dashboard card,
+    // which reads the same direct count from the shared store.
+    return merged.map((s) =>
+      s.id === "to_be_delivered" ? { ...s, count: activeOrders } : s,
+    );
+  }, [statusBreakdown, apiStatuses, activeOrders]);
 
   const formatRatio = useCallback(
     (count: number) => {
@@ -470,8 +737,10 @@ export default function CourierPage() {
     [totalOrders],
   );
 
-  // ── Loading state ──────────────────────────────────────────────
-  if (loading) {
+  // ── Loading / refreshing state ────────────────────────────────
+  // The step checklist shows during both the initial load and manual
+  // refresh (it replaces the skeleton placeholders used previously).
+  if (loading || refreshing) {
     return (
       <motion.div
         className="flex flex-col items-center justify-center py-24"
@@ -479,10 +748,10 @@ export default function CourierPage() {
         initial="hidden"
         animate="show"
       >
-        <Loader2 className="size-8 animate-spin text-muted-foreground/40" />
-        <p className="mt-4 text-sm text-muted-foreground">
-          Loading courier data...
-        </p>
+        <Loader2 className="size-10 animate-spin text-primary/60" />
+        <div className="mt-6">
+          <LoadingStepList steps={loadingSteps} />
+        </div>
       </motion.div>
     );
   }
@@ -676,7 +945,12 @@ export default function CourierPage() {
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
+          {lastRefreshed && (
+            <span className="text-xs text-muted-foreground">
+              Last refreshed: {formatDateTime(lastRefreshed)}
+            </span>
+          )}
           <button
             type="button"
             onClick={handleRefresh}
@@ -696,7 +970,7 @@ export default function CourierPage() {
             ) : (
               <RefreshCw className="size-3.5" />
             )}
-            <span className="relative z-10">Refresh</span>
+            <span className="relative z-10">{refreshing ? "Refreshing" : "Refresh"}</span>
           </button>
           <Link
             href="/dashboard/settings?tab=courier#courier-provider"
@@ -750,24 +1024,78 @@ export default function CourierPage() {
               </div>
             </div>
 
-            {/* Right: Orders metric */}
-            <div className="rounded-2xl border border-hero-foreground/10 bg-hero-foreground/[0.08] p-3.5 backdrop-blur-sm sm:p-4">
-              <p className="text-xs font-medium text-hero-foreground/60">
-                Total Orders
+            {/* Right: Active Orders metric */}
+            <div className="rounded-2xl border border-hero-foreground/10 bg-hero-foreground/[0.08] p-3.5 text-right backdrop-blur-sm sm:p-4">
+              <p className="text-3xl font-bold tracking-tight text-hero-foreground tabular-nums">
+                {activeOrders}
               </p>
-              <p className="mt-1 text-3xl font-bold tracking-tight text-hero-foreground tabular-nums">
-                {totalOrders}
-              </p>
-              <p className="mt-0.5 text-xs text-hero-foreground/50">
-                {totalDeliveryCharge > 0
-                  ? `${formatCurrency(totalDeliveryCharge)} total delivery charges`
-                  : "No deliveries recorded yet"}
+              <p className="mt-1 text-xs font-medium text-hero-foreground/60">
+                Active Orders
               </p>
             </div>
           </div>
         </div>
       </motion.div>
 
+      {/* ══════════════════════════════════════════════════════════ */}
+      {/* TAB NAVIGATION — Underline style                          */}
+      {/* ══════════════════════════════════════════════════════════ */}
+      <motion.div variants={itemVariants}>
+        <div role="tablist" className="flex w-full border-b border-border/40">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === "orders"}
+            onClick={() => setActiveTab("orders")}
+            className={cn(
+              "relative flex flex-1 items-center justify-center gap-2 px-4 py-3 text-sm font-medium transition-all duration-200",
+              "outline-none focus-visible:ring-2 focus-visible:ring-ring/45 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+              activeTab === "orders"
+                ? "text-foreground"
+                : "text-muted-foreground hover:text-foreground/80",
+            )}
+          >
+            <Truck className="size-4" />
+            Orders
+            {/* Active indicator */}
+            <span
+              className={cn(
+                "absolute bottom-0 left-2 right-2 h-0.5 rounded-full bg-primary transition-all duration-200",
+                activeTab === "orders" ? "opacity-100" : "opacity-0",
+              )}
+            />
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === "finance"}
+            onClick={() => setActiveTab("finance")}
+            className={cn(
+              "relative flex flex-1 items-center justify-center gap-2 px-4 py-3 text-sm font-medium transition-all duration-200",
+              "outline-none focus-visible:ring-2 focus-visible:ring-ring/45 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+              activeTab === "finance"
+                ? "text-foreground"
+                : "text-muted-foreground hover:text-foreground/80",
+            )}
+          >
+            <FileText className="size-4" />
+            Finance
+            {/* Active indicator */}
+            <span
+              className={cn(
+                "absolute bottom-0 left-2 right-2 h-0.5 rounded-full bg-primary transition-all duration-200",
+                activeTab === "finance" ? "opacity-100" : "opacity-0",
+              )}
+            />
+          </button>
+        </div>
+      </motion.div>
+
+      {/* ══════════════════════════════════════════════════════════ */}
+      {/* TAB CONTENT                                              */}
+      {/* ══════════════════════════════════════════════════════════ */}
+      {activeTab === "orders" && (
+        <>
       {/* ══════════════════════════════════════════════════════════ */}
       {/* EVENT STATUS OVERVIEW                                     */}
       {/* ══════════════════════════════════════════════════════════ */}
@@ -791,8 +1119,8 @@ export default function CourierPage() {
         {activeStatuses.length > 0 ? (
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {activeStatuses.map((status, index) => {
-              const c = guessStatusStyle(status.label);
-              const Icon = guessStatusIcon(status.label);
+              const c = categoryStyle(status.category);
+              const Icon = categoryIcon(status.category);
               const isHovered = hoveredCard === status.id;
 
               return (
@@ -805,57 +1133,42 @@ export default function CourierPage() {
                   onMouseEnter={() => setHoveredCard(status.id)}
                   onMouseLeave={() => setHoveredCard(null)}
                   className={cn(
-                    "group relative overflow-hidden rounded-xl border border-border/30 p-4",
+                    "group relative overflow-hidden rounded-2xl glass-card p-3.5",
                     "transition-all duration-200 ease-out",
-                    "hover:-translate-y-0.5 hover:shadow-md",
-                    "active:scale-[0.98]",
+                    "hover:shadow-md hover:border-primary/15",
+                    "active:scale-[0.97]",
                     "focus-visible:ring-3 focus-visible:ring-ring/45 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-                    c.bg,
                   )}
                 >
                   {/* Hover glow */}
                   <span
                     className={cn(
-                      "pointer-events-none absolute -right-12 -top-12 size-32 rounded-full opacity-0 blur-3xl transition-opacity duration-500",
+                      "pointer-events-none absolute -right-16 -top-16 size-40 rounded-full opacity-0 blur-3xl transition-opacity duration-500",
                       c.dot,
                       isHovered && "opacity-20",
                     )}
                   />
 
-                  {/* Top: Icon + Count Badge */}
-                  <div className="flex items-start justify-between">
+                  <div className="relative flex items-center gap-3">
+                    {/* Icon */}
                     <div
                       className={cn(
-                        "flex size-10 items-center justify-center rounded-xl ring-1 ring-inset transition-all duration-200 group-hover:scale-105",
+                        "flex size-9 shrink-0 items-center justify-center rounded-xl ring-1 ring-inset transition-all duration-200 group-hover:scale-105",
                         c.icon,
                       )}
                     >
-                      <Icon className="size-[18px]" />
+                      <Icon className="size-[16px]" />
                     </div>
-                    <span
-                      className={cn(
-                        "inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold transition-all",
-                        c.badge,
-                      )}
-                    >
-                      {status.count}{" "}
-                      {status.count === 1 ? "order" : "orders"}
-                    </span>
-                  </div>
 
-                  {/* Content */}
-                  <div className="mt-4">
-                    <div className="flex items-center gap-1.5">
-                      <span className={cn("size-2 rounded-full", c.dot)} />
-                      <p className="text-base font-semibold text-foreground">
+                    {/* Count + label */}
+                    <div className="min-w-0 flex-1">
+                      <p className="text-lg font-semibold tracking-tight text-foreground tabular-nums">
+                        {status.count}
+                      </p>
+                      <p className="text-sm text-muted-foreground truncate">
                         {status.label}
                       </p>
                     </div>
-                    {status.deliveryCharge > 0 && (
-                      <p className="mt-1.5 text-[13px] leading-[1.5] text-muted-foreground">
-                        {formatCurrency(status.deliveryCharge)} delivery charge
-                      </p>
-                    )}
                   </div>
 
                   {/* Bottom accent bar on hover */}
@@ -901,17 +1214,7 @@ export default function CourierPage() {
               </div>
             </div>
 
-            {recentActivity.length > 0 && (
-              <button
-                type="button"
-                onClick={handleRefresh}
-                disabled={refreshing}
-                className="group flex items-center gap-1.5 rounded-[10px] px-2.5 py-1.5 text-sm font-medium text-primary transition-all hover:bg-primary/5"
-              >
-                <RefreshCw className={cn("size-3.5", refreshing && "animate-spin")} />
-                Refresh
-              </button>
-            )}
+
           </div>
 
           {recentActivity.length > 0 ? (
@@ -938,7 +1241,8 @@ export default function CourierPage() {
                   </thead>
                   <tbody className="divide-y divide-border/30">
                     {recentActivity.map((item, idx) => {
-                      const c = guessStatusStyle(item.status);
+                      const cat = getCategoryForStatus(item.status, configRef.current.providerId);
+                      const c = categoryStyle(cat);
                       return (
                         <tr
                           key={`${item.waybill}-${idx}`}
@@ -961,7 +1265,7 @@ export default function CourierPage() {
                               )}
                             >
                               <span className={cn("size-1.5 rounded-full", c.dot)} />
-                              {item.status}
+                              {getDisplayStatusLabel(item.status, configRef.current.providerId)}
                             </span>
                           </td>
                           <td className="px-5 py-3.5 text-muted-foreground">
@@ -977,8 +1281,9 @@ export default function CourierPage() {
               {/* Mobile Cards */}
               <div className="divide-y divide-border/30 sm:hidden">
                 {recentActivity.map((item, idx) => {
-                  const Icon = guessStatusIcon(item.status);
-                  const c = guessStatusStyle(item.status);
+                  const cat = getCategoryForStatus(item.status, configRef.current.providerId);
+                  const Icon = categoryIcon(cat);
+                  const c = categoryStyle(cat);
                   return (
                     <div
                       key={`${item.waybill}-${idx}`}
@@ -1003,7 +1308,7 @@ export default function CourierPage() {
                               c.badge,
                             )}
                           >
-                            {item.status}
+                            {getDisplayStatusLabel(item.status, configRef.current.providerId)}
                           </span>
                         </div>
                         <p className="mt-0.5 text-[13px] text-muted-foreground">
@@ -1015,22 +1320,7 @@ export default function CourierPage() {
                 })}
               </div>
 
-              {/* Footer */}
-              <div className="border-t border-border/50">
-                <button
-                  type="button"
-                  onClick={handleRefresh}
-                  disabled={refreshing}
-                  className="flex h-11 w-full items-center justify-center gap-1.5 text-sm font-medium text-primary transition-colors hover:bg-primary/5 active:bg-primary/10 disabled:opacity-50"
-                >
-                  {refreshing ? (
-                    <Loader2 className="size-3.5 animate-spin" />
-                  ) : (
-                    <RefreshCw className="size-3.5" />
-                  )}
-                  {refreshing ? "Updating..." : "Refresh Status"}
-                </button>
-              </div>
+
             </>
           ) : (
             <div className="flex flex-col items-center justify-center py-12 text-center">
@@ -1069,6 +1359,7 @@ export default function CourierPage() {
               </div>
             </div>
 
+            <>
             {/* Desktop Table */}
             <div className="hidden sm:block">
               <table className="w-full text-sm">
@@ -1089,8 +1380,8 @@ export default function CourierPage() {
                 </thead>
                 <tbody className="divide-y divide-border/30">
                   {activeStatuses.map((status) => {
-                    const c = guessStatusStyle(status.label);
-                    const Icon = guessStatusIcon(status.label);
+                    const c = categoryStyle(status.category);
+                    const Icon = categoryIcon(status.category);
                     return (
                       <tr
                         key={status.id}
@@ -1153,8 +1444,8 @@ export default function CourierPage() {
             {/* Mobile Cards */}
             <div className="divide-y divide-border/30 sm:hidden">
               {activeStatuses.map((status) => {
-                const c = guessStatusStyle(status.label);
-                const Icon = guessStatusIcon(status.label);
+                const c = categoryStyle(status.category);
+                const Icon = categoryIcon(status.category);
                 return (
                   <div
                     key={status.id}
@@ -1204,7 +1495,24 @@ export default function CourierPage() {
                 );
               })}
             </div>
+            </>
           </div>
+        </motion.div>
+      )}
+        </>
+      )}
+
+      {/* ══════════════════════════════════════════════════════════ */}
+      {/* FINANCE TAB                                              */}
+      {/* ══════════════════════════════════════════════════════════ */}
+      {activeTab === "finance" && (
+        <motion.div
+          key="finance-tab"
+          variants={itemVariants}
+          initial="hidden"
+          animate="show"
+        >
+          <CourierFinanceTab />
         </motion.div>
       )}
     </motion.div>

@@ -4,7 +4,7 @@
 
 ## Todo
 
-- **Phase 5 remaining** — AI Assistant, advanced automations, additional courier integrations, PWA/offline support, and direct WhatsApp Business API
+- **Phase 5 remaining** — AI Assistant, advanced automations, additional courier integrations (provider architecture in place — ~100 lines/file per new courier), PWA/offline support, and direct WhatsApp Business API
 - **Courier Snapshot** — Store courier metadata (provider, handling instructions, date option, note) on order at dispatch time for historical label accuracy
 - **Per-Shipment Override UI** — Allow adjusting handling instructions and optional note in the Shipping Label Dialog before printing
 - **Distinct Handling Icons** — Use per-type monochrome icons (⚠, ☂, ⬆, ◆, ⊘) instead of generic △ prefix

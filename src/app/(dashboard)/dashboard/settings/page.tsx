@@ -1402,6 +1402,63 @@ function OperationalSettings({ activeSection }: { activeSection: string | null }
             </div>
           </SettingsRow>
         </div>
+
+        <SectionDivider />
+
+        <div>
+          <SectionHeader title="Bank Details" />
+          <SettingsRow label="Include Bank Details" hint="Show bank account info at the bottom of quotation PDFs">
+            <Switch
+              checked={quotationSettings.showBankDetails}
+              onCheckedChange={quotationSettings.setShowBankDetails}
+            />
+          </SettingsRow>
+
+          {quotationSettings.showBankDetails && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              className="mt-3 space-y-3 overflow-hidden"
+            >
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <FormField label="Account Name">
+                  <Input
+                    value={quotationSettings.bankAccountName}
+                    onChange={(e) => quotationSettings.setBankAccountName(e.target.value)}
+                    placeholder="e.g. John Doe"
+                    className="h-10"
+                  />
+                </FormField>
+                <FormField label="Bank Name">
+                  <Input
+                    value={quotationSettings.bankName}
+                    onChange={(e) => quotationSettings.setBankName(e.target.value)}
+                    placeholder="e.g. Bank of Ceylon"
+                    className="h-10"
+                  />
+                </FormField>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <FormField label="Account Number">
+                  <Input
+                    value={quotationSettings.accountNumber}
+                    onChange={(e) => quotationSettings.setAccountNumber(e.target.value)}
+                    placeholder="e.g. 1234567890"
+                    className="h-10"
+                  />
+                </FormField>
+                <FormField label="Branch">
+                  <Input
+                    value={quotationSettings.branch}
+                    onChange={(e) => quotationSettings.setBranch(e.target.value)}
+                    placeholder="e.g. Colombo Main"
+                    className="h-10"
+                  />
+                </FormField>
+              </div>
+            </motion.div>
+          )}
+        </div>
       </CollapsibleCard>
       )}
 

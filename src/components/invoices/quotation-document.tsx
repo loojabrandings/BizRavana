@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { formatPhoneNumber } from "@/lib/formatters";
 import { formatDate as fmtDate } from "@/lib/formatters";
 import { usePreferences } from "@/stores/preferences-store";
+import { useQuotationSettings } from "@/stores/quotation-settings-store";
 import type { QuotationFormData } from "@/components/quotations/types";
 import type { BusinessProfile } from "./invoice-document";
 
@@ -320,6 +321,50 @@ export function QuotationDocument({ data, business }: QuotationDocumentProps) {
           </div>
         </div>
       </div>
+
+      {/* ═══ Bank Details ════════════════════════════════════════ */}
+      {(() => {
+        const bank = useQuotationSettings.getState();
+        if (!bank.showBankDetails) return null;
+        const hasAny = bank.bankAccountName || bank.bankName || bank.accountNumber || bank.branch;
+        if (!hasAny) return null;
+        return (
+          <div className="px-10 pb-4">
+            <div
+              className="text-xs font-bold uppercase tracking-wider mb-2"
+              style={{ color: "var(--primary, #2563eb)" }}
+            >
+              Bank Details
+            </div>
+            <div className="grid grid-cols-2 gap-x-8 gap-y-1 text-xs text-gray-600">
+              {bank.bankAccountName && (
+                <>
+                  <span className="font-medium text-gray-400">Account Name:</span>
+                  <span>{bank.bankAccountName}</span>
+                </>
+              )}
+              {bank.bankName && (
+                <>
+                  <span className="font-medium text-gray-400">Bank:</span>
+                  <span>{bank.bankName}</span>
+                </>
+              )}
+              {bank.accountNumber && (
+                <>
+                  <span className="font-medium text-gray-400">Account No:</span>
+                  <span>{bank.accountNumber}</span>
+                </>
+              )}
+              {bank.branch && (
+                <>
+                  <span className="font-medium text-gray-400">Branch:</span>
+                  <span>{bank.branch}</span>
+                </>
+              )}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* ═══ Thank You (above footer divider) ═══════════════════ */}
       <div className="text-center text-xs text-gray-400 px-10 pb-2">

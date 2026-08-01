@@ -44,6 +44,7 @@ import { dateFilterOptions, getDateRange } from "@/lib/date-utils";
 import { EditableStatusBadge } from "@/components/shared/editable-status-badge";
 import { BulkOrderImportForm } from "@/components/orders/bulk-order-import-form";
 import { DispatchDialog, type DispatchMode } from "@/components/orders/dispatch-dialog";
+import { BulkDispatchDialog } from "@/components/orders/bulk-dispatch-dialog";
 import { TrackShipmentDialog } from "@/components/orders/track-shipment-dialog";
 import { EnterWaybillDialog } from "@/components/orders/enter-waybill-dialog";
 import { useOrdersSettings } from "@/stores/orders-settings-store";
@@ -304,7 +305,7 @@ function OrdersPageInner() {
   const [businessId, setBusinessId] = useState<string | null>(null);
 
   // UI
-  const [dateFilter, setDateFilter] = useState<string>("this_month");
+  const [dateFilter, setDateFilter] = useState<string>("all_time");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [activeSort, setActiveSort] = useState<{ key: string; direction: "asc" | "desc" } | null>({ key: "order_number", direction: "desc" });
@@ -426,6 +427,7 @@ function OrdersPageInner() {
   const [dispatchDialogOpen, setDispatchDialogOpen] = useState(false);
   const [pendingDispatchOrderId, setPendingDispatchOrderId] = useState<string | null>(null);
   const [pendingDispatchNewStatus, setPendingDispatchNewStatus] = useState<string | null>(null);
+  const [bulkDispatchDialogOpen, setBulkDispatchDialogOpen] = useState(false);
   const [courierConfig, setCourierConfig] = useState<CourierConfig | null>(null);
   const [waybillDialogOpen, setWaybillDialogOpen] = useState(false);
   const [pendingWaybillOrderId, setPendingWaybillOrderId] = useState<string | null>(null);
@@ -606,13 +608,14 @@ const handleStatusChange = useCallback(async (orderId: string, newStatus: string
         courierConfig,
       );
 
-      // Update order status and waybill in DB
+      // Update order status, waybill, and courier_provider in DB
       const supabase = createClient();
       await supabase
         .from("orders")
         .update({
           status: newStatus,
           waybill_id: waybill,
+          courier_provider: courierConfig.provider,
           updated_at: new Date().toISOString(),
         })
         .eq("id", orderId);
@@ -1165,6 +1168,71 @@ const handleStatusChange = useCallback(async (orderId: string, newStatus: string
     [editOrderId],
   );
 
+  // ─── Bulk Dispatch Handler ─────────────────────────────────
+  const handleBulkDispatchToCourier = useCallback(async (orderId: string): Promise<{ waybill: string }> => {
+    if (guard("dispatching orders")) throw new Error("Read-only mode");
+    if (!courierConfig?.provider) throw new Error("No courier configured");
+
+    const order = orders.find((o) => o.id === orderId);
+    if (!order) throw new Error("Order not found");
+
+    // Validate district and city
+    if (!order.customer_district?.trim() || !order.customer_city?.trim()) {
+      throw new Error(`Order #${order.order_number} is missing district/city`);
+    }
+
+    // Send to courier
+    const { waybill } = await shipWithCourier(
+      {
+        id: order.id,
+        order_number: order.order_number,
+        customer_name: order.customer_name,
+        customer_phone: order.customer_phone,
+        customer_address: order.customer_address,
+        customer_city: order.customer_city,
+        customer_district: order.customer_district,
+        total: order.total,
+        advance_paid: order.advance_paid,
+        waybill_id: order.waybill_id,
+        items: order.items.map((i) => ({
+          product_name: i.product_name,
+          quantity: i.quantity,
+          unit_price: i.unit_price,
+        })),
+      },
+      courierConfig,
+    );
+
+    return { waybill };
+  }, [courierConfig, orders]);
+
+  const handleBulkDispatchUpdate = useCallback(async (orderId: string, waybill: string) => {
+    const supabase = createClient();
+    await supabase
+      .from("orders")
+      .update({
+        status: "dispatched",
+        waybill_id: waybill,
+        courier_provider: courierConfig?.provider ?? null,
+        dispatched_date: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", orderId);
+
+    // Update local state
+    setOrders((prev) =>
+      prev.map((o) =>
+        o.id === orderId
+          ? { ...o, status: "dispatched", waybill_id: waybill, dispatched_date: new Date().toISOString() }
+          : o,
+      ),
+    );
+
+    markWaybillAsUsed(waybill).catch((err) =>
+      console.warn("Failed to mark waybill as used:", err),
+    );
+  }, []);
+
   // ─── Bulk Handlers ─────────────────────────────────────────────
   const handleBulkStatusChange = useCallback(
     async (newStatus: string) => {
@@ -1495,9 +1563,50 @@ const handleStatusChange = useCallback(async (orderId: string, newStatus: string
     ],
   );
 
-  // ─── Export to XLSX ──────────────────────────────────────────────
-  const handleExportXlsx = useCallback(() => {
+  // ─── Export to XLSX / Royal Express Template ─────────────────────
+  const handleExportXlsx = useCallback(async () => {
     if (filteredOrders.length === 0) return;
+
+    const isRoyalExpress = courierConfig?.provider === "royal_express";
+
+    if (isRoyalExpress) {
+      // ── Export using Royal Express template ───────────────────
+      try {
+        const res = await fetch("/templates/royal-express-order-template.xlsx");
+        const buf = await res.arrayBuffer();
+        const wb = XLSX.read(buf, { type: "array" });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+
+        // Template columns: waybill_number | order_no | customer_name | customer_phone
+        // | customer_secondary_phone | customer_address | customer_email | cod
+        // | destination_city | weight | description | remark
+        const dataRows = filteredOrders.map((order) => [
+          order.waybill_id ?? "",                                    // waybill_number
+          order.order_number,                                         // order_no
+          order.customer_name,                                        // customer_name
+          order.customer_phone ?? "",                                 // customer_phone
+          order.customer_whatsapp ?? "",                              // customer_secondary_phone
+          order.customer_address ?? "",                               // customer_address
+          order.customer_email ?? "",                                 // customer_email
+          order.payment_method === "cod" ? order.total : "",          // cod
+          order.customer_city ?? "",                                  // destination_city
+          "",                                                          // weight (user fills in)
+          order.items.map((i) => i.product_name).join(", "),          // description
+          "",                                                          // remark (user fills in)
+        ]);
+
+        // Write data starting at row 2 (row index 1, 0-based)
+        XLSX.utils.sheet_add_aoa(ws, dataRows, { origin: { r: 1, c: 0 } });
+
+        XLSX.writeFile(wb, `royal-express-orders_${new Date().toISOString().slice(0, 10)}.xlsx`);
+      } catch (err) {
+        console.error("Failed to export with Royal Express template:", err);
+        toast.error("Export failed", { description: "Could not load the Royal Express template." });
+      }
+      return;
+    }
+
+    // ── Default export (no courier or other courier) ─────────────
     const rows = filteredOrders.map((order) => ({
       "Order No": order.order_number,
       Customer: order.customer_name,
@@ -1523,7 +1632,7 @@ const handleStatusChange = useCallback(async (orderId: string, newStatus: string
     ws["!cols"] = colWidths;
 
     XLSX.writeFile(wb, `orders_${new Date().toISOString().slice(0, 10)}.xlsx`);
-  }, [filteredOrders]);
+  }, [filteredOrders, courierConfig]);
 
   // ─── Bulk Select by Status / Payment ──────────────────────────
   const handleSelectByStatus = useCallback((status: string) => {
@@ -1673,6 +1782,18 @@ const handleStatusChange = useCallback(async (orderId: string, newStatus: string
           </DropdownMenuContent>
         </DropdownMenu>
 
+        {/* Dispatch to Courier */}
+        {courierConfig?.provider && (
+          <Button
+            variant="gradient"
+            size="sm"
+            onClick={() => setBulkDispatchDialogOpen(true)}
+          >
+            <Truck className="size-3.5" />
+            Dispatch to {courierConfig.providerLabel || "Courier"}
+          </Button>
+        )}
+
         {/* Delete */}
         <Button
           variant="destructive"
@@ -1693,7 +1814,7 @@ const handleStatusChange = useCallback(async (orderId: string, newStatus: string
         </Button>
       </>
     ),
-    [handleSelectByStatus, handleSelectByPayment, handleBulkStatusChange, handleBulkPaymentChange, handleExportXlsx],
+    [handleSelectByStatus, handleSelectByPayment, handleBulkStatusChange, handleBulkPaymentChange, handleExportXlsx, courierConfig],
   );
 
   const activeFilterCount =
@@ -1701,7 +1822,7 @@ const handleStatusChange = useCallback(async (orderId: string, newStatus: string
     (paymentStatusTab !== "all" ? 1 : 0) +
     (activeDeliveryTab !== "all" ? 1 : 0) +
     (searchQuery.trim() !== "" ? 1 : 0) +
-    (dateFilter !== "this_month" ? 1 : 0);
+    (dateFilter !== "all_time" ? 1 : 0);
 
   const handleClearFilters = useCallback(() => {
     setActiveStatusTab("all");
@@ -1709,7 +1830,7 @@ const handleStatusChange = useCallback(async (orderId: string, newStatus: string
     setMultiPaymentFilter(null);
     setActiveDeliveryTab("all");
     setSearchQuery("");
-    setDateFilter("this_month");
+    setDateFilter("all_time");
     setDateFrom("");
     setDateTo("");
   }, []);
@@ -1904,15 +2025,22 @@ const handleStatusChange = useCallback(async (orderId: string, newStatus: string
         sortKey: "status",
         className: "w-28",
         renderCell: (order) => (
-          <EditableStatusBadge
-            value={order.status}
-            options={orderStatusOptions}
-            colorMap={statusColorMap}
-            onUpdate={(v) => {
-                if (guard("status changes")) return;
-                handleStatusChange(order.id, v);
-              }}
-          />
+          <div className="flex flex-col items-start gap-0.5">
+            <EditableStatusBadge
+              value={order.status}
+              options={orderStatusOptions}
+              colorMap={statusColorMap}
+              onUpdate={(v) => {
+                  if (guard("status changes")) return;
+                  handleStatusChange(order.id, v);
+                }}
+            />
+            {order.dispatched_date && (
+              <span className="text-nano font-medium text-success/70 whitespace-nowrap">
+                {formatDate(order.dispatched_date)}
+              </span>
+            )}
+          </div>
         ),
       },
       {
@@ -2256,11 +2384,7 @@ const handleStatusChange = useCallback(async (orderId: string, newStatus: string
               }}
               onStatusChange={async (newStatus) => {
                 if (savedOrderId) {
-                  const supabase = createClient();
-                  await supabase
-                    .from("orders")
-                    .update({ status: newStatus, updated_at: new Date().toISOString() })
-                    .eq("id", savedOrderId);
+                  await handleStatusChange(savedOrderId, newStatus);
                 }
               }}
               onPaymentStatusChange={async (newPayment: string) => {
@@ -2348,7 +2472,7 @@ const handleStatusChange = useCallback(async (orderId: string, newStatus: string
               options: dateFilterOptions,
               isCustomMode: dateFilter === "custom",
               onCalendarClick: () =>
-                setDateFilter(dateFilter === "custom" ? "this_month" : "custom"),
+                setDateFilter(dateFilter === "custom" ? "all_time" : "custom"),
             }}
             activeFilterCount={activeFilterCount}
             onClearFilters={handleClearFilters}
@@ -2439,21 +2563,8 @@ const handleStatusChange = useCallback(async (orderId: string, newStatus: string
               if (savedOrderId) setEditOrderId(savedOrderId);
             }}
             onStatusChange={async (newStatus) => {
-              setPreviewData((prev) => prev ? { ...prev, status: newStatus } : null);
               if (savedOrderId) {
-                setOrders((prev) =>
-                  prev.map((o) =>
-                    o.id === savedOrderId ? { ...o, status: newStatus } : o,
-                  ),
-                );
-                try {
-                  await createClient()
-                    .from("orders")
-                    .update({ status: newStatus, updated_at: new Date().toISOString() })
-                    .eq("id", savedOrderId);
-                } catch (err) {
-                  console.error("Preview status update error:", err);
-                }
+                await handleStatusChange(savedOrderId, newStatus);
               }
             }}
             onPaymentStatusChange={async (newPayment) => {
@@ -2540,6 +2651,25 @@ const handleStatusChange = useCallback(async (orderId: string, newStatus: string
         }}
         courierName={courierConfig?.providerLabel || null}
         onDispatch={handleDispatch}
+      />
+
+      {/* ─── Bulk Dispatch Dialog ──────────────────────────────── */}
+      <BulkDispatchDialog
+        open={bulkDispatchDialogOpen}
+        onOpenChange={setBulkDispatchDialogOpen}
+        orders={[...selectedIds].filter((id): id is string => typeof id === "string").map((id) => {
+          const o = orders.find((ord) => ord.id === id);
+          return {
+            id,
+            order_number: o?.order_number || "",
+            customer_name: o?.customer_name || "",
+            status: o?.status || "",
+          };
+        })}
+        courierConfig={courierConfig}
+        courierName={courierConfig?.providerLabel || null}
+        onDispatchOrder={handleBulkDispatchToCourier}
+        onUpdateOrder={handleBulkDispatchUpdate}
       />
 
       {/* ─── Track Shipment Dialog ──────────────────────────────── */}

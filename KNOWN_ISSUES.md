@@ -30,7 +30,7 @@ This file tracks current limitations and technical debt.
 - PayHere checkout is sandbox-ready; live use is pending merchant verification and live configuration.
 - No WhatsApp Business API integration (uses simple `wa.me` links).
 - No email, PWA, or offline mode yet.
-- No courier API integration beyond Royal Express (waybill tracking via API).
+- Only Royal Express integrated. The provider architecture now makes adding new couriers a ~100-line single-file task (implement `CourierProvider` + register).
 - No image upload for products yet (avatars/logos, order images, and payment proofs are implemented).
 - The delivery module has settings in the Settings page but no dedicated delivery management page.
 - Reports are limited to 500 records per query (optimization needed for larger datasets).

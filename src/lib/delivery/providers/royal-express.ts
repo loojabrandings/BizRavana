@@ -3,6 +3,7 @@ import {
   registerProvider,
   SHARED_SETTINGS_KEYS,
   type CourierProvider,
+  type StatusDisplayEntry,
 } from "@/lib/delivery/provider-registry";
 import type {
   CourierDashboardData,
@@ -59,12 +60,121 @@ function authHeaders(token: string, tenant: string): Record<string, string> {
   };
 }
 
+// ─── Status Mapping ──────────────────────────────────────────────────
+// Precise Curfox status → internal delivery status mappings.
+// Avoids the fragile keyword matching in the shared fallback.
+
+function royalExpressMapStatus(apiStatus: string): string | null {
+  const s = apiStatus.toLowerCase().trim();
+
+  // Exact matches first
+  const exact: Record<string, string> = {
+    confirmed: "confirmed",
+    draft: "confirmed",
+    dispatched: "in_branch",
+    "in transit": "in_branch",
+    "out for delivery": "assigned_to_rider",
+    delivered: "delivered",
+    completed: "delivered",
+    cancelled: "cancelled",
+  };
+
+  if (exact[s]) return exact[s];
+
+  // Partial matches for known patterns
+  if (s.includes("failed to deliver")) return "returned";
+  if (s.includes("failed")) return "returned";
+  if (s.includes("return")) return "returned";
+  if (s.includes("rto")) return "returned";
+  if (s.includes("reschedule")) return "to_dispatch";
+  if (s.includes("hold")) return "to_dispatch";
+  if (s.includes("pickup") || s.includes("collected")) return "in_branch";
+  if (s.includes("rider") || s.includes("assign")) return "assigned_to_rider";
+
+  return null;
+}
+
+// ─── Dashboard Status Display Config ─────────────────────────────────
+// Defines the 7 standard cards shown on the courier page.
+// Each entry declares which Curfox status labels (lowercase, partial match)
+// should appear under that card, plus a semantic category for styling.
+
+const STATUS_DISPLAY: StatusDisplayEntry[] = [
+  {
+    id: "confirmed",
+    label: "Confirmed",
+    matchPatterns: ["confirmed"],
+    category: "confirmed",
+  },
+  {
+    id: "dispatched",
+    label: "Dispatched",
+    matchPatterns: ["dispatched"],
+    category: "transit",
+  },
+  {
+    id: "in_transit",
+    label: "In Transit",
+    matchPatterns: ["in transit", "in_branch"],
+    category: "transit",
+  },
+  {
+    id: "to_be_delivered",
+    label: "To Be Delivered",
+    matchPatterns: ["to be delivered", "out for delivery", "rider assigned", "assigned_to_rider"],
+    category: "rider",
+  },
+  {
+    id: "rescheduled",
+    label: "Rescheduled",
+    matchPatterns: ["rescheduled", "to_dispatch"],
+    category: "rescheduled",
+  },
+  {
+    id: "to_be_returned",
+    label: "To Be Returned",
+    matchPatterns: ["to be returned", "returned", "rto"],
+    category: "pending",
+  },
+  {
+    id: "delivered",
+    label: "Delivered",
+    matchPatterns: ["delivered", "completed"],
+    category: "completed",
+  },
+];
+
 // ─── Provider Implementation ─────────────────────────────────────────
 
 export const royalExpressProvider: CourierProvider = {
   id: "royal_express",
   label: "Royal Express",
   settingsKeys: { ...SETTINGS_KEYS },
+
+  // ── Auto-generated credential form metadata ──────────────────
+  credentialFields: [
+    {
+      key: "tenant",
+      label: "Tenant Name",
+      type: "text",
+      readonly: true,
+      hint: "Auto-filled for Royal Express. Cannot be changed.",
+    },
+    {
+      key: "email",
+      label: "API Email",
+      type: "email",
+      placeholder: "sales@testmerchant.com",
+      required: true,
+    },
+    {
+      key: "password",
+      label: "API Password",
+      type: "password",
+      placeholder: "Enter your API password",
+      required: true,
+    },
+  ],
 
   validateCredentials(credentials: Record<string, string>): string | null {
     if (!credentials.email?.trim()) return "API Email is required.";
@@ -274,6 +384,10 @@ export const royalExpressProvider: CourierProvider = {
       recentActivity: [],
     };
   },
+
+  // ── Provider-level status mapping ───────────────────────────
+  mapStatus: royalExpressMapStatus,
+  statusDisplayConfig: STATUS_DISPLAY,
 
   async syncLocations(businessId, credentials): Promise<CourierLocations> {
     const token = await getToken(credentials);

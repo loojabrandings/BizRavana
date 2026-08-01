@@ -2,10 +2,12 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { Clock, Loader2, RefreshCw, Truck } from "lucide-react";
+import { Check, Clock, Loader2, RefreshCw, Save, Truck } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { CollapsibleCard } from "@/components/shared/collapsible-card";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -17,34 +19,207 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { WaybillSettings } from "@/components/delivery/waybill-settings";
-import { RoyalExpressCredentials } from "@/components/delivery/royal-express-credentials";
 import {
   getProviderOptions,
   getProvider,
   extractCredentials,
   SHARED_SETTINGS_KEYS,
+  type CourierProvider,
 } from "@/lib/delivery/provider-registry";
-import { loadCourierConfig } from "@/lib/delivery/courier-utils";
+import { loadCourierConfig, syncCourierLocations } from "@/lib/delivery/courier-utils";
 
 // ─── Settings Keys ────────────────────────────────────────────────
 
 const REFRESH_MODE_KEY = "courier_refresh_mode";
 
-// ─── Provider Credential Form Registry ───────────────────────────────
-// Each courier provider can register its credential form component here.
-// When adding a new courier, add its form component import and registry entry.
+// ═══════════════════════════════════════════════════════════════════
+// AutoCredentialForm — renders inputs from provider.credentialFields
+// ═══════════════════════════════════════════════════════════════════
 
-const PROVIDER_CREDENTIAL_FORMS: Record<string, React.ComponentType<{
+interface AutoCredentialFormProps {
   businessId: string;
   credentials: Record<string, string>;
   onChange: (field: string, value: string) => void;
   saved: boolean;
   onSaved: (saved: boolean) => void;
-}>> = {
-  royal_express: RoyalExpressCredentials,
-};
+  provider: CourierProvider;
+}
 
-// ─── Component ──────────────────────────────────────────────────────
+function AutoCredentialForm({
+  businessId,
+  credentials,
+  onChange,
+  saved,
+  onSaved,
+  provider,
+}: AutoCredentialFormProps) {
+  const [testing, setTesting] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+
+  // ── Test Connection ─────────────────────────────────────────────
+  const handleTestConnection = useCallback(async () => {
+    const missing = (provider.credentialFields || [])
+      .filter((f) => f.required && !credentials[f.key]?.trim());
+    if (missing.length > 0) {
+      toast.error(
+        `Please fill in the required fields first: ${missing.map((f) => f.label).join(", ")}`,
+      );
+      return;
+    }
+
+    setTesting(true);
+    try {
+      const ok = await provider.testConnection(credentials);
+      if (ok) {
+        toast.success("Connection successful! Your credentials are valid.");
+      } else {
+        toast.error("Connection failed. Please check your credentials.");
+      }
+    } catch (err) {
+      toast.error("Connection failed", {
+        description: err instanceof Error ? err.message : "Could not reach the courier API.",
+      });
+    } finally {
+      setTesting(false);
+    }
+  }, [provider, credentials]);
+
+  // ── Save Credentials ────────────────────────────────────────────
+  const handleSave = useCallback(async () => {
+    setSaving(true);
+    try {
+      const supabase = createClient();
+
+      // Write each credential field using the provider's settingsKeys mapping
+      for (const field of provider.credentialFields || []) {
+        const dbKey = provider.settingsKeys[field.key];
+        if (dbKey && credentials[field.key]?.trim()) {
+          await supabase.from("business_settings").upsert(
+            { business_id: businessId, key: dbKey, value: credentials[field.key].trim() },
+            { onConflict: "business_id, key" },
+          );
+        }
+      }
+
+      // Auto-sync locations AFTER saving credentials but BEFORE
+      // marking saved/ showing success — so a sync failure surfaces
+      // before the user thinks everything is done.
+      setSyncing(true);
+      try {
+        await syncCourierLocations(businessId, credentials, provider.id);
+      } catch (syncErr) {
+        // Sync failure is non-fatal — still show save success
+        // but surface the warning.
+        console.error("Location sync failed:", syncErr);
+      } finally {
+        setSyncing(false);
+      }
+
+      // Check if all required fields are filled
+      const allRequiredFilled = (provider.credentialFields || [])
+        .filter((f) => f.required)
+        .every((f) => !!credentials[f.key]?.trim());
+      onSaved(allRequiredFilled);
+
+      toast.success(`${provider.label} credentials saved and locations synced`);
+    } catch (err) {
+      toast.error("Failed to save credentials", {
+        description: err instanceof Error ? err.message : "An error occurred.",
+      });
+    } finally {
+      setSaving(false);
+    }
+  }, [businessId, provider, credentials, onSaved]);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, height: 0 }}
+      animate={{ opacity: 1, height: "auto" }}
+      transition={{ duration: 0.25, ease: "easeOut" }}
+      className="mt-5 overflow-hidden"
+    >
+      <div className="rounded-xl border border-border/30 bg-muted/5 p-5 space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <Label className="text-sm font-semibold text-foreground">
+              {provider.label} API Credentials
+            </Label>
+            <p className="text-xs text-muted-foreground/60 mt-0.5">
+              Enter your {provider.label} API credentials.
+            </p>
+          </div>
+          {saved && (
+            <span className="inline-flex items-center rounded-full bg-success/10 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-success">
+              <Check className="mr-1 size-3" />
+              Saved
+            </span>
+          )}
+        </div>
+
+        <div className="space-y-3">
+          {(provider.credentialFields || []).map((field) => (
+            <div key={field.key} className="space-y-1.5">
+              <Label className="text-xs font-medium text-foreground/70">
+                {field.label}
+                {field.required && <span className="text-destructive ml-0.5">*</span>}
+              </Label>
+              <Input
+                type={field.type || "text"}
+                value={credentials[field.key] ?? ""}
+                onChange={(e) => onChange(field.key, e.target.value)}
+                placeholder={field.placeholder}
+                readOnly={field.readonly}
+                className={cn(
+                  "h-10",
+                  field.readonly && "bg-muted/20 text-muted-foreground/70 cursor-not-allowed",
+                )}
+              />
+              {field.hint && (
+                <p className="text-[11px] text-muted-foreground/50">{field.hint}</p>
+              )}
+            </div>
+          ))}
+        </div>
+
+        {/* Actions */}
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between pt-1">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleTestConnection}
+            disabled={testing}
+          >
+            {testing ? (
+              <Loader2 className="size-3.5 animate-spin" />
+            ) : (
+              <Truck className="size-3.5" />
+            )}
+            {testing ? "Testing..." : "Test Connection"}
+          </Button>
+
+          <Button
+            variant="gradient"
+            size="sm"
+            onClick={handleSave}
+            disabled={saving}
+          >
+            {saving ? (
+              <Loader2 className="size-3.5 animate-spin" />
+            ) : (
+              <Save className="size-3.5" />
+            )}
+            {syncing ? "Syncing locations..." : saving ? "Saving..." : "Save Credentials"}
+          </Button>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// CourierSettings — main settings component
+// ═══════════════════════════════════════════════════════════════════
 
 export function CourierSettings({ activeSection }: { activeSection?: string | null }) {
   const [businessId, setBusinessId] = useState<string | null>(null);
@@ -227,9 +402,6 @@ export function CourierSettings({ activeSection }: { activeSection?: string | nu
   }, [businessId, selectedCourier]);
 
   // ── Determine which credential form to render ─────────────────
-  const CredentialFormComponent = selectedCourier !== "none"
-    ? PROVIDER_CREDENTIAL_FORMS[selectedCourier] || null
-    : null;
   const selectedProvider = selectedCourier !== "none" ? getProvider(selectedCourier) : null;
 
   if (loading) {
@@ -293,19 +465,20 @@ export function CourierSettings({ activeSection }: { activeSection?: string | nu
             </div>
           </div>
 
-          {/* ── Dynamic Credential Form ── */}
-          {selectedCourier !== "none" && CredentialFormComponent && businessId && (
-            <CredentialFormComponent
+          {/* ── Auto-generated Credential Form ── */}
+          {selectedCourier !== "none" && selectedProvider && businessId && (
+            <AutoCredentialForm
               businessId={businessId}
               credentials={credentials}
               onChange={handleCredentialChange}
               saved={savedCredentials}
               onSaved={handleCredentialsSaved}
+              provider={selectedProvider}
             />
           )}
 
-          {/* ── No credential form available ── */}
-          {selectedCourier !== "none" && !CredentialFormComponent && (
+          {/* ── No provider found ── */}
+          {selectedCourier !== "none" && !selectedProvider && (
             <motion.div
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: "auto" }}
@@ -315,10 +488,10 @@ export function CourierSettings({ activeSection }: { activeSection?: string | nu
               <div className="rounded-xl border border-dashed border-border/30 bg-muted/5 p-6 text-center">
                 <Truck className="mx-auto size-8 text-muted-foreground/30" />
                 <p className="mt-2 text-sm font-medium text-foreground/70">
-                  {selectedProvider?.label || selectedCourier}
+                  {selectedCourier}
                 </p>
                 <p className="mt-1 text-xs text-muted-foreground/50">
-                  Credential form not yet implemented for this provider.
+                  Provider module not found. Make sure the provider is imported in providers/index.ts.
                 </p>
               </div>
             </motion.div>

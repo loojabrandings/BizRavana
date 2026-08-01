@@ -10,6 +10,7 @@ export function getDateKey(value: string) {
 }
 
 export const dateFilterOptions = [
+  { value: "all_time", label: "All time" },
   { value: "this_month", label: "This month" },
   { value: "today", label: "Today" },
   { value: "last_month", label: "Last month" },
@@ -29,6 +30,10 @@ export function getDateRange(filter: string, customFrom?: string, customTo?: str
   if (filter === "last_month") {
     const n = new Date();
     return { start: new Date(n.getFullYear(), n.getMonth() - 1, 1), end: new Date(n.getFullYear(), n.getMonth(), 0, 23, 59, 59, 999) };
+  }
+  if (filter === "all_time") {
+    // No date constraint — return all rows.
+    return null;
   }
   if (filter === "custom" && customFrom && customTo) {
     return { start: new Date(customFrom + "T00:00:00"), end: new Date(customTo + "T23:59:59.999") };
