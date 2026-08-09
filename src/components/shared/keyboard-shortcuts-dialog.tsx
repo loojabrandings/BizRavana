@@ -32,7 +32,7 @@ function Kbd({ shortcut }: { shortcut: ShortcutAction }) {
         <span
           key={i}
           className={cn(
-            "inline-flex h-6 min-w-[22px] items-center justify-center rounded-md border border-border/50 bg-muted/60 px-1.5 text-[11px] font-semibold tracking-tight text-foreground/80 shadow-xs",
+            "inline-flex h-7 min-w-7 items-center justify-center rounded-md border border-border/50 bg-muted/60 px-1.5 text-xs font-semibold tracking-tight text-foreground shadow-xs",
           )}
         >
           {k}
@@ -112,7 +112,7 @@ export function KeyboardShortcutsDialog({
                   if (items.length === 0) return null;
                   return (
                     <div key={group.title}>
-                      <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground/60">
+                      <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                         {group.title}
                       </h3>
                       <div className="space-y-1">

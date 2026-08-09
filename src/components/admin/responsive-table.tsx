@@ -1,6 +1,5 @@
 "use client";
 
-import { useCallback, useState } from "react";
 import { cn } from "@/lib/utils";
 import {
   Table,
@@ -127,7 +126,7 @@ export function AdminResponsiveTable<T>({
   return (
     <div className={cn("min-w-0", containerClassName)}>
       {/* ═══ DESKTOP TABLE ═══════════════════════════════════ */ }
-      <div className={cn("rounded-2xl border border-border/40 bg-card overflow-hidden", showTableClass, className)}>
+      <div className={cn("glass-base overflow-hidden rounded-xl", showTableClass, className)}>
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
@@ -309,7 +308,7 @@ export function AdminMobileRecordCard({
   return (
     <div
       className={cn(
-        "rounded-2xl border border-border/30 bg-card p-4 shadow-sm",
+        "glass-base rounded-xl p-4",
         className,
       )}
     >

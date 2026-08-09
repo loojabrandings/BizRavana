@@ -100,30 +100,32 @@ export function InvoiceTemplate({
   businessProfile,
   loading,
 }: InvoiceTemplateProps) {
-  const [business, setBusiness] = useState<BusinessProfile | null>(businessProfile || null);
-  const [fetching, setFetching] = useState(!businessProfile);
+  const [fetchedBusiness, setFetchedBusiness] = useState<BusinessProfile | null>(null);
+  const [profileFetchComplete, setProfileFetchComplete] = useState(false);
   const [generating, setGenerating] = useState(false);
   const invoiceRef = useRef<HTMLDivElement>(null);
+  const business = businessProfile ?? fetchedBusiness;
+  const fetching = !businessProfile && !profileFetchComplete;
 
   // Fetch business profile if not provided
   useEffect(() => {
-    if (businessProfile) {
-      setBusiness(businessProfile);
-      return;
-    }
-    if (!fetching) return;
+    if (businessProfile || profileFetchComplete) return;
+    let cancelled = false;
     const load = async () => {
       try {
         const profile = await fetchBusinessProfile();
-        setBusiness(profile);
+        if (!cancelled) setFetchedBusiness(profile);
       } catch (err) {
         console.error("Failed to fetch business profile:", err);
       } finally {
-        setFetching(false);
+        if (!cancelled) setProfileFetchComplete(true);
       }
     };
-    load();
-  }, [businessProfile, fetching]);
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, [businessProfile, profileFetchComplete]);
 
   // ─── Download as PDF via dom-to-image-more + jsPDF ─────────
   const handleDownloadPdf = useCallback(async () => {

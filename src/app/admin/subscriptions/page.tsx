@@ -160,10 +160,7 @@ function ExtendSubscriptionDialog({
 }) {
   const [days, setDays] = useState(30);
   const [customDays, setCustomDays] = useState(false);
-
-  useEffect(() => {
-    if (open) { setDays(30); setCustomDays(false); }
-  }, [open]);
+  const [referenceTime] = useState(Date.now);
 
   if (!business) return null;
 
@@ -171,7 +168,7 @@ function ExtendSubscriptionDialog({
   const currentEnd = business.subscription_ends_at
     ? new Date(business.subscription_ends_at).toLocaleDateString()
     : "—";
-  const newEnd = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toLocaleDateString();
+  const newEnd = new Date(referenceTime + days * 24 * 60 * 60 * 1000).toLocaleDateString();
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -273,11 +270,7 @@ function ChangePlanDialog({
   onSave: (planId: string) => void;
   loading: boolean;
 }) {
-  const [selectedPlanId, setSelectedPlanId] = useState("");
-
-  useEffect(() => {
-    if (open && business) setSelectedPlanId(business.plan_id || "");
-  }, [open, business]);
+  const [selectedPlanId, setSelectedPlanId] = useState(business?.plan_id || "");
 
   if (!business) return null;
 
@@ -460,7 +453,10 @@ export default function AdminSubscriptionsPage() {
   }, [supabase]);
 
   useEffect(() => {
-    fetchSubscriptions();
+    const taskId = window.setTimeout(() => {
+      void fetchSubscriptions();
+    }, 0);
+    return () => window.clearTimeout(taskId);
   }, [fetchSubscriptions]);
 
   // ── Stats ───────────────────────────────────────────────────
@@ -677,7 +673,7 @@ export default function AdminSubscriptionsPage() {
           <div className="min-w-0">
             <p className="text-sm font-medium text-foreground truncate max-w-[160px]">{sub.name}</p>
             {sub.owner_name && (
-              <p className="text-[10px] text-muted-foreground/60 truncate max-w-[160px]">
+              <p className="max-w-[160px] truncate text-xs text-muted-foreground">
                 {sub.owner_name}{sub.owner_email ? ` · ${sub.owner_email}` : ""}
               </p>
             )}
@@ -691,7 +687,7 @@ export default function AdminSubscriptionsPage() {
         <div>
           <span className="text-sm text-foreground/80">{sub.plan_name || "—"}</span>
           {sub.plan_price > 0 && (
-            <p className="text-[10px] text-muted-foreground/60">Rs. {sub.plan_price.toLocaleString()}/mo</p>
+            <p className="text-xs text-muted-foreground">Rs. {sub.plan_price.toLocaleString()}/mo</p>
           )}
         </div>
       ),
@@ -746,7 +742,7 @@ export default function AdminSubscriptionsPage() {
             <p className="text-sm font-semibold tabular-nums text-foreground">
               Rs. {sub.last_payment_amount.toLocaleString()}
             </p>
-            <p className="text-[10px] text-muted-foreground/60">
+            <p className="text-xs text-muted-foreground">
               {sub.last_payment_date ? new Date(sub.last_payment_date).toLocaleDateString() : ""}
               {sub.last_payment_plan_name ? ` · ${sub.last_payment_plan_name}` : ""}
             </p>
@@ -828,7 +824,7 @@ export default function AdminSubscriptionsPage() {
             <button
               type="button"
               onClick={() => window.open(`/admin/businesses/${sub.id}`, "_self")}
-              className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-input bg-background px-3 py-2 text-xs font-medium min-h-11 hover:bg-accent transition-colors"
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-[10px] border border-border bg-transparent px-4 text-sm font-medium text-foreground shadow-xs transition-all hover:-translate-y-0.5 hover:border-primary/30 hover:bg-muted hover:shadow-sm"
             >
               <ExternalLink className="size-3.5" />
               View
@@ -836,7 +832,7 @@ export default function AdminSubscriptionsPage() {
             <button
               type="button"
               onClick={() => handleOpenActionSheet(sub)}
-              className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-primary text-primary-foreground px-3 py-2 text-xs font-medium min-h-11 hover:bg-primary/90 transition-colors"
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-[10px] bg-primary px-4 text-sm font-medium text-white shadow-sm shadow-primary/20 transition-all hover:-translate-y-0.5 hover:bg-primary/90 hover:shadow-md"
             >
               More
             </button>
@@ -941,23 +937,27 @@ export default function AdminSubscriptionsPage() {
       )}
 
       {/* ═══ Extend Dialog ════════════════════════════════════ */}
-      <ExtendSubscriptionDialog
-        open={extendTarget !== null}
-        onOpenChange={(open) => { if (!open) setExtendTarget(null); }}
-        business={extendTarget}
-        onExtend={handleExtend}
-        loading={extending}
-      />
+      {extendTarget && (
+        <ExtendSubscriptionDialog
+          open
+          onOpenChange={(open) => { if (!open) setExtendTarget(null); }}
+          business={extendTarget}
+          onExtend={handleExtend}
+          loading={extending}
+        />
+      )}
 
       {/* ═══ Change Plan Dialog ═══════════════════════════════ */}
-      <ChangePlanDialog
-        open={changeTarget !== null}
-        onOpenChange={(open) => { if (!open) setChangeTarget(null); }}
-        business={changeTarget}
-        plans={plans}
-        onSave={handleChangePlan}
-        loading={changing}
-      />
+      {changeTarget && (
+        <ChangePlanDialog
+          open
+          onOpenChange={(open) => { if (!open) setChangeTarget(null); }}
+          business={changeTarget}
+          plans={plans}
+          onSave={handleChangePlan}
+          loading={changing}
+        />
+      )}
 
       {/* ═══ Suspend Confirm ══════════════════════════════════ */}
       <ConfirmDialog

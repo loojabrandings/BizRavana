@@ -150,7 +150,7 @@ function AutoCredentialForm({
             </p>
           </div>
           {saved && (
-            <span className="inline-flex items-center rounded-full bg-success/10 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-success">
+            <span className="inline-flex items-center rounded-full bg-success/10 px-2.5 py-0.5 text-xs font-semibold text-success">
               <Check className="mr-1 size-3" />
               Saved
             </span>
@@ -176,7 +176,7 @@ function AutoCredentialForm({
                 )}
               />
               {field.hint && (
-                <p className="text-[11px] text-muted-foreground/50">{field.hint}</p>
+                <p className="text-xs text-muted-foreground">{field.hint}</p>
               )}
             </div>
           ))}
@@ -491,7 +491,7 @@ export function CourierSettings({ activeSection }: { activeSection?: string | nu
                   {selectedCourier}
                 </p>
                 <p className="mt-1 text-xs text-muted-foreground/50">
-                  Provider module not found. Make sure the provider is imported in providers/index.ts.
+                  This courier provider is unavailable. Refresh the page or contact support if the issue continues.
                 </p>
               </div>
             </motion.div>

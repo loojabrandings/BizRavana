@@ -116,10 +116,10 @@ function QuotationPreviewHeader({
         ) : (
           onConvertToOrder && data.status !== "converted" && (
             <Button
-              variant="default"
-              size="sm"
+              variant="success"
+              size="md"
               onClick={onConvertToOrder}
-              className="mt-4 w-full gap-1.5 text-sm font-medium h-10 bg-success hover:bg-success/90 text-success-foreground"
+              className="mt-4 w-full"
             >
               <ShoppingCart className="size-3.5" />
               Convert to Order
@@ -131,19 +131,19 @@ function QuotationPreviewHeader({
         <div className="mt-3 flex items-center gap-2">
           <Button
             variant="outline"
-            size="sm"
+            size="md"
             onClick={onWhatsApp}
             disabled={!(data.whatsapp || data.phone)}
-            className="flex-1 gap-1.5 text-sm font-medium h-9"
+            className="flex-1"
           >
             <MessageCircle className="size-3.5" />
             WhatsApp
           </Button>
           <Button
             variant="outline"
-            size="sm"
+            size="md"
             onClick={onViewQuotation}
-            className="flex-1 gap-1.5 text-sm font-medium h-9"
+            className="flex-1"
           >
             <FileText className="size-3.5" />
             PDF
@@ -151,9 +151,9 @@ function QuotationPreviewHeader({
           {onEdit && (
             <Button
               variant="outline"
-              size="sm"
+              size="md"
               onClick={onEdit}
-              className="flex-1 gap-1.5 text-sm font-medium h-9"
+              className="flex-1"
             >
               <Pencil className="size-3.5" />
               Edit
@@ -751,7 +751,7 @@ export function QuotationPreview({
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.25, ease: "easeOut" }}
-        className="flex flex-col rounded-2xl glass-card"
+        className="flex flex-col rounded-xl glass-card"
       >
         {/* ═══════ Header ════════════════════════════════════════════ */}
         <div className={isMobile ? "px-4 pt-4 pb-3" : "px-8 pt-7 pb-6"}>

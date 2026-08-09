@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { motion } from "framer-motion";
 import {
   Award,
@@ -132,14 +133,14 @@ interface BoolFeature {
 // HELPERS
 // ══════════════════════════════════════════════════════════════════════
 
-function getPlanIcon(name: string) {
+function PlanIcon({ name, className }: { name: string; className?: string }) {
   switch (name.toLowerCase()) {
-    case "trial": return Gift;
-    case "basic": return Building2;
-    case "standard": return Star;
-    case "premium": return Crown;
-    case "enterprise": return Award;
-    default: return Building2;
+    case "trial": return <Gift className={className} />;
+    case "basic": return <Building2 className={className} />;
+    case "standard": return <Star className={className} />;
+    case "premium": return <Crown className={className} />;
+    case "enterprise": return <Award className={className} />;
+    default: return <Building2 className={className} />;
   }
 }
 
@@ -327,7 +328,6 @@ export default function SubscriptionPage() {
   // Mobile card scroll tracking
   const [activeCardIndex, setActiveCardIndex] = useState(0);
   const cardsContainerRef = useRef<HTMLDivElement>(null);
-  const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
 
   // Copy feedback
   const [copied, setCopied] = useState(false);
@@ -410,6 +410,32 @@ export default function SubscriptionPage() {
     const idx = Math.round(scrollLeft / cardWidth);
     setActiveCardIndex(Math.min(idx, plans.filter((p) => p.name !== "Trial").length - 1));
   }, [plans]);
+
+  const fetchUsage = useCallback(async (businessId: string) => {
+    try {
+      const promises = await Promise.all([
+        supabase.from("orders").select("id", { count: "exact", head: true }).eq("business_id", businessId).is("deleted_at", null),
+        supabase.from("expenses").select("id", { count: "exact", head: true }).eq("business_id", businessId).is("deleted_at", null),
+        supabase.from("products").select("id", { count: "exact", head: true }).eq("business_id", businessId).is("deleted_at", null).eq("is_active", true),
+        supabase.from("quotations").select("id", { count: "exact", head: true }).eq("business_id", businessId).is("deleted_at", null),
+        supabase.from("inventory_items").select("id", { count: "exact", head: true }).eq("business_id", businessId).is("deleted_at", null),
+      ]);
+
+      setUsage({
+        orders: promises[0].count || 0,
+        expenses: promises[1].count || 0,
+        products: promises[2].count || 0,
+        quotations: promises[3].count || 0,
+        inventory: promises[4].count || 0,
+        storage_mb: 0,
+        team_members: 1,
+        courier_accounts: 1,
+        whatsapp_templates: 1,
+      });
+    } catch {
+      // Silently fail
+    }
+  }, [supabase]);
 
   // ── Fetch all data ──
   const fetchData = useCallback(async () => {
@@ -495,37 +521,14 @@ export default function SubscriptionPage() {
     } finally {
       setLoading(false);
     }
-  }, [supabase]);
-
-  const fetchUsage = useCallback(async (businessId: string) => {
-    try {
-      const promises = await Promise.all([
-        supabase.from("orders").select("id", { count: "exact", head: true }).eq("business_id", businessId).is("deleted_at", null),
-        supabase.from("expenses").select("id", { count: "exact", head: true }).eq("business_id", businessId).is("deleted_at", null),
-        supabase.from("products").select("id", { count: "exact", head: true }).eq("business_id", businessId).is("deleted_at", null).eq("is_active", true),
-        supabase.from("quotations").select("id", { count: "exact", head: true }).eq("business_id", businessId).is("deleted_at", null),
-        supabase.from("inventory_items").select("id", { count: "exact", head: true }).eq("business_id", businessId).is("deleted_at", null),
-      ]);
-
-      setUsage({
-        orders: promises[0].count || 0,
-        expenses: promises[1].count || 0,
-        products: promises[2].count || 0,
-        quotations: promises[3].count || 0,
-        inventory: promises[4].count || 0,
-        storage_mb: 0,
-        team_members: 1,
-        courier_accounts: 1,
-        whatsapp_templates: 1,
-      });
-    } catch {
-      // Silently fail
-    }
-  }, [supabase]);
+  }, [fetchUsage, supabase]);
 
   // ── Initial load ──
   useEffect(() => {
-    fetchData();
+    const taskId = window.setTimeout(() => {
+      void fetchData();
+    }, 0);
+    return () => window.clearTimeout(taskId);
   }, [fetchData]);
 
   // ── Payment Proof Upload ──
@@ -669,13 +672,11 @@ export default function SubscriptionPage() {
   const statusInfo = business ? getStatusVariant(business.account_status) : null;
   const StatusIcon = statusInfo?.icon || HelpCircle;
   const trialDays = business ? getDaysRemaining(business.trial_ends_at) : { days: 0, expired: false };
-  const subDays = business ? getDaysRemaining(business.subscription_ends_at) : { days: 0, expired: false };
   const isTrial = business?.account_status === "trial";
   const isExpired = business?.account_status === "trial_expired" || business?.account_status === "expired";
   const isPendingPayment = business?.account_status === "pending_payment";
   const currentPlanName = currentPlan?.name || "Trial";
   const color = currentPlan ? getPlanColor(currentPlanName) : getPlanColor("trial");
-  const PlanIcon = currentPlan ? getPlanIcon(currentPlanName) : Gift;
 
   const trialProgress = isTrial && business?.trial_ends_at
     ? Math.max(0, Math.min(100, Math.round(((3 - trialDays.days) / 3) * 100)))
@@ -683,9 +684,6 @@ export default function SubscriptionPage() {
 
   // Plans (excluding Trial for the pricing sections)
   const paidPlans = plans.filter((p) => p.name !== "Trial");
-
-  // Mobile cards refs
-  cardRefs.current = cardRefs.current.slice(0, paidPlans.length);
 
   return (
     <div className="space-y-8 p-4 sm:p-6 pb-24 sm:pb-6">
@@ -745,7 +743,10 @@ export default function SubscriptionPage() {
                 color.bg,
                 color.border,
               )}>
-                <PlanIcon className="size-7" />
+                <PlanIcon
+                  name={currentPlan ? currentPlanName : "trial"}
+                  className="size-7"
+                />
               </div>
 
               <div className="min-w-0">
@@ -868,7 +869,7 @@ export default function SubscriptionPage() {
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="rounded-2xl glass-card overflow-hidden"
+          className="rounded-xl glass-card overflow-hidden"
         >
           <div className="p-5 sm:p-6">
             <div className="flex items-center justify-between mb-5">
@@ -1035,7 +1036,7 @@ export default function SubscriptionPage() {
           transition={{ delay: 0.1 }}
           className="relative"
         >
-          <div className="rounded-2xl glass-card overflow-hidden">
+          <div className="rounded-xl glass-card overflow-hidden">
             {/* Fixed Header */}
             <div className="min-w-[820px]">
               <div className="grid grid-cols-[220px_repeat(4,1fr)] divide-x divide-border/20 border-b border-border/20 bg-card/95 backdrop-blur-sm">
@@ -1044,7 +1045,6 @@ export default function SubscriptionPage() {
                 </div>
                 {paidPlans.map((plan) => {
                   const isCurrent = currentPlan?.id === plan.id;
-                  const planColor = getPlanColor(plan.name);
                   return (
                     <div
                       key={plan.id}
@@ -1230,16 +1230,14 @@ export default function SubscriptionPage() {
             className="flex gap-4 overflow-x-auto snap-x snap-mandatory scrollbar-none -mx-4 px-4 pb-2"
             style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
           >
-            {paidPlans.map((plan, idx) => {
+            {paidPlans.map((plan) => {
               const isCurrent = currentPlan?.id === plan.id;
               const planColor = getPlanColor(plan.name);
-              const Icon = getPlanIcon(plan.name);
               const isUpgrade = !isCurrent && (plan.sort_order > (currentPlan?.sort_order || 0));
 
               return (
                 <div
                   key={plan.id}
-                  ref={(el) => { cardRefs.current[idx] = el; }}
                   className={cn(
                     "relative flex flex-col min-w-[85vw] max-w-[320px] snap-start rounded-2xl border transition-all duration-200 shrink-0",
                     isCurrent
@@ -1270,7 +1268,7 @@ export default function SubscriptionPage() {
                   {/* Header */}
                   <div className={cn("p-5 rounded-t-2xl", planColor.light)}>
                     <div className={cn("inline-flex size-10 items-center justify-center rounded-xl mb-3", planColor.bg)}>
-                      <Icon className="size-5" />
+                      <PlanIcon name={plan.name} className="size-5" />
                     </div>
                     <h3 className="text-lg font-bold text-foreground">{plan.name}</h3>
                     <div className="mt-1.5 flex items-baseline gap-1">
@@ -1407,7 +1405,6 @@ export default function SubscriptionPage() {
                     <div className="bg-card p-3" />
                     {paidPlans.map((plan) => {
                       const isCurrent = currentPlan?.id === plan.id;
-                      const planColor = getPlanColor(plan.name);
                       return (
                         <div
                           key={plan.id}
@@ -1659,7 +1656,16 @@ export default function SubscriptionPage() {
                 className="flex w-full flex-col items-center gap-2 rounded-xl border-2 border-dashed border-border/40 px-4 py-6 text-sm text-muted-foreground transition-colors hover:border-primary/40 hover:bg-primary/[0.02] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {proofPreview ? (
-                  <img src={proofPreview} alt="Proof preview" className="max-h-32 rounded-lg object-contain" />
+                  <span className="relative block h-32 w-full">
+                    <Image
+                      src={proofPreview}
+                      alt="Proof preview"
+                      fill
+                      sizes="(max-width: 768px) 100vw, 640px"
+                      unoptimized
+                      className="rounded-lg object-contain"
+                    />
+                  </span>
                 ) : proofFile ? (
                   <>
                     <FileText className="size-8 text-primary/70" />

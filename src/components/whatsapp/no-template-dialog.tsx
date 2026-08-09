@@ -87,17 +87,15 @@ export function NoTemplateDialog({
           <div className="flex items-center justify-end gap-1.5">
             <Button
               variant="ghost"
-              size="xs"
+              size="sm"
               onClick={() => onOpenChange(false)}
-              className="h-7 text-xxs text-muted-foreground/50"
             >
               Cancel
             </Button>
             <Button
               variant="gradient"
-              size="xs"
+              size="sm"
               onClick={handleCreateTemplate}
-              className="h-7 text-xxs gap-1"
             >
               <Plus className="size-2.5" />
               Create Template

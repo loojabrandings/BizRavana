@@ -48,7 +48,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { CollapsibleCard } from "@/components/shared/collapsible-card";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
-import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 
 // ─── Types ──────────────────────────────────────────────────────────
@@ -84,7 +83,7 @@ const ROLE_CONFIG = {
   },
   admin: {
     icon: ShieldCheck,
-    label: "Admin",
+    label: "Business Manager",
     color: "text-blue-500",
     bg: "bg-blue-500/10",
     border: "border-blue-500/20",
@@ -104,7 +103,7 @@ function RoleBadge({ role }: { role: "owner" | "admin" | "member" }) {
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold border",
+        "inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold border",
         config.color,
         config.bg,
         config.border,
@@ -126,7 +125,7 @@ function InvitationStatusBadge({ status }: { status: string }) {
 
   const c = config[status as keyof typeof config] || config.pending;
   return (
-    <span className={cn("inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold border", c.color, c.bg, c.border)}>
+    <span className={cn("inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold border", c.color, c.bg, c.border)}>
       {status === "pending" && <Clock className="size-2.5 mr-1" />}
       {status === "accepted" && <CheckCircle2 className="size-2.5 mr-1" />}
       {status === "expired" && <AlertCircle className="size-2.5 mr-1" />}
@@ -211,7 +210,7 @@ export function TeamSettings({ activeSection }: { activeSection?: string | null 
       if (membersData) setMembers(membersData);
 
       // Fetch invitations
-      const response = await fetch(`/api/invitations?business_id=${profile.business_id}`);
+      const response = await fetch("/api/invitations");
       if (response.ok) {
         const { data: invites } = await response.json();
         if (invites) setInvitations(invites);
@@ -223,7 +222,12 @@ export function TeamSettings({ activeSection }: { activeSection?: string | null 
     }
   }, [supabase]);
 
-  useEffect(() => { fetchData(); }, [fetchData]);
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      void fetchData();
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [fetchData]);
 
   // ── Promote/Demote Member ────────────────────────────────────────
 
@@ -237,7 +241,6 @@ export function TeamSettings({ activeSection }: { activeSection?: string | null 
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           profile_id: member.id,
-          business_id: businessId,
           new_role: newRole,
         }),
       });
@@ -253,7 +256,7 @@ export function TeamSettings({ activeSection }: { activeSection?: string | null 
 
       toast.success(result.message || "Role updated successfully");
       fetchData();
-    } catch (err) {
+    } catch {
       toast.error("Failed to change role");
     } finally {
       setChangingRole(null);
@@ -263,7 +266,7 @@ export function TeamSettings({ activeSection }: { activeSection?: string | null 
   // ── Invite Member ───────────────────────────────────────────────
 
   const handleInvite = useCallback(async () => {
-    if (!businessId || !currentUserId || !inviteEmail.trim()) return;
+    if (!businessId || !inviteEmail.trim()) return;
     setInviting(true);
 
     try {
@@ -271,10 +274,8 @@ export function TeamSettings({ activeSection }: { activeSection?: string | null 
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          business_id: businessId,
           email: inviteEmail.trim(),
           role: inviteRole,
-          invited_by: currentUserId,
         }),
       });
 
@@ -301,12 +302,12 @@ export function TeamSettings({ activeSection }: { activeSection?: string | null 
       setInviteEmail("");
       setInviteRole("member");
       fetchData();
-    } catch (err) {
+    } catch {
       toast.error("Failed to send invitation");
     } finally {
       setInviting(false);
     }
-  }, [businessId, currentUserId, inviteEmail, inviteRole, fetchData]);
+  }, [businessId, inviteEmail, inviteRole, fetchData]);
 
   // ── Cancel Invitation ───────────────────────────────────────────
 
@@ -327,7 +328,7 @@ export function TeamSettings({ activeSection }: { activeSection?: string | null 
       toast.success("Invitation cancelled");
       setCancelTarget(null);
       fetchData();
-    } catch (err) {
+    } catch {
       toast.error("Failed to cancel invitation");
     } finally {
       setCancelling(false);
@@ -341,25 +342,28 @@ export function TeamSettings({ activeSection }: { activeSection?: string | null 
     setRemoving(true);
 
     try {
-      const { error } = await supabase
-        .from("profiles")
-        .update({ business_id: null, role: "member" })
-        .eq("id", removeTarget.id);
+      const response = await fetch(
+        `/api/invitations/member-role?profile_id=${encodeURIComponent(removeTarget.id)}`,
+        { method: "DELETE" },
+      );
+      const result = await response.json();
 
-      if (error) {
-        toast.error("Failed to remove member");
+      if (!response.ok) {
+        toast.error("Failed to remove member", {
+          description: result.error || "An error occurred.",
+        });
         return;
       }
 
       toast.success(`${removeTarget.full_name} has been removed from the team`);
       setRemoveTarget(null);
       fetchData();
-    } catch (err) {
+    } catch {
       toast.error("Failed to remove member");
     } finally {
       setRemoving(false);
     }
-  }, [removeTarget, supabase, fetchData]);
+  }, [removeTarget, fetchData]);
 
   // ── Loading State ───────────────────────────────────────────────
 
@@ -417,7 +421,7 @@ export function TeamSettings({ activeSection }: { activeSection?: string | null 
                       </span>
                       <RoleBadge role={member.role} />
                       {member.user_id === currentUserId && (
-                        <span className="text-[10px] text-muted-foreground/40 font-medium">(you)</span>
+                        <span className="text-xs font-medium text-muted-foreground">(you)</span>
                       )}
                     </div>
                     {member.phone && (
@@ -434,7 +438,7 @@ export function TeamSettings({ activeSection }: { activeSection?: string | null 
     );
   }
 
-  // ── Render (owner/admin view) ────────────────────────────────────
+  // ── Render (owner/business-manager view) ─────────────────────────
 
   const pendingInvites = invitations.filter((i) => i.status === "pending");
 
@@ -504,7 +508,7 @@ export function TeamSettings({ activeSection }: { activeSection?: string | null 
                   <SelectItem value="admin">
                     <span className="flex items-center gap-2">
                       <ShieldCheck className="size-3.5" />
-                      Admin — Full access (except billing)
+                      Business Manager — Full access (except billing)
                     </span>
                   </SelectItem>
                 </SelectContent>
@@ -541,7 +545,7 @@ export function TeamSettings({ activeSection }: { activeSection?: string | null 
         title="Team Members"
         description={`${members.length} member${members.length !== 1 ? "s" : ""} in your business`}
       >
-        {/* Invite button for owners/admins */}
+        {/* Invite button for owners and business managers */}
         {canManage && (
           <div className="mb-4">
             <Button
@@ -590,7 +594,7 @@ export function TeamSettings({ activeSection }: { activeSection?: string | null 
                     </span>
                     <RoleBadge role={member.role} />
                     {member.user_id === currentUserId && (
-                      <span className="text-[10px] text-muted-foreground/40 font-medium">
+                      <span className="text-xs font-medium text-muted-foreground">
                         (you)
                       </span>
                     )}
@@ -599,13 +603,13 @@ export function TeamSettings({ activeSection }: { activeSection?: string | null 
                     {member.phone && (
                       <span className="text-xs text-muted-foreground/60">{member.phone}</span>
                     )}
-                    <span className="text-[10px] text-muted-foreground/40">
+                    <span className="text-xs text-muted-foreground">
                       Joined {formatDateTime(member.created_at)}
                     </span>
                   </div>
                 </div>
 
-                {/* Actions (owner/admin only, not for self or owner) */}
+                {/* Actions (owner/business-manager only, not for self or owner) */}
                 {canManage && member.user_id !== currentUserId && member.role !== "owner" && (
                   <DropdownMenu>
                     <DropdownMenuTrigger
@@ -630,7 +634,7 @@ export function TeamSettings({ activeSection }: { activeSection?: string | null 
                           ) : (
                             <ShieldCheck className="size-3.5 text-blue-500" />
                           )}
-                          Promote to Admin
+                          Promote to Business Manager
                         </DropdownMenuItem>
                       )}
                       {member.role === "admin" && (
@@ -690,7 +694,7 @@ export function TeamSettings({ activeSection }: { activeSection?: string | null 
                   </div>
                   <div className="flex items-center gap-2 mt-0.5">
                     <RoleBadge role={invite.role} />
-                    <span className="text-[10px] text-muted-foreground/40">
+                    <span className="text-xs text-muted-foreground">
                       Expires {formatDateTime(invite.expires_at)}
                     </span>
                   </div>
@@ -736,7 +740,7 @@ export function TeamSettings({ activeSection }: { activeSection?: string | null 
                     </div>
                     <div className="flex items-center gap-2 mt-0.5">
                       <RoleBadge role={invite.role} />
-                      <span className="text-[10px] text-muted-foreground/40">
+                      <span className="text-xs text-muted-foreground">
                         {formatDateTime(invite.created_at)}
                       </span>
                     </div>

@@ -115,8 +115,8 @@ RETURNS TABLE (
     ti.token,
     ti.expires_at,
     ti.created_at
-  FROM team_invitations ti
-  JOIN businesses b ON b.id = ti.business_id
+  FROM public.team_invitations ti
+  JOIN public.businesses b ON b.id = ti.business_id
   WHERE ti.email = target_email
     AND ti.status = 'pending'
     AND ti.expires_at > now()
@@ -127,13 +127,13 @@ $$;
 CREATE OR REPLACE FUNCTION accept_invitation(invitation_token TEXT, accepting_user_id UUID)
 RETURNS UUID LANGUAGE plpgsql SECURITY DEFINER SET search_path = '' AS $$
 DECLARE
-  inv_record team_invitations%ROWTYPE;
+  inv_record public.team_invitations%ROWTYPE;
   existing_profile_id UUID;
   new_business_id UUID;
 BEGIN
   -- Get the invitation
   SELECT * INTO inv_record
-  FROM team_invitations
+  FROM public.team_invitations
   WHERE token = invitation_token
     AND status = 'pending'
     AND expires_at > now();
@@ -144,23 +144,23 @@ BEGIN
 
   -- Check if user already has a profile in this business
   SELECT id INTO existing_profile_id
-  FROM profiles
+  FROM public.profiles
   WHERE user_id = accepting_user_id
     AND business_id = inv_record.business_id;
 
   IF FOUND THEN
     -- Already a member — just update the role if the invitation has a higher role
-    UPDATE profiles
+    UPDATE public.profiles
     SET role = CASE
-        WHEN inv_record.role = 'admin' AND profiles.role = 'member' THEN 'admin'
-        ELSE profiles.role
+        WHEN inv_record.role = 'admin' AND public.profiles.role = 'member' THEN 'admin'
+        ELSE public.profiles.role
       END,
       updated_at = now()
     WHERE id = existing_profile_id
     RETURNING business_id INTO new_business_id;
   ELSE
     -- Create a new profile linked to the business
-    INSERT INTO profiles (user_id, business_id, full_name, phone, role)
+    INSERT INTO public.profiles (user_id, business_id, full_name, phone, role)
     VALUES (
       accepting_user_id,
       inv_record.business_id,
@@ -172,7 +172,7 @@ BEGIN
   END IF;
 
   -- Mark invitation as accepted
-  UPDATE team_invitations
+  UPDATE public.team_invitations
   SET status = 'accepted',
       accepted_at = now(),
       updated_at = now()

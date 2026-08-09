@@ -14,7 +14,6 @@ import { createClient } from "@/lib/supabase/client";
 import {
   getProvider,
   extractCredentials,
-  getAllProviders,
   SHARED_SETTINGS_KEYS,
 } from "@/lib/delivery/provider-registry";
 import type {

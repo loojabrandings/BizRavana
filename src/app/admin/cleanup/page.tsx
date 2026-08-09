@@ -143,11 +143,11 @@ function RetainDialog({ open, onOpenChange, business, onRetain, loading }: {
 }) {
   const [days, setDays] = useState(14);
   const [customDays, setCustomDays] = useState(false);
-  useEffect(() => { if (open) { setDays(14); setCustomDays(false); } }, [open]);
+  const [referenceTime] = useState(Date.now);
   if (!business) return null;
   const presets = [7, 14, 30, 60];
   const currentDeleteDate = business.data_delete_after ? new Date(business.data_delete_after).toLocaleDateString() : "—";
-  const newDeleteDate = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toLocaleDateString();
+  const newDeleteDate = new Date(referenceTime + days * 24 * 60 * 60 * 1000).toLocaleDateString();
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent size="sm">
@@ -284,7 +284,12 @@ export default function AdminCleanupPage() {
     finally { setLoading(false); }
   }, [supabase]);
 
-  useEffect(() => { fetchCleanupQueue(); }, [fetchCleanupQueue]);
+  useEffect(() => {
+    const taskId = window.setTimeout(() => {
+      void fetchCleanupQueue();
+    }, 0);
+    return () => window.clearTimeout(taskId);
+  }, [fetchCleanupQueue]);
 
   // ── Stats ──────────────────────────────────────────────────────
   const stats: StatsSummary = useMemo(() => {
@@ -371,7 +376,7 @@ export default function AdminCleanupPage() {
           </div>
           <div className="min-w-0">
             <button type="button" onClick={() => router.push(`/admin/businesses/${biz.id}`)} className="text-sm font-medium text-foreground truncate max-w-[160px] hover:text-primary transition-colors text-left">{biz.name}</button>
-            {biz.owner_name && <p className="text-[10px] text-muted-foreground/60 truncate max-w-[160px]">{biz.owner_name}{biz.owner_email ? ` · ${biz.owner_email}` : ""}</p>}
+            {biz.owner_name && <p className="max-w-[160px] truncate text-xs text-muted-foreground">{biz.owner_name}{biz.owner_email ? ` · ${biz.owner_email}` : ""}</p>}
           </div>
         </div>
       );
@@ -395,7 +400,7 @@ export default function AdminCleanupPage() {
       const expiredDaysAgo = getDaysSinceExpired(biz.expired_since);
       return expiredDaysAgo !== null ? <span className="text-sm text-muted-foreground/80 tabular-nums">{expiredDaysAgo} day{expiredDaysAgo !== 1 ? "s" : ""} ago</span> : <span className="text-sm text-muted-foreground/50 italic">—</span>;
     }},
-    { header: "Orders", hideBelow: "lg", accessor: (biz) => <div><span className="text-sm tabular-nums text-muted-foreground/80">{biz.orders_count}</span>{biz.data_size_estimate && <p className="text-[10px] text-muted-foreground/60">{biz.data_size_estimate}</p>}</div> },
+    { header: "Orders", hideBelow: "lg", accessor: (biz) => <div><span className="text-sm tabular-nums text-muted-foreground">{biz.orders_count}</span>{biz.data_size_estimate && <p className="text-xs text-muted-foreground">{biz.data_size_estimate}</p>}</div> },
     { header: "", className: "w-44", headerClassName: "hidden sm:table-cell", accessor: (biz) => biz.deleted_at ? <span className="text-xs text-muted-foreground/50 italic">Deleted</span> : (
       <div className="flex items-center gap-0.5 max-lg:opacity-100 opacity-0 group-hover:opacity-100 transition-opacity">
         <Button variant="ghost" size="icon-xs" onClick={() => setReactivateTarget(biz)} title="Reactivate"><RefreshCw className="size-3.5 text-primary" /></Button>
@@ -427,11 +432,11 @@ export default function AdminCleanupPage() {
         actions={isDeleted ? <span className="text-xs text-muted-foreground/50 italic py-2">Deleted</span> : (
           <>
             <button type="button" onClick={() => router.push(`/admin/businesses/${biz.id}`)}
-              className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-input bg-background px-3 py-2 text-xs font-medium min-h-11 hover:bg-accent transition-colors">
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-[10px] border border-border bg-transparent px-4 text-sm font-medium text-foreground shadow-xs transition-all hover:-translate-y-0.5 hover:border-primary/30 hover:bg-muted hover:shadow-sm">
               <ExternalLink className="size-3.5" /> View
             </button>
             <button type="button" onClick={() => handleOpenActionSheet(biz)}
-              className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-primary text-primary-foreground px-3 py-2 text-xs font-medium min-h-11 hover:bg-primary/90 transition-colors">
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-[10px] bg-primary px-4 text-sm font-medium text-white shadow-sm shadow-primary/20 transition-all hover:-translate-y-0.5 hover:bg-primary/90 hover:shadow-md">
               Manage
             </button>
           </>
@@ -507,7 +512,9 @@ export default function AdminCleanupPage() {
         </div>
       )}
 
-      <RetainDialog open={retainTarget !== null} onOpenChange={(o) => { if (!o) setRetainTarget(null); }} business={retainTarget} onRetain={handleRetain} loading={retaining} />
+      {retainTarget && (
+        <RetainDialog open onOpenChange={(o) => { if (!o) setRetainTarget(null); }} business={retainTarget} onRetain={handleRetain} loading={retaining} />
+      )}
       <ReactivateDialog open={reactivateTarget !== null} onOpenChange={(o) => { if (!o) setReactivateTarget(null); }} business={reactivateTarget} onReactivate={handleReactivate} loading={reactivating} />
 
       <ConfirmDialog open={deleteTarget !== null} onOpenChange={() => setDeleteTarget(null)} onConfirm={handleDeleteNow}

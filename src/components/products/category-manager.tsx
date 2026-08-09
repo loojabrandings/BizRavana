@@ -54,7 +54,6 @@ export function CategoryManager({
   // ─── Fetch categories ─────────────────────────────────────────
   const fetchCategories = useCallback(async () => {
     if (!businessId) return;
-    setLoading(true);
     try {
       const supabase = createClient();
       const { data } = await supabase
@@ -75,7 +74,11 @@ export function CategoryManager({
   }, [businessId, tableName]);
 
   useEffect(() => {
-    if (open) fetchCategories();
+    if (!open) return;
+    const taskId = window.setTimeout(() => {
+      void fetchCategories();
+    }, 0);
+    return () => window.clearTimeout(taskId);
   }, [open, fetchCategories]);
 
   // ─── Add category ─────────────────────────────────────────────
@@ -193,7 +196,13 @@ export function CategoryManager({
   // ─── Render ───────────────────────────────────────────────────
   return (
     <>
-      <Sheet open={open} onOpenChange={onOpenChange}>
+      <Sheet
+        open={open}
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen) setLoading(true);
+          onOpenChange(nextOpen);
+        }}
+      >
         <SheetContent side="right" className="sm:max-w-md">
           <SheetHeader className="pb-2">
             <SheetTitle>Manage Categories</SheetTitle>

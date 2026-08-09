@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import {
   ArrowLeft,
   ChevronDown,
@@ -28,8 +29,8 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Dropdown } from "@/components/ui/dropdown";
 import { FilterBar } from "@/components/shared/filter-bar";
+import { DateRangePickerModal } from "@/components/shared/lazy-date-range-picker-modal";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { DataTable, type ColumnDef } from "@/components/shared/data-table";
@@ -94,8 +95,6 @@ const statusColorMap: Record<string, string> = {
 
 import { formatCurrency } from "@/lib/formatters";
 
-import { formatDate } from "@/lib/formatters";
-
 function formatProfitMargin(margin: number | null): string {
   if (margin === null) return "—";
   const prefix = margin >= 0 ? "+" : "";
@@ -109,8 +108,9 @@ function getProfitAmount(sellingPrice: number, costPrice: number | null): number
 
 // ─── Main Page ─────────────────────────────────────────────────────
 
-export default function ProductsPage() {
+function ProductsPageInner() {
   const { guard } = useReadOnlyMode();
+  const searchParams = useSearchParams();
 
   // Data
   const [products, setProducts] = useState<Product[]>([]);
@@ -121,9 +121,19 @@ export default function ProductsPage() {
   const [dateFilter, setDateFilter] = useState<string>("this_month");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [activeSort, setActiveSort] = useState<{ key: string; direction: "asc" | "desc" } | null>({ key: "name", direction: "asc" });
   const [activeStatusTab, setActiveStatusTab] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
+
+  // ─── Apply query params as initial filters ──────────────────
+  useEffect(() => {
+    const taskId = window.setTimeout(() => {
+      const search = searchParams.get("search");
+      if (search) setSearchQuery(search);
+    }, 0);
+    return () => window.clearTimeout(taskId);
+  }, [searchParams]);
 
   // ─── Business ID & Categories ───────────────────────────────────
   const [businessId, setBusinessId] = useState<string | null>(null);
@@ -781,7 +791,12 @@ export default function ProductsPage() {
 
   // ─── Pagination ───────────────────────────────────────────────
   const [currentPage, setCurrentPage] = useState(1);
+  const [previousFilteredProducts, setPreviousFilteredProducts] = useState(filteredProducts);
   const [pageSize, setPageSize] = useState(25);
+  if (filteredProducts !== previousFilteredProducts) {
+    setPreviousFilteredProducts(filteredProducts);
+    setCurrentPage(1);
+  }
   const totalPages = Math.max(1, Math.ceil(filteredProducts.length / pageSize));
 
   const paginatedProducts = useMemo(
@@ -797,8 +812,6 @@ export default function ProductsPage() {
     });
     return map;
   }, [paginatedProducts, currentPage, pageSize]);
-
-  useEffect(() => { setCurrentPage(1); }, [filteredProducts]);
 
   // ─── Columns ────────────────────────────────────────────────────
   const columns = useMemo<ColumnDef<Product>[]>(
@@ -949,7 +962,7 @@ export default function ProductsPage() {
         ),
       },
     ],
-    [handleStatusChange, rowNumbers],
+    [fetchProductForForm, guard, handleStatusChange, rowNumbers],
   );
 
   // ─── Mobile Card Render ────────────────────────────────────────
@@ -1065,7 +1078,7 @@ export default function ProductsPage() {
         </div>
       </motion.div>
     ),
-    [handleStatusChange],
+    [fetchProductForForm, handleStatusChange],
   );
 
   // ─── Product Preview (read-only view) ─────────────────────────
@@ -1074,7 +1087,7 @@ export default function ProductsPage() {
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, ease: "easeOut" }}
-      className="flex flex-col rounded-2xl glass-card"
+      className="flex flex-col rounded-xl glass-card"
     >
       {/* ═══════ Header ════════════════════════════════════════════ */}
       <div className={isMobile ? "px-4 pt-4 pb-3" : "px-8 pt-7 pb-5"}>
@@ -1260,7 +1273,6 @@ export default function ProductsPage() {
   const emptyState = useMemo(() => {
     const isStatusFiltered = activeStatusTab !== "all";
     const isCategoryFiltered = activeCategoryTab !== "all";
-    const isFiltered = products.length > 0 && (isStatusFiltered || isCategoryFiltered);
     const statusLabel = statusTabs.find((t) => t.value === activeStatusTab)?.label ?? "";
     const categoryLabel = categoryTabs.find((t) => t.value === activeCategoryTab)?.label ?? "";
     let title = "No products yet";
@@ -1289,7 +1301,7 @@ export default function ProductsPage() {
         </Button>
       ) : undefined,
     };
-  }, [products.length, activeStatusTab, activeCategoryTab, categoryTabs]);
+  }, [activeStatusTab, activeCategoryTab, categoryTabs, guard]);
 
   // ─── Render ────────────────────────────────────────────────────
   return (
@@ -1371,49 +1383,30 @@ export default function ProductsPage() {
             }}
             date={{
               value: dateFilter,
-              onChange: (v) => v && setDateFilter(v),
+              onChange: (v) => {
+                if (v === "custom") setDatePickerOpen(true);
+                else if (v) setDateFilter(v);
+              },
               options: dateFilterOptions,
-              isCustomMode: dateFilter === "custom",
-              onCalendarClick: () =>
-                setDateFilter(dateFilter === "custom" ? "this_month" : "custom"),
+              onCalendarClick: () => setDatePickerOpen(true),
             }}
             activeFilterCount={activeFilterCount}
             onClearFilters={handleClearFilters}
           />
 
-          {/* Custom date inputs row */}
-          {dateFilter === "custom" && (
-            <div className="flex items-center gap-2">
-              <div className="flex items-center gap-1.5">
-                <span className="text-sm font-medium text-muted-foreground uppercase tracking-wider">From</span>
-                <input
-                  type="date"
-                  value={dateFrom}
-                  onChange={(e) => setDateFrom(e.target.value)}
-                  className="h-9 w-[140px] rounded-xl border border-input bg-background px-3 text-sm font-medium text-foreground shadow-xs outline-none transition-colors focus:border-ring focus:ring-[3px] focus:ring-ring/50 [color-scheme:light] dark:[color-scheme:dark]"
-                  aria-label="From date"
-                />
-              </div>
-              <span className="text-sm text-muted-foreground">—</span>
-              <div className="flex items-center gap-1.5">
-                <span className="text-sm font-medium text-muted-foreground uppercase tracking-wider">To</span>
-                <input
-                  type="date"
-                  value={dateTo}
-                  onChange={(e) => setDateTo(e.target.value)}
-                  className="h-9 w-[140px] rounded-xl border border-input bg-background px-3 text-sm font-medium text-foreground shadow-xs outline-none transition-colors focus:border-ring focus:ring-[3px] focus:ring-ring/50 [color-scheme:light] dark:[color-scheme:dark]"
-                  aria-label="To date"
-                />
-              </div>
-              <Dropdown
-                value={dateFilter}
-                onChange={(v) => v && setDateFilter(v)}
-                options={dateFilterOptions.map((o) => ({ value: o.value, label: o.label }))}
-                size="sm"
-                className="min-w-[36px]"
-              />
-            </div>
-          )}
+          {/* Custom date range picker modal */}
+          <DateRangePickerModal
+            open={datePickerOpen}
+            onOpenChange={setDatePickerOpen}
+            from={dateFrom}
+            to={dateTo}
+            onApply={(f, t) => {
+              setDateFrom(f);
+              setDateTo(t);
+              setDateFilter("custom");
+              setDatePickerOpen(false);
+            }}
+          />
         </motion.div>
       )}
 
@@ -1507,5 +1500,23 @@ export default function ProductsPage() {
         businessId={businessId}
       />
     </motion.div>
+  );
+}
+
+// ─── Exported Page (wrapped in Suspense for useSearchParams) ───────
+export default function ProductsPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-[50vh] items-center justify-center">
+          <div className="flex flex-col items-center gap-2 text-muted-foreground">
+            <Package className="size-6 animate-pulse" />
+            <p className="text-sm font-medium">Loading products…</p>
+          </div>
+        </div>
+      }
+    >
+      <ProductsPageInner />
+    </Suspense>
   );
 }

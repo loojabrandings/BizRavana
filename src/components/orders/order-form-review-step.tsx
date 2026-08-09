@@ -3,7 +3,6 @@
 import { MessageCircle, Phone, Mail, Truck } from "lucide-react";
 import { cn, formatEnumLabel } from "@/lib/utils";
 import { formatPhoneNumber } from "@/lib/formatters";
-import { Separator } from "@/components/ui/separator";
 import type { OrderFormData, OrderFormCalculations } from "./types";
 import { formatCurrency } from "./utils";
 

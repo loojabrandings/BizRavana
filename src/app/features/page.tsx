@@ -196,7 +196,7 @@ const featureGroups = [
           "Invite team members with role-based access. Assign tasks, track activity and work together seamlessly.",
         highlights: [
           "Multi-user support",
-          "Role-based access (owner, admin, member)",
+          "Role-based access (Owner, Business Manager, Member)",
           "Activity log",
           "Task assignment",
         ],

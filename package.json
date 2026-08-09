@@ -6,7 +6,12 @@
     "dev": "next dev --webpack",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "typecheck": "tsc --noEmit",
+    "test": "node scripts/quality/run-repository-tests.mjs",
+    "test:staging": "node scripts/staging/run-security-regression.mjs",
+    "staging:start": "node scripts/staging/start-staging-server.mjs",
+    "quality": "npm run lint && npm run typecheck && npm test && npm run build"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",

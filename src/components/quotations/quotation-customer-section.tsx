@@ -44,20 +44,16 @@ export function QuotationCustomerSection({
   const [pasteOpen, setPasteOpen] = useState(false);
   const [pasteText, setPasteText] = useState("");
 
-  // Build courier data for the parser (if available)
-  const courierData = courierStates && courierCities && courierStates.length > 0
-    ? {
-        cities: courierCities,
-        states: courierStates,
-      }
-    : undefined;
-
   // ─── Handle Parse & Fill ───────────────────────────────────────
   const handleParseFill = useCallback(() => {
     if (!pasteText.trim()) {
       toast.error("Paste customer details first");
       return;
     }
+
+    const courierData = courierStates && courierCities && courierStates.length > 0
+      ? { cities: courierCities, states: courierStates }
+      : undefined;
 
     const parsed = parseCustomerText(pasteText, {
       courierData,
@@ -85,7 +81,7 @@ export function QuotationCustomerSection({
     toast.success("Customer details parsed", {
       description: `Filled: ${fieldsFilled.join(", ")}`,
     });
-  }, [pasteText, courierData, courierStates, updateForm]);
+  }, [pasteText, courierCities, courierStates, updateForm]);
 
   const districtOptions = courierStates && courierStates.length > 0
     ? courierStates.map((s) => s.name)

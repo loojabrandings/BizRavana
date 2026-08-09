@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { z } from "zod";
+import { requireSuperAdmin } from "@/lib/admin-authorization";
 import { getAdminClient } from "@/lib/supabase/admin";
 import type { Json } from "@/types/database";
 
@@ -27,6 +28,12 @@ const COUNT_TABLES = [
   "payment_proofs",
   "team_invitations",
 ] as const;
+
+const deletionSchema = z
+  .object({
+    confirmation: z.string().trim().min(1).max(320),
+  })
+  .strict();
 
 function errorResponse(message: string, status: number) {
   return NextResponse.json({ error: message }, { status });
@@ -151,21 +158,20 @@ export async function DELETE(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const supabase = await createClient();
-  const {
-    data: { user: currentAdmin },
-  } = await supabase.auth.getUser();
-
-  if (!currentAdmin || currentAdmin.app_metadata?.is_super_admin !== true) {
-    return errorResponse("Super admin access required.", 403);
+  const authorization = await requireSuperAdmin();
+  if (!authorization.ok) {
+    return errorResponse(authorization.error, authorization.status);
   }
 
-  const { id: businessId } = await params;
-  const body = (await request.json().catch(() => null)) as {
-    confirmation?: string;
-  } | null;
+  const currentAdmin = authorization.user;
 
-  if (!body?.confirmation?.trim()) {
+  const businessId = z.string().uuid().safeParse((await params).id);
+  if (!businessId.success) {
+    return errorResponse("Invalid business ID.", 400);
+  }
+
+  const body = deletionSchema.safeParse(await request.json().catch(() => null));
+  if (!body.success) {
     return errorResponse("Type the owner email to confirm permanent deletion.", 400);
   }
 
@@ -173,7 +179,7 @@ export async function DELETE(
   const { data: business, error: businessError } = await admin
     .from("businesses")
     .select("id, name, owner_id, account_status, created_at")
-    .eq("id", businessId)
+    .eq("id", businessId.data)
     .single();
 
   if (businessError || !business) {
@@ -222,7 +228,7 @@ export async function DELETE(
         : "";
   }
 
-  if (!ownerEmail || body.confirmation.trim().toLowerCase() !== ownerEmail.toLowerCase()) {
+  if (!ownerEmail || body.data.confirmation.toLowerCase() !== ownerEmail.toLowerCase()) {
     return errorResponse("The confirmation email does not match the business owner.", 400);
   }
 
@@ -231,7 +237,7 @@ export async function DELETE(
       const result = await admin
         .from(table)
         .select("id", { count: "exact", head: true })
-        .eq("business_id", businessId);
+        .eq("business_id", businessId.data);
 
       return [table, result.count ?? 0] as const;
     }),
@@ -350,7 +356,7 @@ export async function DELETE(
 
   let storageSummary: StorageCleanupSummary;
   try {
-    storageSummary = await removeStorageFiles(businessId, business.owner_id);
+    storageSummary = await removeStorageFiles(businessId.data, business.owner_id);
   } catch (error) {
     await admin
       .from("admin_activity_log")

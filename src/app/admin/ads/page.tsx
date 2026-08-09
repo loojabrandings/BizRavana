@@ -23,6 +23,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { createClient } from "@/lib/supabase/client";
+import { deleteUploadedFiles, uploadFile } from "@/lib/uploads";
 import type { Database } from "@/types/database";
 
 type AdCampaign = Database["public"]["Tables"]["ad_campaigns"]["Row"];
@@ -168,14 +169,9 @@ export default function AdminAdsPage() {
       if (!user) throw new Error("Please sign in again.");
 
       if (image) {
-        const extension = image.name.split(".").pop()?.toLowerCase() || "jpg";
-        const newPath = `${crypto.randomUUID()}.${extension}`;
-        const { error: uploadError } = await supabase.storage
-          .from("dashboard-ads")
-          .upload(newPath, image, { contentType: image.type, upsert: false });
-        if (uploadError) throw uploadError;
-        uploadedImagePath = newPath;
-        imagePath = newPath;
+        const uploaded = await uploadFile("dashboard-ad", image);
+        uploadedImagePath = uploaded.path;
+        imagePath = uploaded.path;
       }
 
       const payload = {
@@ -201,7 +197,7 @@ export default function AdminAdsPage() {
         : await supabase.from("ad_campaigns").insert({ ...payload, created_by: user.id });
       if (result.error) throw result.error;
       if (uploadedImagePath && editing?.image_path) {
-        await supabase.storage.from("dashboard-ads").remove([editing.image_path]);
+        await deleteUploadedFiles("dashboard-ad", [editing.image_path]);
       }
 
       toast.success(editing ? "Ad updated." : "Ad created.");
@@ -209,7 +205,7 @@ export default function AdminAdsPage() {
       await load();
     } catch (error) {
       if (uploadedImagePath) {
-        await supabase.storage.from("dashboard-ads").remove([uploadedImagePath]);
+        await deleteUploadedFiles("dashboard-ad", [uploadedImagePath]);
       }
       console.error("Ad save failed:", error);
       toast.error(error instanceof Error ? error.message : "Ad could not be saved.");
@@ -232,7 +228,7 @@ export default function AdminAdsPage() {
     setDeletingId(ad.id);
     const { error } = await supabase.from("ad_campaigns").delete().eq("id", ad.id);
     if (!error && ad.image_path) {
-      await supabase.storage.from("dashboard-ads").remove([ad.image_path]);
+      await deleteUploadedFiles("dashboard-ad", [ad.image_path]);
     }
     setDeletingId(null);
     if (error) return toast.error("Ad could not be deleted.");
@@ -335,7 +331,7 @@ export default function AdminAdsPage() {
                   </div>
                 )}
                 <div className="flex min-w-0 flex-1 flex-col justify-center px-4 py-3 pr-10">
-                  <span className="mb-1 text-[9px] font-semibold uppercase tracking-[0.14em] text-primary">
+                  <span className="mb-1 text-xs font-semibold uppercase tracking-wider text-primary">
                     {form.label}
                   </span>
                   <h3 className="truncate text-sm font-semibold text-foreground">

@@ -12,12 +12,10 @@ import {
   Loader2,
   RefreshCw,
   Trash2,
-  Upload,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
-import { CollapsibleCard } from "@/components/shared/collapsible-card";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { toast } from "sonner";
 
@@ -215,11 +213,17 @@ export function CloudBackupSettings() {
 
   // Initial load
   useEffect(() => {
-    fetchBusinessAndPlan();
+    const taskId = window.setTimeout(() => {
+      void fetchBusinessAndPlan();
+    }, 0);
+    return () => window.clearTimeout(taskId);
   }, [fetchBusinessAndPlan]);
 
   useEffect(() => {
-    if (businessId) fetchBackups();
+    const taskId = window.setTimeout(() => {
+      if (businessId) void fetchBackups();
+    }, 0);
+    return () => window.clearTimeout(taskId);
   }, [businessId, fetchBackups]);
 
   // ═════════════════════════════════════════════════════════════
@@ -363,13 +367,13 @@ export function CloudBackupSettings() {
 
           for (let i = 0; i < clean.length; i += 50) {
             const batch = clean.slice(i, i + 50);
-            const upsertOptions =
+            const upsertOptions: { onConflict?: string } =
               table === "business_settings"
-                ? { onConflict: "business_id, key" as const }
+                ? { onConflict: "business_id, key" }
                 : {};
             const { error } = await supabase
               .from(table)
-              .upsert(batch, upsertOptions as any);
+              .upsert(batch, upsertOptions);
             if (error) {
               console.error(`Restore failed for ${table}:`, error);
             } else {

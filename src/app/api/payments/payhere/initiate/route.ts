@@ -113,7 +113,7 @@ export async function POST(request: Request) {
   }
   if (!["owner", "admin"].includes(profile.role)) {
     return errorResponse(
-      "Only a business owner or admin can make this payment.",
+      "Only a business owner or Business Manager can make this payment.",
       403,
     );
   }

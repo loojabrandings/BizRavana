@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { Loader2, Truck, CheckCircle2, XCircle, AlertTriangle, MapPin } from "lucide-react";
+import { useCallback, useMemo, useState } from "react";
+import { Loader2, Truck, CheckCircle2, XCircle, AlertTriangle } from "lucide-react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import {
@@ -61,23 +61,12 @@ export function BulkDispatchDialog({
   const [currentIndex, setCurrentIndex] = useState(0);
   const [results, setResults] = useState<BulkDispatchResult[]>([]);
 
-  // Reset state when dialog opens
-  useEffect(() => {
-    if (open) {
-      setState("idle");
-      setCurrentIndex(0);
-      setResults([]);
-    }
-  }, [open]);
-
   // ─── Categorise orders ──────────────────────────────────────
   const { eligible, skipped } = useMemo(() => {
     const eligible: BulkOrder[] = [];
     const skipped: { order: BulkOrder; reason: string }[] = [];
 
     const dispatachableStatuses = ["new_order", "ready", "packed"];
-    const orderMap = new Map(orders.map((o) => [o.id, o]));
-
     // We need the full order data from the parent page to check district/city,
     // but since this dialog only gets basic info, we'll pass all orders through
     // and let the parent handle validation.

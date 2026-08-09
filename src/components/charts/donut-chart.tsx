@@ -45,25 +45,37 @@ export function DonutChart({
   const radius = center - strokeWidth / 2;
   const circumference = 2 * Math.PI * radius;
 
-  // Build arc segments
-  let cumulativePercent = 0;
-  const segments = data.map((item, index) => {
-    const percent = total > 0 ? item.value / total : 0;
-    const offset = cumulativePercent * circumference;
-    const length = percent * circumference;
-    cumulativePercent += percent;
+  // Build arc segments without mutating render-scoped accumulator state.
+  const segments = data.reduce<{
+    cumulativePercent: number;
+    items: Array<
+      DonutChartData & {
+        percent: number;
+        offset: number;
+        length: number;
+        color: (typeof SEGMENT_COLORS)[number];
+        index: number;
+      }
+    >;
+  }>(
+    (result, item, index) => {
+      const percent = total > 0 ? item.value / total : 0;
+      const segment = {
+        ...item,
+        percent,
+        offset: result.cumulativePercent * circumference,
+        length: percent * circumference,
+        color: SEGMENT_COLORS[index % SEGMENT_COLORS.length],
+        index,
+      };
 
-    const color = SEGMENT_COLORS[index % SEGMENT_COLORS.length];
-
-    return {
-      ...item,
-      percent,
-      offset,
-      length,
-      color,
-      index,
-    };
-  });
+      return {
+        cumulativePercent: result.cumulativePercent + percent,
+        items: [...result.items, segment],
+      };
+    },
+    { cumulativePercent: 0, items: [] },
+  ).items;
 
   return (
     <div className="flex flex-col items-center gap-5 sm:flex-row sm:items-start">

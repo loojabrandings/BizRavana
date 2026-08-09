@@ -15,7 +15,7 @@ export function SectionCard({
   className?: string;
 }) {
   return (
-    <div className={cn("rounded-2xl sm:rounded-3xl glass-card overflow-hidden", className)}>
+    <div className={cn("rounded-xl glass-card overflow-hidden", className)}>
       <div className="border-b border-border/50 px-4 sm:px-6 py-3 sm:py-4">
         <div className="flex items-center gap-2.5 sm:gap-3">
           <div className="flex size-8 sm:size-9 items-center justify-center rounded-lg sm:rounded-xl bg-primary/10">

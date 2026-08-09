@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef } from "react";
+import NextImage from "next/image";
 import { Upload, X } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -110,7 +111,14 @@ export function ImageUpload({
         <div className="flex flex-wrap gap-2">
           {images.map((item) => (
             <div key={item.id} className="group relative size-20 overflow-hidden rounded-xl border border-border/60 bg-muted/30">
-              <img src={item.previewUrl} alt="" className="size-full object-cover" />
+              <NextImage
+                src={item.previewUrl}
+                alt=""
+                fill
+                sizes="80px"
+                unoptimized
+                className="object-cover"
+              />
               {item.uploading && (
                 <div className="absolute inset-0 flex items-center justify-center bg-black/40">
                   <div className="size-5 animate-spin rounded-full border-2 border-white border-t-transparent" />

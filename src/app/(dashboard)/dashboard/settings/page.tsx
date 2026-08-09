@@ -28,7 +28,6 @@ import {
   Upload,
   User,
   Users,
-  Database,
   Download,
   Globe,
   Image as ImageIcon,
@@ -46,6 +45,11 @@ import {
   X,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import {
+  deleteUploadedFiles,
+  storagePathFromPublicUrl,
+  uploadFile,
+} from "@/lib/uploads";
 import { cn, formatEnumLabel } from "@/lib/utils";
 import { PageHeader } from "@/components/shared/page-header";
 
@@ -65,7 +69,6 @@ import {
   type AccentColor,
   type FontFamily,
   type FontSize,
-  type BackgroundStyle,
 } from "@/stores/preferences-store";
 import { useOrdersSettings } from "@/stores/orders-settings-store";
 import { useQuotationSettings } from "@/stores/quotation-settings-store";
@@ -129,22 +132,6 @@ const PALETTE_OPTIONS: { value: AccentColor; label: string; colors: string[] }[]
 
 
 
-const paymentMethodOptions = [
-  { value: "cod", label: "COD" },
-  { value: "cash", label: "Cash" },
-  { value: "card", label: "Card" },
-  { value: "bank_transfer", label: "Bank Transfer" },
-  { value: "online", label: "Online" },
-];
-
-const TIMEZONES = [
-  "Asia/Colombo", "Asia/Kolkata", "Asia/Dubai", "Asia/Singapore",
-  "Asia/Kuala_Lumpur", "Asia/Bangkok", "Asia/Dhaka", "Asia/Kathmandu",
-  "Asia/Karachi", "Asia/Tokyo", "Asia/Shanghai", "Australia/Sydney",
-  "Pacific/Auckland", "Europe/London", "Europe/Paris", "America/New_York",
-  "America/Chicago", "America/Los_Angeles",
-];
-
 const DATE_FORMATS = [
   { label: "YYYY-MM-DD", value: "YYYY-MM-DD", example: "2026-07-19" },
   { label: "DD-MM-YYYY", value: "DD-MM-YYYY", example: "19-07-2026" },
@@ -158,12 +145,6 @@ const CURRENCIES = [
   { label: "INR (₹)", value: "INR" }, { label: "AED (د.إ)", value: "AED" },
   { label: "SGD (S$)", value: "SGD" }, { label: "MYR (RM)", value: "MYR" },
   { label: "THB (฿)", value: "THB" }, { label: "AUD (A$)", value: "AUD" },
-];
-
-const COUNTRIES = [
-  "Sri Lanka", "India", "Maldives", "Bangladesh", "Nepal", "Pakistan",
-  "Singapore", "Malaysia", "Thailand", "United Arab Emirates",
-  "United Kingdom", "United States", "Australia",
 ];
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -195,7 +176,7 @@ function FormField({
       {label && (
         <div className="flex items-baseline justify-between">
           <Label className="text-sm font-medium text-foreground/80">{label}</Label>
-          {hint && <span className="text-[11px] text-muted-foreground/50">{hint}</span>}
+          {hint && <span className="text-xs text-muted-foreground">{hint}</span>}
         </div>
       )}
       {children}
@@ -246,7 +227,7 @@ function SettingsRow({
     >
       <div className="shrink-0 sm:w-[220px]">
         <Label className="text-sm font-medium text-foreground/80">{label}</Label>
-        {hint && <p className="text-[11px] text-muted-foreground/50 mt-0.5 leading-tight">{hint}</p>}
+        {hint && <p className="mt-0.5 text-xs leading-normal text-muted-foreground">{hint}</p>}
       </div>
       <div className="flex-1 flex justify-start sm:justify-end">{children}</div>
     </motion.div>
@@ -266,7 +247,7 @@ function SectionDivider() {
 function Badge({ children, variant = "default" }: { children: React.ReactNode; variant?: "default" | "success" | "warning" | "info" }) {
   return (
     <span className={cn(
-      "inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider",
+      "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold",
       variant === "default" && "bg-muted text-muted-foreground/60",
       variant === "success" && "bg-success/10 text-success",
       variant === "warning" && "bg-warning/10 text-warning",
@@ -447,7 +428,7 @@ function GeneralSettings({ activeSection }: { activeSection: string | null }) {
                         <Icon className="size-5" />
                       </div>
                       <span className={cn("text-sm font-semibold", selected ? "text-foreground" : "text-muted-foreground/60")}>{opt.label}</span>
-                      <span className="text-[11px] text-muted-foreground/40 text-center leading-tight">{opt.description}</span>
+                      <span className="text-center text-xs leading-normal text-muted-foreground">{opt.description}</span>
                     </motion.button>
                   );
                 })}
@@ -527,7 +508,7 @@ function GeneralSettings({ activeSection }: { activeSection: string | null }) {
                     <span className="text-xl">✨</span>
                   </div>
                   <span className={cn("text-sm font-semibold", backgroundStyle === "blobs" ? "text-foreground" : "text-muted-foreground/60")}>Blobs</span>
-                  <span className="text-[11px] text-muted-foreground/40 text-center leading-tight">Gradient blobs</span>
+                  <span className="text-center text-xs leading-normal text-muted-foreground">Gradient blobs</span>
                 </motion.button>
 
                 <motion.button
@@ -543,7 +524,7 @@ function GeneralSettings({ activeSection }: { activeSection: string | null }) {
                     <span className="text-xl">●</span>
                   </div>
                   <span className={cn("text-sm font-semibold", backgroundStyle === "solid" ? "text-foreground" : "text-muted-foreground/60")}>Solid</span>
-                  <span className="text-[11px] text-muted-foreground/40 text-center leading-tight">Clean solid background</span>
+                  <span className="text-center text-xs leading-normal text-muted-foreground">Clean solid background</span>
                 </motion.button>
               </div>
             </div>
@@ -670,9 +651,7 @@ function ProfileSettings({ activeSection }: { activeSection: string | null }) {
   const [postalCode, setPostalCode] = useState("");
   const [country, setCountry] = useState("Sri Lanka");
   const [businessType, setBusinessType] = useState("");
-  const [currency, setCurrency] = useState("LKR");
   const [timezone, setTimezone] = useState("Asia/Colombo");
-  const [dateFormat, setDateFormat] = useState("YYYY-MM-DD");
   const [facebook, setFacebook] = useState("");
   const [instagram, setInstagram] = useState("");
   const [tiktok, setTiktok] = useState("");
@@ -702,10 +681,7 @@ function ProfileSettings({ activeSection }: { activeSection: string | null }) {
     setUploadingAvatar(true);
     try {
       const supabase = createClient();
-      const filePath = `avatars/${userId}/avatar-${Date.now()}.png`;
-      const { error: uploadError } = await supabase.storage.from(SUPABASE_STORAGE_BUCKET).upload(filePath, croppedBlob, { upsert: true });
-      if (uploadError) throw uploadError;
-      const { data: { publicUrl } } = supabase.storage.from(SUPABASE_STORAGE_BUCKET).getPublicUrl(filePath);
+      const { publicUrl } = await uploadFile("profile-avatar", croppedBlob);
       await supabase.from("profiles").update({ avatar_url: publicUrl }).eq("user_id", userId);
       setAvatarUrl(publicUrl);
       toast.success("Avatar updated successfully");
@@ -719,8 +695,8 @@ function ProfileSettings({ activeSection }: { activeSection: string | null }) {
     setAvatarConfirmOpen(false);
     try {
       const supabase = createClient();
-      const oldPath = avatarUrl.split("/").slice(-3).join("/");
-      await supabase.storage.from(SUPABASE_STORAGE_BUCKET).remove([oldPath]);
+      const oldPath = storagePathFromPublicUrl(avatarUrl, SUPABASE_STORAGE_BUCKET);
+      if (oldPath) await deleteUploadedFiles("profile-avatar", [oldPath]);
       await supabase.from("profiles").update({ avatar_url: null }).eq("user_id", userId);
       setAvatarUrl(null);
       toast.success("Avatar removed");
@@ -750,21 +726,7 @@ function ProfileSettings({ activeSection }: { activeSection: string | null }) {
     setUploadingLogo(true);
     try {
       const supabase = createClient();
-      const extension =
-        file.type === "image/jpeg"
-          ? "jpg"
-          : file.type === "image/webp"
-            ? "webp"
-            : "png";
-      const filePath = `logos/${businessId}/logo-${Date.now()}.${extension}`;
-      const { error: uploadError } = await supabase.storage
-        .from(SUPABASE_STORAGE_BUCKET)
-        .upload(filePath, file, {
-          contentType: file.type,
-          upsert: true,
-        });
-      if (uploadError) throw uploadError;
-      const { data: { publicUrl } } = supabase.storage.from(SUPABASE_STORAGE_BUCKET).getPublicUrl(filePath);
+      const { publicUrl } = await uploadFile("business-logo", file);
       const { error: updateError } = await supabase
         .from("businesses")
         .update({ logo_url: publicUrl })
@@ -782,8 +744,8 @@ function ProfileSettings({ activeSection }: { activeSection: string | null }) {
     setLogoConfirmOpen(false);
     try {
       const supabase = createClient();
-      const oldPath = businessLogoUrl.split("/").slice(-3).join("/");
-      await supabase.storage.from(SUPABASE_STORAGE_BUCKET).remove([oldPath]);
+      const oldPath = storagePathFromPublicUrl(businessLogoUrl, SUPABASE_STORAGE_BUCKET);
+      if (oldPath) await deleteUploadedFiles("business-logo", [oldPath]);
       await supabase.from("businesses").update({ logo_url: null }).eq("id", businessId);
       setBusinessLogoUrl(null);
       toast.success("Logo removed");
@@ -837,8 +799,8 @@ function ProfileSettings({ activeSection }: { activeSection: string | null }) {
             setTagline(map.tagline || ""); setWhatsappNumber(map.whatsapp_number || "");
             setBusinessEmail(map.business_email || ""); setWebsite(map.website || "");
             setCity(map.city || ""); setPostalCode(map.postal_code || "");
-            setCountry(map.country || "Sri Lanka"); setCurrency(map.currency || "LKR");
-            setTimezone(map.timezone || "Asia/Colombo"); setDateFormat(map.date_format || "YYYY-MM-DD");
+            setCountry(map.country || "Sri Lanka");
+            setTimezone(map.timezone || "Asia/Colombo");
             // Sync currency & dateFormat to preferences store for General tab
             usePreferences.getState().setCurrency(map.currency || "LKR");
             usePreferences.getState().setDateFormat(map.date_format || "YYYY-MM-DD");
@@ -889,7 +851,7 @@ function ProfileSettings({ activeSection }: { activeSection: string | null }) {
     } catch (err) {
       toast.error("Failed to update business profile", { description: err instanceof Error ? err.message : "An error occurred." });
     } finally { setSavingBusiness(false); }
-  }, [businessId, businessName, businessType, businessPhone, district, address, tagline, whatsappNumber, businessEmail, website, city, postalCode, country, currency, timezone, dateFormat, facebook, instagram, tiktok, linkedin]);
+  }, [businessId, businessName, businessType, businessPhone, district, address, tagline, whatsappNumber, businessEmail, website, city, postalCode, country, timezone, facebook, instagram, tiktok, linkedin]);
 
   return (
     <>
@@ -993,7 +955,7 @@ function ProfileSettings({ activeSection }: { activeSection: string | null }) {
                         <Smartphone className="size-4" />
                       </div>
                       <div className="min-w-0">
-                        <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground/40">Phone</p>
+                        <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Phone</p>
                         <p className="text-sm font-medium text-foreground/80 truncate">{businessPhone}</p>
                       </div>
                     </div>
@@ -1004,7 +966,7 @@ function ProfileSettings({ activeSection }: { activeSection: string | null }) {
                         <Mail className="size-4" />
                       </div>
                       <div className="min-w-0">
-                        <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground/40">Email</p>
+                        <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Email</p>
                         <p className="text-sm font-medium text-foreground/80 truncate">{businessEmail}</p>
                       </div>
                     </div>
@@ -1019,7 +981,7 @@ function ProfileSettings({ activeSection }: { activeSection: string | null }) {
                         <MapPin className="size-4" />
                       </div>
                       <div className="min-w-0">
-                        <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground/40">Location</p>
+                        <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Location</p>
                         <p className="text-sm text-foreground/70">{address}</p>
                       </div>
                     </div>
@@ -1030,7 +992,7 @@ function ProfileSettings({ activeSection }: { activeSection: string | null }) {
                         <Globe className="size-4" />
                       </div>
                       <div className="min-w-0">
-                        <p className="text-[10px] font-medium uppercase tracking-wider text-primary/40">Website</p>
+                        <p className="text-xs font-medium uppercase tracking-wider text-primary">Website</p>
                         <p className="text-sm font-medium text-primary/70">{website.replace("https://", "").replace("http://", "")}</p>
                       </div>
                     </div>
@@ -1047,7 +1009,7 @@ function ProfileSettings({ activeSection }: { activeSection: string | null }) {
                         {tiktok && <SocialIcon type="tiktok" href={buildSocialUrl("tiktok", tiktok)} />}
                         {linkedin && <SocialIcon type="linkedin" href={buildSocialUrl("linkedin", linkedin)} />}
                       </div>
-                      <span className="text-[9px] font-medium uppercase tracking-[0.15em] text-muted-foreground/25">Live Preview</span>
+                      <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Live Preview</span>
                     </div>
                   </div>
                 )}
@@ -1255,7 +1217,7 @@ function OperationalSettings({ activeSection }: { activeSection: string | null }
                     >
                       {formatEnumLabel(method)}
                       {isDefault && (
-                        <span className="ml-1.5 text-[10px] font-semibold uppercase tracking-wider text-primary">
+                        <span className="ml-1.5 text-xs font-semibold text-primary">
                           Default
                         </span>
                       )}
@@ -1487,7 +1449,7 @@ function OperationalSettings({ activeSection }: { activeSection: string | null }
                     >
                       {formatEnumLabel(method)}
                       {isDefault && (
-                        <span className="ml-1.5 text-[10px] font-semibold uppercase tracking-wider text-primary">
+                        <span className="ml-1.5 text-xs font-semibold text-primary">
                           Default
                         </span>
                       )}
@@ -1534,7 +1496,7 @@ function OperationalSettings({ activeSection }: { activeSection: string | null }
                 </Button>
               </div>
             </div>
-            <p className="text-[11px] text-muted-foreground/50">
+            <p className="text-xs text-muted-foreground">
               Click a method to set it as default. New methods are stored as lowercase with underscores.
             </p>
           </div>
@@ -1576,6 +1538,30 @@ const DATA_ENTITIES: DataEntity[] = [
 ];
 
 const ALL_ENTITY_KEYS = DATA_ENTITIES.map((e) => e.key);
+
+const GENERATED_COLUMNS: Record<string, string[]> = {
+  products: ["profit_margin"],
+  orders: ["balance_remaining", "total"],
+  order_items: ["total_price"],
+  quotations: ["grand_total"],
+  quotation_items: ["total_price"],
+  expenses: ["total_cost"],
+};
+
+const TABLES_WITHOUT_UPDATED_AT = new Set([
+  "order_items",
+  "order_status_history",
+  "inventory_transactions",
+  "quotation_items",
+  "price_snapshots",
+]);
+
+const RESET_TABLES = [
+  ...DATA_ENTITIES
+    .filter((entity) => entity.key !== "settings")
+    .flatMap((entity) => entity.tables),
+  "profiles",
+].reverse();
 
 // ─── Entity Checkbox (extracted to prevent remounting) ────────────
 
@@ -1621,6 +1607,46 @@ function EntityCheckbox({
   );
 }
 
+function EntitySelectionGrid({
+  selected,
+  setSelected,
+}: {
+  selected: Set<string>;
+  setSelected: React.Dispatch<React.SetStateAction<Set<string>>>;
+}) {
+  const toggle = (key: string) => {
+    setSelected((previous) => {
+      const next = new Set(previous);
+      if (key === "all") {
+        return next.size === ALL_ENTITY_KEYS.length
+          ? new Set()
+          : new Set(ALL_ENTITY_KEYS);
+      }
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
+
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 py-2">
+      <EntityCheckbox
+        entity={{ key: "all", label: "All Data" }}
+        checked={selected.size === ALL_ENTITY_KEYS.length}
+        onToggle={() => toggle("all")}
+      />
+      {DATA_ENTITIES.map((entity) => (
+        <EntityCheckbox
+          key={entity.key}
+          entity={entity}
+          checked={selected.has(entity.key)}
+          onToggle={() => toggle(entity.key)}
+        />
+      ))}
+    </div>
+  );
+}
+
 // ─── Data Security Settings ──────────────────────────────────────
 
 function DataSecuritySettings({ activeSection }: { activeSection: string | null }) {
@@ -1637,51 +1663,6 @@ function DataSecuritySettings({ activeSection }: { activeSection: string | null 
   const [resetPassword, setResetPassword] = useState("");
   const [verifyingPassword, setVerifyingPassword] = useState(false);
   const [passwordError, setPasswordError] = useState("");
-
-  const allSelected = (set: Set<string>) => set.size === ALL_ENTITY_KEYS.length;
-
-  const toggle = useCallback(
-    (key: string, setter: React.Dispatch<React.SetStateAction<Set<string>>>) => {
-      setter((prev) => {
-        const next = new Set(prev);
-        if (key === "all") {
-          return next.size === ALL_ENTITY_KEYS.length ? new Set() : new Set(ALL_ENTITY_KEYS);
-        }
-        if (next.has(key)) next.delete(key);
-        else next.add(key);
-        return next;
-      });
-    },
-    [],
-  );
-
-  // ── Entity selection grid (shared for both dialogs) ──────────
-  const EntitySelectionGrid = useCallback(
-    ({
-      selected,
-      setSelected,
-    }: {
-      selected: Set<string>;
-      setSelected: React.Dispatch<React.SetStateAction<Set<string>>>;
-    }) => (
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 py-2">
-        <EntityCheckbox
-          entity={{ key: "all", label: "All Data" }}
-          checked={allSelected(selected)}
-          onToggle={() => toggle("all", setSelected)}
-        />
-        {DATA_ENTITIES.map((entity) => (
-          <EntityCheckbox
-            key={entity.key}
-            entity={entity}
-            checked={selected.has(entity.key)}
-            onToggle={() => toggle(entity.key, setSelected)}
-          />
-        ))}
-      </div>
-    ),
-    [toggle],
-  );
 
   // ── Export handler ───────────────────────────────────────────
   const handleExport = useCallback(async () => {
@@ -1742,24 +1723,6 @@ function DataSecuritySettings({ activeSection }: { activeSection: string | null 
   } | null>(null);
 
   // Generated columns — these are computed by the database and must be excluded from INSERTs
-  const GENERATED_COLUMNS: Record<string, string[]> = {
-    products: ["profit_margin"],
-    orders: ["balance_remaining", "total"],
-    order_items: ["total_price"],
-    quotations: ["grand_total"],
-    quotation_items: ["total_price"],
-    expenses: ["total_cost"],
-  };
-
-  // Tables that don't have an updated_at column in the schema
-  const TABLES_WITHOUT_UPDATED_AT = new Set([
-    "order_items",
-    "order_status_history",
-    "inventory_transactions",
-    "quotation_items",
-    "price_snapshots",
-  ]);
-
   const handleImportAfterFile = useCallback(async () => {
     if (!importFile) return;
     if (selectedImport.size === 0) {
@@ -1857,13 +1820,6 @@ function DataSecuritySettings({ activeSection }: { activeSection: string | null 
   }, []);
 
   // Exclude business_settings — preserve user preferences, courier credentials, etc.
-  const RESET_TABLES = [
-    ...DATA_ENTITIES
-      .filter((e) => e.key !== "settings")
-      .flatMap((e) => e.tables),
-    "profiles",
-  ].reverse(); // Delete child tables first to avoid FK constraint violations
-
   // ── Actual delete logic (runs after password verification) ──
   const executeReset = useCallback(async () => {
     setResetting(true);
@@ -2312,7 +2268,7 @@ const SETTINGS_SEARCH_INDEX: SettingsSearchEntry[] = [
   // ── Team
   { keywords: ["team", "member", "members", "people", "staff", "employee"], tab: "team", sectionId: "team-management", path: "Team > Team Management", description: "Manage team members, roles, and invitations" },
   { keywords: ["invite", "invitation", "add", "member", "collaborator"], tab: "team", sectionId: "team-management", path: "Team > Team Management > Invite Members", description: "Invite new team members to your business" },
-  { keywords: ["role", "permission", "owner", "admin", "member", "access"], tab: "team", sectionId: "team-management", path: "Team > Team Management > Roles", description: "Manage team member roles and permissions" },
+  { keywords: ["role", "permission", "owner", "business manager", "manager", "admin", "member", "access"], tab: "team", sectionId: "team-management", path: "Team > Team Management > Roles", description: "Manage team member roles and permissions" },
 
   // ── Data & Security
   { keywords: ["data", "backup", "export", "import", "restore", "json"], tab: "data-security", sectionId: "manual-backup", path: "Data & Security > Manual Backup & Restore", description: "Export business data as JSON or restore from backup" },
@@ -2633,10 +2589,6 @@ function SettingsSearchBar({ onNavigate }: { onNavigate: (tab: string) => void }
     return () => document.removeEventListener("mousedown", handler);
   }, [open]);
 
-  const tabLabels: Record<string, string> = Object.fromEntries(
-    TABS.map((t) => [t.value, t.label]),
-  );
-
   return (
     <div className="relative">
       <div className="relative">
@@ -2656,6 +2608,7 @@ function SettingsSearchBar({ onNavigate }: { onNavigate: (tab: string) => void }
           className="h-10 w-full rounded-xl border border-border/40 bg-muted/30 pl-9 pr-3 text-sm text-foreground outline-none transition-all placeholder:text-muted-foreground/40 focus:border-primary/30 focus:bg-muted/50 focus:ring-[3px] focus:ring-primary/10"
           aria-label="Search settings"
           aria-expanded={open}
+          aria-controls="settings-search-results"
           aria-haspopup="listbox"
           aria-autocomplete="list"
           role="combobox"
@@ -2674,6 +2627,7 @@ function SettingsSearchBar({ onNavigate }: { onNavigate: (tab: string) => void }
 
       {open && results.length > 0 && (
         <div
+          id="settings-search-results"
           ref={listRef}
           className="absolute left-0 right-0 top-full z-50 mt-1.5 overflow-hidden rounded-xl border border-border/30 bg-popover shadow-lg backdrop-blur-xl"
           role="listbox"
@@ -2682,7 +2636,6 @@ function SettingsSearchBar({ onNavigate }: { onNavigate: (tab: string) => void }
             {results.map((result, i) => {
               const isActive = i === activeIndex;
               const IconComponent = TABS.find((t) => t.value === result.tab)?.icon;
-              const tabLabel = tabLabels[result.tab] || result.tab;
               return (
                 <button
                   key={`${result.tab}-${result.path}`}
@@ -2730,10 +2683,10 @@ function SettingsSearchBar({ onNavigate }: { onNavigate: (tab: string) => void }
             })}
           </div>
           <div className="border-t border-border/10 px-3.5 py-1.5">
-            <p className="text-[10px] text-muted-foreground/40">
-              <kbd className="rounded border border-border/20 bg-muted/50 px-1 py-0.5 text-[9px] font-medium">↑↓</kbd> Navigate
-              <kbd className="ml-2 rounded border border-border/20 bg-muted/50 px-1 py-0.5 text-[9px] font-medium">↵</kbd> Select
-              <kbd className="ml-2 rounded border border-border/20 bg-muted/50 px-1 py-0.5 text-[9px] font-medium">Esc</kbd> Close
+            <p className="text-xs text-muted-foreground">
+              <kbd className="rounded border border-border/40 bg-muted/50 px-1.5 py-0.5 text-xs font-medium">↑↓</kbd> Navigate
+              <kbd className="ml-2 rounded border border-border/40 bg-muted/50 px-1.5 py-0.5 text-xs font-medium">↵</kbd> Select
+              <kbd className="ml-2 rounded border border-border/40 bg-muted/50 px-1.5 py-0.5 text-xs font-medium">Esc</kbd> Close
             </p>
           </div>
         </div>
@@ -2741,8 +2694,8 @@ function SettingsSearchBar({ onNavigate }: { onNavigate: (tab: string) => void }
 
       {open && query.trim() && results.length === 0 && (
         <div className="absolute left-0 right-0 top-full z-50 mt-1.5 rounded-xl border border-border/30 bg-popover p-4 text-center shadow-lg backdrop-blur-xl">
-          <p className="text-sm text-muted-foreground/60">No settings found for "{query}"</p>
-          <p className="mt-0.5 text-xs text-muted-foreground/40">Try a different keyword like "theme", "email", or "backup"</p>
+          <p className="text-sm text-muted-foreground/60">No settings found for &quot;{query}&quot;</p>
+          <p className="mt-0.5 text-xs text-muted-foreground/40">Try a different keyword like &quot;theme&quot;, &quot;email&quot;, or &quot;backup&quot;</p>
         </div>
       )}
     </div>
@@ -2756,7 +2709,6 @@ function SettingsSearchBar({ onNavigate }: { onNavigate: (tab: string) => void }
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState("general");
   const [activeSection, setActiveSection] = useState<string | null>("theme-style");
-  const isMobile = useIsMobile();
 
   const ActiveComponent = TABS.find((t) => t.value === activeTab)?.component ?? GeneralSettings;
 
@@ -2808,12 +2760,17 @@ export default function SettingsPage() {
 
   useEffect(() => {
     // Read hash on initial load
-    resolveHash(window.location.hash);
+    const taskId = window.setTimeout(() => {
+      resolveHash(window.location.hash);
+    }, 0);
 
     // Listen for hash changes (e.g. user clicks dropdown item while on settings)
     const handleHashChange = () => resolveHash(window.location.hash);
     window.addEventListener("hashchange", handleHashChange);
-    return () => window.removeEventListener("hashchange", handleHashChange);
+    return () => {
+      window.clearTimeout(taskId);
+      window.removeEventListener("hashchange", handleHashChange);
+    };
   }, [resolveHash]);
 
   return (

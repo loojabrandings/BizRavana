@@ -37,7 +37,6 @@ import {
   deleteTemplate,
   duplicateTemplate,
   getUserBusinessId,
-  getCurrentUserId,
   toDbContext,
   type MessageTemplate,
 } from "@/lib/supabase/message-templates";
@@ -299,7 +298,7 @@ function ContextPill({
       type="button"
       onClick={onClick}
       className={cn(
-        "group relative flex items-center gap-2.5 rounded-lg border px-3.5 py-2 text-left transition-all duration-200",
+        "group relative flex min-h-10 items-center gap-2.5 rounded-[10px] border px-3.5 py-2 text-left transition-all duration-200 outline-none focus-visible:border-primary/50 focus-visible:ring-3 focus-visible:ring-primary/20 active:scale-[0.98] max-sm:min-h-11",
         active
           ? "border-primary/25 bg-primary/[0.05] shadow-sm"
           : "border-border/30 hover:border-border/50 hover:bg-muted/10",
@@ -310,7 +309,7 @@ function ContextPill({
       </span>
       <span
         className={cn(
-          "inline-flex items-center justify-center rounded-full px-1.5 py-0.5 text-nano font-semibold tabular-nums",
+          "inline-flex items-center justify-center rounded-full px-1.5 py-0.5 text-xs font-semibold tabular-nums",
           active ? "bg-primary/10 text-primary" : "bg-muted/60 text-muted-foreground",
         )}
       >
@@ -368,7 +367,7 @@ function TemplateListItem({
       onClick={onSelect}
       onKeyDown={handleKeyDown}
       className={cn(
-        "group relative flex w-full cursor-pointer items-center rounded-lg border px-3 py-2.5 text-left transition-all duration-150",
+        "group relative flex w-full cursor-pointer items-center rounded-[10px] border px-3 py-2.5 text-left transition-all duration-150 outline-none focus-visible:border-primary/50 focus-visible:ring-3 focus-visible:ring-primary/20 active:scale-[0.99]",
         isSelected
           ? "border-primary/30 bg-primary/[0.04] shadow-sm"
           : "border-border/20 hover:border-border/40 hover:bg-muted/10",
@@ -377,7 +376,7 @@ function TemplateListItem({
       {isSelected && (
         <motion.div
           layoutId="template-selected-sidebar"
-          className="absolute inset-0 rounded-lg ring-1 ring-primary/15"
+          className="absolute inset-0 rounded-[10px] ring-1 ring-primary/15"
           transition={{ type: "spring", stiffness: 400, damping: 30 }}
         />
       )}
@@ -402,14 +401,14 @@ function TemplateListItem({
               {template.title}
             </span>
             {template.isDefault && (
-              <span className="shrink-0 inline-flex items-center gap-0.5 rounded-full bg-amber-500/10 px-1.5 py-0.5 text-micro font-semibold text-amber-600 dark:text-amber-400 ring-1 ring-amber-500/20">
-                <Star className="size-2 fill-amber-500/30" />
+              <span className="shrink-0 inline-flex items-center gap-0.5 rounded-full bg-warning/10 px-1.5 py-0.5 text-xs font-semibold text-warning ring-1 ring-warning/20">
+                <Star className="size-2 fill-warning/30" />
                 Default
               </span>
             )}
           </div>
           {formattedDate && (
-            <p className="text-nano text-muted-foreground/30 mt-0.5 truncate">
+            <p className="mt-0.5 truncate text-xs text-muted-foreground">
               Updated {formattedDate}
             </p>
           )}
@@ -420,7 +419,7 @@ function TemplateListItem({
           <DropdownMenuTrigger
             onClick={(e) => e.stopPropagation()}
             className={cn(
-              "flex shrink-0 items-center justify-center rounded-full transition-all duration-150",
+              "flex size-10 shrink-0 items-center justify-center rounded-[10px] transition-all duration-150 outline-none focus-visible:ring-3 focus-visible:ring-primary/20 max-sm:size-11",
               isSelected
                 ? "text-foreground/50 hover:bg-primary/10 hover:text-primary"
                 : "text-foreground/40 hover:bg-muted/30 hover:text-foreground",
@@ -429,19 +428,19 @@ function TemplateListItem({
             <MoreVertical className="size-4" />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="min-w-[130px] p-1">
-            <DropdownMenuItem className="rounded-md text-xxs gap-1.5 py-1" onClick={(e) => { e.stopPropagation(); onDuplicate(); }}>
+            <DropdownMenuItem className="gap-1.5 rounded-md py-1 text-xs" onClick={(e) => { e.stopPropagation(); onDuplicate(); }}>
               <Copy className="size-3" /> Duplicate
             </DropdownMenuItem>
             {!template.isDefault && (
-              <DropdownMenuItem className="rounded-md text-xxs gap-1.5 py-1" onClick={(e) => { e.stopPropagation(); onSetDefault(); }}>
+              <DropdownMenuItem className="gap-1.5 rounded-md py-1 text-xs" onClick={(e) => { e.stopPropagation(); onSetDefault(); }}>
                 <Star className="size-3" /> Set as Default
               </DropdownMenuItem>
             )}
-            <DropdownMenuItem className="rounded-md text-xxs gap-1.5 py-1" onClick={(e) => { e.stopPropagation(); onRename(); }}>
+            <DropdownMenuItem className="gap-1.5 rounded-md py-1 text-xs" onClick={(e) => { e.stopPropagation(); onRename(); }}>
               <FileText className="size-3" /> Rename
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="rounded-md text-xxs gap-1.5 py-1 text-destructive" onClick={(e) => { e.stopPropagation(); onDelete(); }}>
+            <DropdownMenuItem className="gap-1.5 rounded-md py-1 text-xs text-destructive" onClick={(e) => { e.stopPropagation(); onDelete(); }}>
               <Trash2 className="size-3" /> Delete
             </DropdownMenuItem>
           </DropdownMenuContent>
@@ -473,10 +472,10 @@ function PlaceholderChips({
       {/* ── Header ─────────────────────────────────────────────── */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-1.5">
-          <span className="text-xxs font-semibold uppercase tracking-wider text-muted-foreground/50">
+          <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             Placeholders
           </span>
-          <span className="inline-flex items-center justify-center rounded-full bg-muted/40 px-1.5 py-0.5 text-nano font-medium text-muted-foreground/50 tabular-nums">
+          <span className="inline-flex items-center justify-center rounded-full bg-muted/40 px-1.5 py-0.5 text-xs font-medium text-muted-foreground tabular-nums">
             {totalPlaceholders}
           </span>
         </div>
@@ -484,21 +483,24 @@ function PlaceholderChips({
 
       {/* ── Search ─────────────────────────────────────────────── */}
       <div className="relative">
-        <Search className="absolute left-2 top-1/2 size-2.5 -translate-y-1/2 text-muted-foreground/30" />
+        <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
         <input
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           placeholder="Filter placeholders..."
-          className="w-full h-8 rounded-md border border-border/20 bg-muted/10 pl-6 pr-6 text-xs text-foreground placeholder:text-muted-foreground/30 focus:outline-none focus:border-primary/30 focus:bg-primary/[0.02] transition-colors"
+          className="h-10 w-full rounded-[10px] border border-border/40 bg-transparent pl-10 pr-10 text-sm text-foreground placeholder:text-muted-foreground transition-colors focus:border-primary/50 focus:outline-none focus:ring-3 focus:ring-primary/20 max-sm:h-11"
         />
         {searchQuery && (
-          <button
+          <Button
             type="button"
+            variant="ghost"
+            size="icon"
             onClick={() => setSearchQuery("")}
-            className="absolute right-1 top-1/2 -translate-y-1/2 text-muted-foreground/30 hover:text-foreground transition-colors"
+            aria-label="Clear placeholder search"
+            className="absolute right-0 top-0 text-muted-foreground hover:text-foreground"
           >
-            <X className="size-2.5" />
-          </button>
+            <X className="size-4" />
+          </Button>
         )}
       </div>
 
@@ -507,21 +509,21 @@ function PlaceholderChips({
         {filteredGroups.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-8 text-center">
             <div className="flex size-7 items-center justify-center rounded-full bg-muted/20">
-              <Search className="size-3 text-muted-foreground/25" />
+              <Search className="size-3 text-muted-foreground" />
             </div>
-            <p className="mt-2 text-xxs text-muted-foreground/40 font-medium">No placeholders match</p>
+            <p className="mt-2 text-xs font-medium text-muted-foreground">No placeholders match</p>
             {searchQuery && (
-              <p className="text-nano text-muted-foreground/30 mt-0.5">Try a different search term</p>
+              <p className="mt-0.5 text-xs text-muted-foreground">Try a different search term</p>
             )}
           </div>
         ) : (
           filteredGroups.map((group) => (
             <div key={group.label} className="space-y-1.5">
               <div className="flex items-center justify-between">
-                <span className="text-xxs font-semibold uppercase tracking-widest text-muted-foreground/35">
+                <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
                   {group.label}
                 </span>
-                <span className="text-xxs text-muted-foreground/20 tabular-nums">{group.items.length}</span>
+                <span className="text-xs text-muted-foreground tabular-nums">{group.items.length}</span>
               </div>
               <div className="flex flex-wrap gap-1.5">
                 {group.items.map((ph) => (
@@ -530,7 +532,7 @@ function PlaceholderChips({
                     type="button"
                     title={`Click to insert ${ph}`}
                     onClick={() => onInsert(ph)}
-                    className="group/chip inline-flex cursor-pointer items-center gap-1.5 rounded-lg bg-muted/20 px-2.5 py-1 text-xs font-mono leading-relaxed text-muted-foreground/60 transition-all hover:bg-primary/5 hover:text-primary border border-transparent hover:border-primary/20"
+                    className="group/chip inline-flex min-h-8 cursor-pointer items-center gap-1.5 rounded-[10px] border border-transparent bg-muted/20 px-2.5 py-1 font-mono text-xs leading-relaxed text-muted-foreground transition-all outline-none hover:border-primary/20 hover:bg-primary/5 hover:text-primary focus-visible:border-primary/50 focus-visible:ring-3 focus-visible:ring-primary/20 active:scale-[0.98] max-sm:min-h-11"
                   >
                     {ph.replace(/\{\{|\}\}/g, "")}
                   </button>
@@ -570,13 +572,13 @@ function WhatsAppPreview({
             <div className="flex items-center gap-1.5">
               <span className="text-xs font-semibold truncate text-foreground">{title || "WhatsApp Preview"}</span>
               {hasUnsaved && (
-                <span className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-warning/10 px-1.5 py-0.5 text-micro font-semibold text-warning ring-1 ring-warning/20">
+                <span className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-warning/10 px-1.5 py-0.5 text-xs font-semibold text-warning ring-1 ring-warning/20">
                   <AlertTriangle className="size-2" />
                   Unsaved
                 </span>
               )}
             </div>
-            <p className="text-xxs text-muted-foreground/50 truncate">{contextLabel}</p>
+            <p className="truncate text-xs text-muted-foreground">{contextLabel}</p>
           </div>
         </div>
       </div>
@@ -584,14 +586,14 @@ function WhatsAppPreview({
         {!rawContent.trim() ? (
           <div className="flex h-full flex-col items-center justify-center text-center px-3">
             <div className="flex size-10 items-center justify-center rounded-xl bg-muted/20 border border-border/10">
-              <MessageCircle className="size-4 text-muted-foreground/25" />
+              <MessageCircle className="size-4 text-muted-foreground" />
             </div>
-            <p className="mt-3 text-xs font-medium text-muted-foreground/50">Preview will appear here</p>
-            <p className="mt-1 text-xxs text-muted-foreground/30">Type in the editor to see a live preview</p>
+            <p className="mt-3 text-xs font-medium text-muted-foreground">Preview will appear here</p>
+            <p className="mt-1 text-xs text-muted-foreground">Type in the editor to see a live preview</p>
           </div>
         ) : (
           <div className="mx-auto max-w-[320px] space-y-1.5">
-            <div className="text-center text-micro text-muted-foreground/30 font-medium tracking-wider uppercase">Today</div>
+            <div className="text-center text-xs font-medium uppercase tracking-wider text-muted-foreground">Today</div>
             <div className="rounded-2xl bg-gradient-to-b from-primary/[0.06] to-primary/[0.02] px-4 py-3 shadow-sm border border-primary/[0.08]">
               <div
                 className="text-xs leading-relaxed text-foreground/90 [&_strong]:font-semibold [&_em]:italic [&_del]:line-through whitespace-pre-wrap break-words"
@@ -599,7 +601,7 @@ function WhatsAppPreview({
               />
             </div>
             <div className="flex justify-end pr-1">
-              <span className="text-micro text-muted-foreground/30">{rawContent.length} chars · 12:30 PM</span>
+              <span className="text-xs text-muted-foreground">{rawContent.length} chars · 12:30 PM</span>
             </div>
           </div>
         )}
@@ -615,7 +617,6 @@ function WhatsAppPreview({
 export function WhatsAppTemplatesSettings() {
   const isMobile = useIsMobile();
   const [businessId, setBusinessId] = useState<string | null>(null);
-  const [userId, setUserId] = useState<string | null>(null);
   const [templates, setTemplates] = useState<MessageTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -650,9 +651,8 @@ export function WhatsAppTemplatesSettings() {
   useEffect(() => {
     (async () => {
       try {
-        const [bid, uid] = await Promise.all([getUserBusinessId(), getCurrentUserId()]);
+        const bid = await getUserBusinessId();
         setBusinessId(bid);
-        setUserId(uid);
       } catch (err) {
         console.error("Failed to load user context:", err);
         toast.error("Failed to load your profile.");
@@ -667,13 +667,13 @@ export function WhatsAppTemplatesSettings() {
   // ── Load ALL templates when businessId changes ────────────────
   useEffect(() => {
     if (!businessId) {
-      setLoading(false);
-      return;
+      const timeoutId = window.setTimeout(() => setLoading(false), 0);
+      return () => window.clearTimeout(timeoutId);
     }
     (async () => {
       setLoading(true);
       try {
-        const data = await fetchAllTemplates(businessId);
+        const data = await fetchAllTemplates();
         setTemplates(data);
         setSelectedTemplateId(null);
         setEditTitle("");
@@ -705,24 +705,17 @@ export function WhatsAppTemplatesSettings() {
   const contextInfo = CONTEXTS.find((c) => c.value === activeContext)!;
 
   // ── Reload all templates from DB ────────────────────────────
-  // Using refs to avoid stale closure issues in callbacks
-  const businessIdRef = useRef(businessId);
-  const activeContextRef = useRef(activeContext);
-  businessIdRef.current = businessId;
-  activeContextRef.current = activeContext;
-
   const reloadTemplates = useCallback(async () => {
-    const bid = businessIdRef.current;
-    if (!bid) { console.log("reloadTemplates: no businessId"); return; }
+    if (!businessId) { console.log("reloadTemplates: no businessId"); return; }
     try {
-      console.log("reloadTemplates: fetching all for", bid);
-      const data = await fetchAllTemplates(bid);
+      console.log("reloadTemplates: fetching all for authenticated business");
+      const data = await fetchAllTemplates();
       console.log("reloadTemplates: got", data.length, "templates total");
       setTemplates(data);
     } catch (err) {
       console.error("reloadTemplates error:", err);
     }
-  }, []); // stable: reads from refs
+  }, [businessId]);
 
   // ── Placeholder warnings ────────────────────────────────────────
   const placeholderWarnings = useMemo(() => validatePlaceholders(editContent), [editContent]);
@@ -761,11 +754,9 @@ export function WhatsAppTemplatesSettings() {
 
   // ── Save / Create ─────────────────────────────────────────────
   const handleSave = useCallback(async () => {
-    const bid = businessIdRef.current;
-    const ctx = activeContextRef.current;
-    console.log("handleSave called", { bid, ctx, isNewTemplate, editTitle, editContent });
+    console.log("handleSave called", { businessId, activeContext, isNewTemplate, editTitle, editContent });
 
-    if (!bid) { toast.error("No business found."); return; }
+    if (!businessId) { toast.error("No business found."); return; }
     const title = editTitle.trim();
     const content = editContent;
     if (!title || !content) { toast.error("Title and content are required."); return; }
@@ -779,14 +770,14 @@ export function WhatsAppTemplatesSettings() {
 
     setSaving(true);
     try {
-      const dbContext = toDbContext(ctx);
-      console.log("handleSave: about to save", { businessId: bid, context: dbContext, title, content });
+      const dbContext = toDbContext(activeContext);
+      console.log("handleSave: about to save", { context: dbContext, title, content });
       if (selectedTemplateId && !isNewTemplate) {
-        await updateTemplate(selectedTemplateId, title, content, userId);
+        await updateTemplate(selectedTemplateId, title, content);
         console.log("handleSave: updated", selectedTemplateId);
         toast.success("Template saved successfully!");
       } else {
-        const result = await createTemplate(bid, dbContext, title, content, userId);
+        const result = await createTemplate(dbContext, title, content);
         console.log("handleSave: created", result.id);
         toast.success("Template created successfully!");
         setSelectedTemplateId(result.id);
@@ -803,7 +794,7 @@ export function WhatsAppTemplatesSettings() {
     } finally {
       setSaving(false);
     }
-  }, [editTitle, editContent, isNewTemplate, selectedTemplateId, userId, hasDuplicateTitle]); // stable: reads businessId/activeContext from refs
+  }, [activeContext, businessId, editTitle, editContent, isNewTemplate, selectedTemplateId, hasDuplicateTitle, reloadTemplates]);
 
   // ── Reset to last saved ──────────────────────────────────────
   const handleReset = useCallback(() => {
@@ -844,7 +835,7 @@ export function WhatsAppTemplatesSettings() {
     setDeleteConfirmOpen(false);
     setPendingDeleteId(null);
     try {
-      await deleteTemplate(id, userId);
+      await deleteTemplate(id);
       toast.success("Template deleted.");
       if (selectedTemplateId === id) {
         setSelectedTemplateId(null);
@@ -859,14 +850,13 @@ export function WhatsAppTemplatesSettings() {
         description: err instanceof Error ? err.message : "An error occurred.",
       });
     }
-  }, [pendingDeleteId, businessId, userId, selectedTemplateId, reloadTemplates]);
+  }, [pendingDeleteId, businessId, selectedTemplateId, reloadTemplates]);
 
   // ── Set as default ───────────────────────────────────────────
   const handleSetDefault = useCallback(async (id: string) => {
     if (!businessId) return;
     try {
-      const dbContext = toDbContext(activeContext);
-      await setDefaultTemplate(id, businessId, dbContext, userId);
+      await setDefaultTemplate(id);
       toast.success("Default template updated.");
       await reloadTemplates();
     } catch (err) {
@@ -874,7 +864,7 @@ export function WhatsAppTemplatesSettings() {
         description: err instanceof Error ? err.message : "An error occurred.",
       });
     }
-  }, [businessId, userId, activeContext, reloadTemplates]);
+  }, [businessId, reloadTemplates]);
 
   // ── Duplicate template ───────────────────────────────────────
   const handleDuplicate = useCallback(async (tpl: SavedTemplate) => {
@@ -882,7 +872,7 @@ export function WhatsAppTemplatesSettings() {
     try {
       const dbTemplate = templates.find((t) => t.id === tpl.id);
       if (!dbTemplate) return;
-      await duplicateTemplate(dbTemplate, userId);
+      await duplicateTemplate(dbTemplate);
       toast.success("Template duplicated.");
       await reloadTemplates();
     } catch (err) {
@@ -890,7 +880,7 @@ export function WhatsAppTemplatesSettings() {
         description: err instanceof Error ? err.message : "An error occurred.",
       });
     }
-  }, [businessId, userId, templates, reloadTemplates]);
+  }, [businessId, templates, reloadTemplates]);
 
   // ── Rename template ────────────────────────────────────────────
   const handleRenameClick = useCallback((tpl: SavedTemplate) => {
@@ -916,7 +906,7 @@ export function WhatsAppTemplatesSettings() {
       // Update just the title — keep content unchanged
       const template = templates.find((t) => t.id === id);
       if (!template) return;
-      await updateTemplate(id, newTitle, template.content, userId);
+      await updateTemplate(id, newTitle, template.content);
       toast.success("Template renamed.");
       // Update the editor if the renamed template is currently selected
       if (selectedTemplateId === id) {
@@ -929,7 +919,7 @@ export function WhatsAppTemplatesSettings() {
         description: err instanceof Error ? err.message : "An error occurred.",
       });
     }
-  }, [renameTemplateId, renameTitle, hasDuplicateTitle, templates, userId, selectedTemplateId, reloadTemplates]);
+  }, [renameTemplateId, renameTitle, hasDuplicateTitle, templates, selectedTemplateId, reloadTemplates]);
 
   // ── Switch context ───────────────────────────────────────────
   const switchContext = useCallback((ctx: TemplateContext) => {
@@ -941,8 +931,8 @@ export function WhatsAppTemplatesSettings() {
     return (
       <div className="flex items-center justify-center py-16">
         <div className="flex flex-col items-center gap-3">
-          <Loader2 className="size-6 animate-spin text-muted-foreground/40" />
-          <p className="text-sm text-muted-foreground/60">Loading templates...</p>
+          <Loader2 className="size-6 animate-spin text-muted-foreground" />
+          <p className="text-sm text-muted-foreground">Loading templates...</p>
         </div>
       </div>
     );
@@ -972,13 +962,13 @@ export function WhatsAppTemplatesSettings() {
       {isMobile ? (
         <div className="flex flex-col gap-4">
           {/* ── Saved Templates ── */}
-          <div className="rounded-xl border border-border/30 bg-card/50 overflow-hidden">
+          <div className="glass-card overflow-hidden rounded-xl">
             <div className="flex items-center justify-between px-3.5 pt-3 pb-2">
               <div className="flex items-center gap-2">
-                <FileText className="size-3 text-muted-foreground/40" />
-                <span className="text-xxs font-semibold uppercase tracking-wider text-muted-foreground/50">Saved Templates</span>
+                <FileText className="size-3 text-muted-foreground" />
+                <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Saved Templates</span>
               </div>
-              <span className="inline-flex items-center justify-center rounded-full bg-muted/50 px-2 py-0.5 text-nano font-medium text-muted-foreground/50 tabular-nums ring-1 ring-border/10">
+              <span className="inline-flex items-center justify-center rounded-full bg-muted/50 px-2 py-0.5 text-xs font-medium text-muted-foreground tabular-nums ring-1 ring-border/10">
                 {templatesForContext.length}
               </span>
             </div>
@@ -986,10 +976,10 @@ export function WhatsAppTemplatesSettings() {
               {templatesForContext.length === 0 && !isNewTemplate ? (
                 <div className="flex flex-col items-center justify-center py-6 text-center">
                   <div className="flex size-8 items-center justify-center rounded-full bg-muted/30 border border-border/10">
-                    <FileText className="size-3 text-muted-foreground/30" />
+                    <FileText className="size-3 text-muted-foreground" />
                   </div>
-                  <p className="mt-2 text-xxs text-muted-foreground/40">No templates yet</p>
-                  <Button variant="outline" size="sm" onClick={startNewTemplate} className="mt-2 gap-1.5 h-8 text-xs rounded-md border-primary/20 text-primary/80 hover:text-primary hover:border-primary/40">
+                  <p className="mt-2 text-xs text-muted-foreground">No templates yet</p>
+                  <Button variant="outline" size="sm" onClick={startNewTemplate} className="mt-2 border-primary/20 text-primary hover:border-primary/40">
                     <Plus className="size-3" /> Create your first template
                   </Button>
                 </div>
@@ -1007,10 +997,17 @@ export function WhatsAppTemplatesSettings() {
                       onDelete={() => handleDelete(tpl.id)}
                     />
                   ))}
-                  {!isNewTemplate && (                        <button type="button" onClick={startNewTemplate} className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-primary/20 bg-primary/[0.03] py-2.5 text-xs font-medium text-primary/70 transition-all hover:border-primary/40 hover:bg-primary/[0.06] hover:text-primary mt-1">
-                          <Plus className="size-3.5" />
-                          <span>New Template</span>
-                        </button>
+                  {!isNewTemplate && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="md"
+                      onClick={startNewTemplate}
+                      className="mt-1 w-full border-primary/20 text-primary hover:border-primary/40"
+                    >
+                      <Plus className="size-3.5" />
+                      <span>New Template</span>
+                    </Button>
                   )}
                 </>
               )}
@@ -1018,15 +1015,15 @@ export function WhatsAppTemplatesSettings() {
           </div>
 
           {/* ── Editor + Preview ── */}
-          <div className="flex flex-col rounded-xl border border-border/30 bg-card/50 overflow-hidden">
+          <div className="glass-card flex flex-col overflow-hidden rounded-xl">
             {/* Title */}
             <div className="border-b border-border/20 px-4 py-3 space-y-2">
               <div className="flex items-center justify-between">
-                <label className="text-xxs font-semibold uppercase tracking-wider text-foreground/60">
+                <label className="text-xs font-semibold uppercase tracking-wider text-foreground">
                   Template Title <span className="text-destructive">*</span>
                 </label>
                 {editTitle.length > 60 && (
-                  <span className={cn("text-nano tabular-nums", editTitle.length > 75 ? "text-destructive/70" : "text-muted-foreground/40")}>
+                  <span className={cn("text-xs tabular-nums", editTitle.length > 75 ? "text-destructive" : "text-muted-foreground")}>
                     {editTitle.length}/80
                   </span>
                 )}
@@ -1045,29 +1042,32 @@ export function WhatsAppTemplatesSettings() {
             <div className="border-b border-border/10 px-4 py-2 space-y-2">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-1.5">
-                  <span className="text-nano font-semibold uppercase tracking-wider text-muted-foreground/40">Placeholders</span>
-                  <span className="inline-flex items-center justify-center rounded-full bg-muted/30 px-1.5 py-0.5 text-micro font-medium text-muted-foreground/40">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Placeholders</span>
+                  <span className="inline-flex items-center justify-center rounded-full bg-muted/30 px-1.5 py-0.5 text-xs font-medium text-muted-foreground">
                     {groups.reduce((sum, g) => sum + g.items.length, 0)}
                   </span>
                 </div>
               </div>
               {/* Search input */}
               <div className="relative">
-                <Search className="absolute left-2 top-1/2 size-2.5 -translate-y-1/2 text-muted-foreground/30" />
+                <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                 <input
                   value={mobilePlaceholderSearch}
                   onChange={(e) => setMobilePlaceholderSearch(e.target.value)}
                   placeholder="Filter placeholders..."
-                  className="w-full h-7 rounded-md border border-border/20 bg-muted/10 pl-6 pr-6 text-xxs text-foreground placeholder:text-muted-foreground/30 focus:outline-none focus:border-primary/30 focus:bg-primary/[0.02] transition-colors"
+                  className="h-11 w-full rounded-[10px] border border-border/40 bg-transparent pl-10 pr-11 text-sm text-foreground placeholder:text-muted-foreground transition-colors focus:border-primary/50 focus:outline-none focus:ring-3 focus:ring-primary/20"
                 />
                 {mobilePlaceholderSearch && (
-                  <button
+                  <Button
                     type="button"
+                    variant="ghost"
+                    size="icon"
                     onClick={() => setMobilePlaceholderSearch("")}
-                    className="absolute right-1 top-1/2 -translate-y-1/2 text-muted-foreground/30 hover:text-foreground transition-colors"
+                    aria-label="Clear placeholder search"
+                    className="absolute right-0 top-0 text-muted-foreground hover:text-foreground"
                   >
-                    <X className="size-2.5" />
-                  </button>
+                    <X className="size-4" />
+                  </Button>
                 )}
               </div>
               {/* Filtered chips */}
@@ -1084,7 +1084,7 @@ export function WhatsAppTemplatesSettings() {
                       key={ph}
                       type="button"
                       onClick={() => insertPlaceholder(ph)}
-                      className="shrink-0 inline-flex items-center rounded-lg bg-muted/20 px-2 py-1 text-xxs font-mono text-muted-foreground/60 whitespace-nowrap border border-transparent hover:border-primary/20 hover:bg-primary/5 hover:text-primary transition-all"
+                      className="inline-flex min-h-11 shrink-0 items-center whitespace-nowrap rounded-[10px] border border-transparent bg-muted/20 px-2.5 py-1 font-mono text-xs text-muted-foreground transition-all outline-none hover:border-primary/20 hover:bg-primary/5 hover:text-primary focus-visible:border-primary/50 focus-visible:ring-3 focus-visible:ring-primary/20 active:scale-[0.98]"
                     >
                       {ph.replace(/\{\{|\}\}/g, "")}
                     </button>
@@ -1095,10 +1095,10 @@ export function WhatsAppTemplatesSettings() {
             {/* Message Content */}
             <div className="flex flex-col px-4 py-3 gap-2">
               <div className="flex items-center justify-between">
-                <label className="text-xxs font-semibold uppercase tracking-wider text-foreground/60">
+                <label className="text-xs font-semibold uppercase tracking-wider text-foreground">
                   Message Content <span className="text-destructive">*</span>
                 </label>
-                <span className="text-nano text-muted-foreground/35 tabular-nums">{editContent.length} chars</span>
+                <span className="text-xs text-muted-foreground tabular-nums">{editContent.length} chars</span>
               </div>
               <Textarea
                 ref={textareaRef}
@@ -1114,11 +1114,11 @@ export function WhatsAppTemplatesSettings() {
                   {placeholderWarnings.slice(0, 2).map((w, i) => (
                     <div key={i} className={cn("flex items-start gap-1.5 rounded-md px-2.5 py-1.5", w.type === "unknown" && "bg-info/5 text-info/70", w.type === "malformed" && "bg-warning/5 text-warning/70", w.type === "unsupported" && "bg-destructive/5 text-destructive/70")}>
                       <AlertTriangle className="size-2.5 shrink-0 mt-0.5" />
-                      <span className="text-xxs leading-relaxed">{w.message}</span>
+                      <span className="text-xs leading-relaxed">{w.message}</span>
                     </div>
                   ))}
                   {placeholderWarnings.length > 2 && (
-                    <p className="text-xxs text-muted-foreground/30 pl-1">+{placeholderWarnings.length - 2} more</p>
+                    <p className="pl-1 text-xs text-muted-foreground">+{placeholderWarnings.length - 2} more</p>
                   )}
                 </div>
               )}
@@ -1130,11 +1130,11 @@ export function WhatsAppTemplatesSettings() {
                 <div className="flex items-center gap-1">
                   {selectedTemplate && (
                     <>
-                      <Button variant="ghost" size="xs" onClick={() => handleDelete(selectedTemplate.id)} className="text-destructive/50 hover:text-destructive gap-1 h-7 text-xxs">
+                      <Button variant="ghost" size="xs" onClick={() => handleDelete(selectedTemplate.id)} className="text-destructive hover:bg-destructive/10">
                         <Trash2 className="size-2.5" /> Delete
                       </Button>
                       {!selectedTemplate.isDefault && (
-                        <Button variant="ghost" size="xs" onClick={() => handleSetDefault(selectedTemplate.id)} className="gap-1 h-7 text-muted-foreground/50 text-xxs">
+                        <Button variant="ghost" size="xs" onClick={() => handleSetDefault(selectedTemplate.id)} className="text-muted-foreground">
                           <Star className="size-2.5" /> Default
                         </Button>
                       )}
@@ -1142,12 +1142,12 @@ export function WhatsAppTemplatesSettings() {
                   )}
                 </div>
                 <div className="flex items-center gap-1">
-                  {hasUnsavedChanges && lastSavedRef.current.title && (
-                    <Button variant="ghost" size="xs" onClick={handleReset} className="gap-1 h-7 text-muted-foreground/50 text-xxs">
+                  {hasUnsavedChanges && selectedTemplateId && !isNewTemplate && (
+                    <Button variant="ghost" size="xs" onClick={handleReset} className="text-muted-foreground">
                       <RotateCcw className="size-2.5" /> Reset
                     </Button>
                   )}
-                  <Button variant="gradient" size="sm" disabled={!editTitle.trim() || !editContent.trim() || saving} onClick={handleSave} className="gap-1.5 h-8 text-xs">
+                  <Button variant="gradient" size="sm" disabled={!editTitle.trim() || !editContent.trim() || saving} onClick={handleSave}>
                     {saving ? <Loader2 className="size-3 animate-spin" /> : <Save className="size-3" />}
                     {saving ? "Saving..." : isNewTemplate ? "Create" : "Save"}
                   </Button>
@@ -1172,13 +1172,13 @@ export function WhatsAppTemplatesSettings() {
         <div className="flex flex-col gap-5" style={{ minHeight: "calc(100vh - 260px)" }}>
           {/* ─── Saved Templates (full width) ── */}
           <div className="min-w-0">
-            <div className="rounded-xl border border-border/30 bg-card/50 p-0 overflow-hidden">
+            <div className="glass-card overflow-hidden rounded-xl">
               <div className="flex items-center justify-between px-3.5 pt-3 pb-2">
                 <div className="flex items-center gap-2">
-                  <FileText className="size-3 text-muted-foreground/40" />
-                  <span className="text-xxs font-semibold uppercase tracking-wider text-muted-foreground/50">Saved Templates</span>
+                  <FileText className="size-3 text-muted-foreground" />
+                  <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Saved Templates</span>
                 </div>
-                <span className="inline-flex items-center justify-center rounded-full bg-muted/50 px-2 py-0.5 text-nano font-medium text-muted-foreground/50 tabular-nums ring-1 ring-border/10">
+                <span className="inline-flex items-center justify-center rounded-full bg-muted/50 px-2 py-0.5 text-xs font-medium text-muted-foreground tabular-nums ring-1 ring-border/10">
                   {templatesForContext.length}
                 </span>
               </div>
@@ -1186,10 +1186,10 @@ export function WhatsAppTemplatesSettings() {
                 {templatesForContext.length === 0 && !isNewTemplate ? (
                   <div className="flex flex-col items-center justify-center py-6 text-center">
                     <div className="flex size-8 items-center justify-center rounded-full bg-muted/30 border border-border/10">
-                      <FileText className="size-3 text-muted-foreground/30" />
+                      <FileText className="size-3 text-muted-foreground" />
                     </div>
-                    <p className="mt-2 text-xxs text-muted-foreground/40">No templates yet</p>
-                    <Button variant="outline" size="sm" onClick={startNewTemplate} className="mt-2 gap-1.5 h-8 text-xs rounded-md border-primary/20 text-primary/80 hover:text-primary hover:border-primary/40">
+                    <p className="mt-2 text-xs text-muted-foreground">No templates yet</p>
+                    <Button variant="outline" size="sm" onClick={startNewTemplate} className="mt-2 border-primary/20 text-primary hover:border-primary/40">
                       <Plus className="size-3" /> Create your first template
                     </Button>
                   </div>
@@ -1208,10 +1208,16 @@ export function WhatsAppTemplatesSettings() {
                       />
                     ))}
                     {!isNewTemplate && (
-                    <button type="button" onClick={startNewTemplate} className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-primary/20 bg-primary/[0.03] py-2.5 text-xs font-medium text-primary/70 transition-all hover:border-primary/40 hover:bg-primary/[0.06] hover:text-primary mt-1">
-                      <Plus className="size-3.5" />
-                      <span>New Template</span>
-                    </button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="md"
+                        onClick={startNewTemplate}
+                        className="mt-1 w-full border-primary/20 text-primary hover:border-primary/40"
+                      >
+                        <Plus className="size-3.5" />
+                        <span>New Template</span>
+                      </Button>
                     )}
                   </>
                 )}
@@ -1220,7 +1226,7 @@ export function WhatsAppTemplatesSettings() {
           </div>
 
           {/* ─── Placeholders (full width) ── */}
-          <div className="min-w-0 rounded-xl border border-border/30 bg-card/30 p-3 pt-2.5 overflow-hidden flex flex-col">
+          <div className="glass-card flex min-w-0 flex-col overflow-hidden rounded-xl p-3 pt-2.5">
             <div className="h-px bg-border/10 -mx-3 mb-3" />
             <PlaceholderChips groups={groups} onInsert={insertPlaceholder} />
           </div>
@@ -1229,14 +1235,14 @@ export function WhatsAppTemplatesSettings() {
           <div className="grid flex-1 gap-5" style={{ gridTemplateColumns: "1fr 1fr" }}>
             {/* Editor */}
             <div className="min-w-0 flex flex-col">
-              <div className="flex flex-col h-full rounded-xl border border-border/30 bg-card/50 overflow-hidden">
+              <div className="glass-card flex h-full flex-col overflow-hidden rounded-xl">
                 <div className="border-b border-border/20 px-4 py-3 space-y-2">
                   <div className="flex items-center justify-between">
-                    <label className="text-xxs font-semibold uppercase tracking-wider text-foreground/60">
+                    <label className="text-xs font-semibold uppercase tracking-wider text-foreground">
                       Template Title <span className="text-destructive">*</span>
                     </label>
                     {editTitle.length > 60 && (
-                      <span className={cn("text-nano tabular-nums", editTitle.length > 75 ? "text-destructive/70" : "text-muted-foreground/40")}>
+                      <span className={cn("text-xs tabular-nums", editTitle.length > 75 ? "text-destructive" : "text-muted-foreground")}>
                         {editTitle.length}/80
                       </span>
                     )}
@@ -1246,10 +1252,10 @@ export function WhatsAppTemplatesSettings() {
 
                 <div className="flex-1 flex flex-col px-4 py-3 gap-2">
                   <div className="flex items-center justify-between">
-                    <label className="text-xxs font-semibold uppercase tracking-wider text-foreground/60">
+                    <label className="text-xs font-semibold uppercase tracking-wider text-foreground">
                       Message Content <span className="text-destructive">*</span>
                     </label>
-                    <span className="text-nano text-muted-foreground/35 tabular-nums">{editContent.length} chars</span>
+                    <span className="text-xs text-muted-foreground tabular-nums">{editContent.length} chars</span>
                   </div>
                   <Textarea ref={textareaRef} value={editContent} onChange={(e) => setEditContent(e.target.value)} placeholder="Type your message here... Use {{placeholders}} to insert dynamic content." className="flex-1 min-h-[300px] resize-y font-mono text-xs leading-relaxed" />
 
@@ -1258,11 +1264,11 @@ export function WhatsAppTemplatesSettings() {
                       {placeholderWarnings.slice(0, 3).map((w, i) => (
                         <div key={i} className={cn("flex items-start gap-1.5 rounded-md px-2.5 py-1.5", w.type === "unknown" && "bg-info/5 text-info/70", w.type === "malformed" && "bg-warning/5 text-warning/70", w.type === "unsupported" && "bg-destructive/5 text-destructive/70")}>
                           <AlertTriangle className="size-2.5 shrink-0 mt-0.5" />
-                          <span className="text-xxs leading-relaxed">{w.message}</span>
+                          <span className="text-xs leading-relaxed">{w.message}</span>
                         </div>
                       ))}
                       {placeholderWarnings.length > 3 && (
-                        <p className="text-xxs text-muted-foreground/30 pl-1">+{placeholderWarnings.length - 3} more warning{placeholderWarnings.length - 3 > 1 ? "s" : ""}</p>
+                        <p className="pl-1 text-xs text-muted-foreground">+{placeholderWarnings.length - 3} more warning{placeholderWarnings.length - 3 > 1 ? "s" : ""}</p>
                       )}
                     </div>
                   )}
@@ -1273,11 +1279,11 @@ export function WhatsAppTemplatesSettings() {
                     <div className="flex items-center gap-1">
                       {selectedTemplate && (
                         <>
-                          <Button variant="ghost" size="xs" onClick={() => handleDelete(selectedTemplate.id)} className="text-destructive/50 hover:text-destructive gap-1 h-7 text-xxs">
+                          <Button variant="ghost" size="xs" onClick={() => handleDelete(selectedTemplate.id)} className="text-destructive hover:bg-destructive/10">
                             <Trash2 className="size-2.5" /> Delete
                           </Button>
                           {!selectedTemplate.isDefault && (
-                            <Button variant="ghost" size="xs" onClick={() => handleSetDefault(selectedTemplate.id)} className="gap-1 h-7 text-muted-foreground/50 text-xxs">
+                            <Button variant="ghost" size="xs" onClick={() => handleSetDefault(selectedTemplate.id)} className="text-muted-foreground">
                               <Star className="size-2.5" /> Default
                             </Button>
                           )}
@@ -1285,12 +1291,12 @@ export function WhatsAppTemplatesSettings() {
                       )}
                     </div>
                     <div className="flex items-center gap-1">
-                      {hasUnsavedChanges && lastSavedRef.current.title && (
-                        <Button variant="ghost" size="xs" onClick={handleReset} className="gap-1 h-7 text-muted-foreground/50 text-xxs">
+                      {hasUnsavedChanges && selectedTemplateId && !isNewTemplate && (
+                        <Button variant="ghost" size="xs" onClick={handleReset} className="text-muted-foreground">
                           <RotateCcw className="size-2.5" /> Reset
                         </Button>
                       )}
-                      <Button variant="gradient" size="sm" disabled={!editTitle.trim() || !editContent.trim() || saving} onClick={handleSave} className="gap-1.5 h-8 text-xs">
+                      <Button variant="gradient" size="sm" disabled={!editTitle.trim() || !editContent.trim() || saving} onClick={handleSave}>
                         {saving ? <Loader2 className="size-3 animate-spin" /> : <Save className="size-3" />}
                         {saving ? "Saving..." : isNewTemplate ? "Create" : "Save"}
                       </Button>

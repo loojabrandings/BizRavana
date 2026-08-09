@@ -51,14 +51,14 @@ function RoleBadge({ role }: { role: string | null }) {
   if (!role) return null;
   const config = {
     owner: { label: "Owner", color: "text-amber-500", bg: "bg-amber-500/10", border: "border-amber-500/20" },
-    admin: { label: "Admin", color: "text-blue-500", bg: "bg-blue-500/10", border: "border-blue-500/20" },
+    admin: { label: "Business Manager", color: "text-blue-500", bg: "bg-blue-500/10", border: "border-blue-500/20" },
     member: { label: "Member", color: "text-muted-foreground", bg: "bg-muted", border: "border-border/40" },
   };
   const c = config[role as keyof typeof config];
   if (!c) return null;
   return (
     <span className={cn(
-      "inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold border",
+      "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold border",
       c.color, c.bg, c.border,
     )}>
       {c.label}

@@ -1,18 +1,10 @@
 import { cn } from "@/lib/utils";
 
 /**
- * A thin vertical accent bar that appears on the left edge of an active nav item.
- */
-export function NavActiveBar({ active }: { active: boolean }) {
-  if (!active) return null;
-  return <span className="sidebar-active-bar" />;
-}
-
-/**
  * Generates consistent className strings for sidebar nav item active/inactive states.
  *
  * Active state: dark elevated bg, bright accent icon, high-contrast white label,
- * left accent bar, subtle glow, rounded right edge.
+ * subtle glow, rounded right edge.
  *
  * Inactive state: muted foreground, transparent background, subtle hover.
  *
@@ -24,7 +16,7 @@ export function NavActiveBar({ active }: { active: boolean }) {
 export function navItemVariants({ active }: { active: boolean }) {
   return cn(
     active
-      ? "font-semibold"
-      : "text-sidebar-foreground/55 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground/85",
+      ? "bg-sidebar-primary/12 font-semibold text-sidebar-foreground ring-1 ring-inset ring-sidebar-primary/20 shadow-sm"
+      : "text-sidebar-foreground/70 hover:bg-sidebar-accent/70 hover:text-sidebar-foreground",
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, type Ref } from "react";
+import Image from "next/image";
 import {
   BarChart3,
   Boxes,
@@ -75,14 +76,20 @@ export function IntegrationsBeam({ className }: { className?: string }) {
         ref={centerRef}
         className="z-10 flex size-24 items-center justify-center rounded-full border-2 border-primary/30 bg-card/90 p-6 shadow-lg shadow-primary/20"
       >
-        <img
+        <Image
           src="/lightmode-logo.png"
           alt="BizRavana"
+          width={96}
+          height={96}
+          style={{ height: "auto" }}
           className="block h-auto w-full object-contain dark:hidden"
         />
-        <img
+        <Image
           src="/darkmode-logo.png"
           alt="BizRavana"
+          width={96}
+          height={96}
+          style={{ height: "auto" }}
           className="hidden h-auto w-full object-contain dark:block"
         />
       </div>

@@ -26,6 +26,11 @@ import { useOrdersSettings } from "@/stores/orders-settings-store";
 // ─── Types ─────────────────────────────────────────────────────────
 
 type WizardStep = "upload" | "preview" | "importing" | "done";
+type ImportOrderStatus = "new_order" | "ready" | "packed" | "dispatched" | "delivered" | "cancelled" | "returned";
+type ImportPaymentStatus = "pending" | "advanced" | "paid";
+type ImportPaymentMethod = "cod" | "bank_transfer" | "cash" | "other";
+type ImportDiscountType = "fixed" | "percentage";
+type ImportOrderSource = "ad" | "whatsapp" | "facebook" | "instagram" | "walkin" | "referral" | "website" | "call" | "other";
 
 interface ParsedOrderItem {
   product_name: string;
@@ -49,13 +54,13 @@ interface ParsedOrder {
   dispatched_date: string;
   items: ParsedOrderItem[];
   discount: number;
-  discount_type: string;
+  discount_type: ImportDiscountType;
   delivery_charge: number;
   advance_paid: number;
-  payment_method: string;
-  status: string;
-  payment_status: string;
-  order_source: string;
+  payment_method: ImportPaymentMethod;
+  status: ImportOrderStatus;
+  payment_status: ImportPaymentStatus;
+  order_source: ImportOrderSource;
   expected_delivery_date: string;
   errors: string[];
 }
@@ -64,6 +69,15 @@ interface ImportResult {
   succeeded: number;
   failed: number;
   errors: { row: number; message: string }[];
+}
+
+interface SpreadsheetDataValidation {
+  type: "list";
+  formula1: string;
+  allowBlank: boolean;
+  showErrorMessage: boolean;
+  errorTitle: string;
+  error: string;
 }
 
 // ─── Helpers ───────────────────────────────────────────────────────
@@ -77,11 +91,20 @@ const REQUIRED_COLUMNS = [
   "Unit Prices",
 ];
 
-const VALID_STATUSES = ["new_order", "ready", "packed", "dispatched", "delivered", "cancelled", "returned"];
-const VALID_PAYMENT_STATUSES = ["pending", "advanced", "paid"];
-const VALID_PAYMENT_METHODS = ["cod", "bank_transfer", "cash", "other"];
-const VALID_DISCOUNT_TYPES = ["fixed", "percentage"];
-const VALID_ORDER_SOURCES = ["ad", "whatsapp", "facebook", "instagram", "walkin", "referral", "website", "call", "other"];
+const VALID_STATUSES: readonly ImportOrderStatus[] = ["new_order", "ready", "packed", "dispatched", "delivered", "cancelled", "returned"];
+const VALID_PAYMENT_STATUSES: readonly ImportPaymentStatus[] = ["pending", "advanced", "paid"];
+const VALID_PAYMENT_METHODS: readonly ImportPaymentMethod[] = ["cod", "bank_transfer", "cash", "other"];
+const VALID_DISCOUNT_TYPES: readonly ImportDiscountType[] = ["fixed", "percentage"];
+const VALID_ORDER_SOURCES: readonly ImportOrderSource[] = ["ad", "whatsapp", "facebook", "instagram", "walkin", "referral", "website", "call", "other"];
+
+function isValidChoice<T extends string>(value: string, choices: readonly T[]): value is T {
+  return choices.some((choice) => choice === value);
+}
+
+function normalizeChoice<T extends string>(value: unknown, choices: readonly T[], fallback: T): T {
+  const normalized = String(value || "").trim().toLowerCase();
+  return isValidChoice(normalized, choices) ? normalized : fallback;
+}
 
 function normalizeHeader(h: string): string {
   return h
@@ -155,7 +178,7 @@ function parseItemArrays(
   return { items, errors };
 }
 
-function validateRow(row: Record<string, unknown>, _rowIndex: number): string[] {
+function validateRow(row: Record<string, unknown>): string[] {
   const errors: string[] = [];
 
   const customerName = String(row["Customer Name"] || "").trim();
@@ -183,27 +206,27 @@ function validateRow(row: Record<string, unknown>, _rowIndex: number): string[] 
 
   // Validate enum fields if provided
   const status = String(row["Status"] || "new_order").trim().toLowerCase();
-  if (status && !VALID_STATUSES.includes(status)) {
+  if (status && !isValidChoice(status, VALID_STATUSES)) {
     errors.push(`Status must be one of: ${VALID_STATUSES.join(", ")}`);
   }
 
   const paymentStatus = String(row["Payment Status"] || "pending").trim().toLowerCase();
-  if (paymentStatus && !VALID_PAYMENT_STATUSES.includes(paymentStatus)) {
+  if (paymentStatus && !isValidChoice(paymentStatus, VALID_PAYMENT_STATUSES)) {
     errors.push(`Payment Status must be one of: ${VALID_PAYMENT_STATUSES.join(", ")}`);
   }
 
   const paymentMethod = String(row["Payment Method"] || "cash").trim().toLowerCase();
-  if (paymentMethod && !VALID_PAYMENT_METHODS.includes(paymentMethod)) {
+  if (paymentMethod && !isValidChoice(paymentMethod, VALID_PAYMENT_METHODS)) {
     errors.push(`Payment Method must be one of: ${VALID_PAYMENT_METHODS.join(", ")}`);
   }
 
   const discountType = String(row["Discount Type"] || "").trim().toLowerCase();
-  if (discountType && !VALID_DISCOUNT_TYPES.includes(discountType)) {
+  if (discountType && !isValidChoice(discountType, VALID_DISCOUNT_TYPES)) {
     errors.push(`Discount Type must be \"fixed\" or \"percentage\"`);
   }
 
   const orderSource = String(row["Order Source"] || "").trim().toLowerCase();
-  if (orderSource && !VALID_ORDER_SOURCES.includes(orderSource)) {
+  if (orderSource && !isValidChoice(orderSource, VALID_ORDER_SOURCES)) {
     errors.push(`Order Source must be one of: ${VALID_ORDER_SOURCES.join(", ")}`);
   }
 
@@ -434,7 +457,7 @@ export function BulkOrderImportForm({
     ws["!cols"] = headers.map((h) => ({ wch: Math.max(h.length, 22) }));
 
     // Data validations
-    const validations: Record<string, XLSX.ColInfo> = {};
+    const validations: Record<string, SpreadsheetDataValidation> = {};
     // Payment Method dropdown
     validations["T2:T1048576"] = {
       type: "list",
@@ -443,7 +466,7 @@ export function BulkOrderImportForm({
       showErrorMessage: true,
       errorTitle: "Invalid Payment Method",
       error: "Please enter: cash, cod, bank_transfer, or other",
-    } as any;
+    };
     // Discount Type dropdown
     validations["Q2:Q1048576"] = {
       type: "list",
@@ -452,7 +475,7 @@ export function BulkOrderImportForm({
       showErrorMessage: true,
       errorTitle: "Invalid Discount Type",
       error: 'Please enter: "fixed" or "percentage"',
-    } as any;
+    };
     // Order Source dropdown
     validations["U2:U1048576"] = {
       type: "list",
@@ -461,7 +484,7 @@ export function BulkOrderImportForm({
       showErrorMessage: true,
       errorTitle: "Invalid Order Source",
       error: "Please enter a valid order source",
-    } as any;
+    };
     // Status dropdown
     validations["V2:V1048576"] = {
       type: "list",
@@ -470,7 +493,7 @@ export function BulkOrderImportForm({
       showErrorMessage: true,
       errorTitle: "Invalid Status",
       error: "Please enter a valid order status",
-    } as any;
+    };
     // Payment Status dropdown
     validations["W2:W1048576"] = {
       type: "list",
@@ -479,13 +502,13 @@ export function BulkOrderImportForm({
       showErrorMessage: true,
       errorTitle: "Invalid Payment Status",
       error: "Please enter: pending, advanced, or paid",
-    } as any;
+    };
     ws["!dataValidations"] = validations;
 
     // Bold headers
     headers.forEach((_, i) => {
       const cell = XLSX.utils.encode_cell({ r: 0, c: i });
-      if (ws[cell]) ws[cell] = { ...ws[cell], font: { bold: true } as any };
+      if (ws[cell]) ws[cell] = { ...ws[cell], font: { bold: true } };
     });
 
     XLSX.utils.book_append_sheet(wb, ws, "Orders Template");
@@ -564,7 +587,7 @@ export function BulkOrderImportForm({
             row[col] = getColValue(rawRow, col, headerMap);
           }
 
-          const errors = validateRow(row, i + 2);
+          const errors = validateRow(row);
 
           const itemsRaw = splitCSV(row["Items"]);
           const quantitiesRaw = splitCSV(row["Quantities"]);
@@ -572,8 +595,6 @@ export function BulkOrderImportForm({
           const categoriesRaw = splitCSV(row["Item Categories"]);
           const itemNotesRaw = splitCSV(row["Item Notes"]);
           const { items } = parseItemArrays(itemsRaw, quantitiesRaw, pricesRaw, categoriesRaw, itemNotesRaw);
-
-          const discountType = String(row["Discount Type"] || "fixed").trim().toLowerCase();
 
           return {
             rowNumber: i + 2,
@@ -589,13 +610,13 @@ export function BulkOrderImportForm({
             dispatched_date: String(row["Dispatched Date"] || "").trim(),
             items,
             discount: Number(row["Discount"] || 0),
-            discount_type: VALID_DISCOUNT_TYPES.includes(discountType) ? discountType : "fixed",
+            discount_type: normalizeChoice(row["Discount Type"], VALID_DISCOUNT_TYPES, "fixed"),
             delivery_charge: Number(row["Delivery Charge"] || 0),
             advance_paid: Number(row["Advance Paid"] || 0),
-            payment_method: String(row["Payment Method"] || "cash").trim().toLowerCase(),
-            status: String(row["Status"] || "new_order").trim().toLowerCase(),
-            payment_status: String(row["Payment Status"] || "pending").trim().toLowerCase(),
-            order_source: String(row["Order Source"] || "ad").trim().toLowerCase(),
+            payment_method: normalizeChoice(row["Payment Method"], VALID_PAYMENT_METHODS, "cash"),
+            status: normalizeChoice(row["Status"], VALID_STATUSES, "new_order"),
+            payment_status: normalizeChoice(row["Payment Status"], VALID_PAYMENT_STATUSES, "pending"),
+            order_source: normalizeChoice(row["Order Source"], VALID_ORDER_SOURCES, "ad"),
             expected_delivery_date: String(row["Expected Delivery Date"] || "").trim(),
             errors,
           };
@@ -692,12 +713,12 @@ export function BulkOrderImportForm({
                 dispatched_date: r.dispatched_date || null,
                 subtotal,
                 discount: r.discount,
-                discount_type: r.discount_type as any,
+                discount_type: r.discount_type,
                 delivery_charge: r.delivery_charge,
                 advance_paid: r.advance_paid,
-                payment_method: r.payment_method as any,
-                status: r.status as any,
-                payment_status: r.payment_status as any,
+                payment_method: r.payment_method,
+                status: r.status,
+                payment_status: r.payment_status,
                 expected_delivery_date: r.expected_delivery_date || null,
                 order_source: r.order_source,
                 created_by: session.user.id,
@@ -786,7 +807,7 @@ export function BulkOrderImportForm({
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, ease: "easeOut" }}
-      className="flex flex-col rounded-2xl glass-card"
+      className="flex flex-col rounded-xl glass-card"
     >
       {/* ═══════ Header ════════════════════════════════════════════ */}
       <div className="flex items-start justify-between px-8 pt-7 pb-5">

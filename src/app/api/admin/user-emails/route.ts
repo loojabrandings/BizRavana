@@ -1,5 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
+import { requireSuperAdmin } from "@/lib/admin-authorization";
 import { createClient } from "@/lib/supabase/server";
+
+const requestSchema = z
+  .object({
+    userIds: z.array(z.string().uuid()).max(200),
+  })
+  .strict();
 
 /**
  * POST /api/admin/user-emails
@@ -12,35 +20,26 @@ import { createClient } from "@/lib/supabase/server";
  */
 export async function POST(request: NextRequest) {
   try {
-    // Verify the user is authenticated and is a super admin
-    const supabase = await createClient();
-    const { data: { session } } = await supabase.auth.getSession();
-
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const isSuperAdmin = session.user.app_metadata?.is_super_admin === true;
-    if (!isSuperAdmin) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
-
-    // Parse request body
-    const body = await request.json();
-    const { userIds } = body as { userIds: string[] };
-
-    if (!Array.isArray(userIds) || userIds.length === 0) {
-      return NextResponse.json({ emails: {} });
-    }
-
-    if (userIds.length > 200) {
+    const authorization = await requireSuperAdmin();
+    if (!authorization.ok) {
       return NextResponse.json(
-        { error: "Too many user IDs (max 200)" },
-        { status: 400 },
+        { error: authorization.error },
+        { status: authorization.status },
       );
     }
 
-    // Call the RPC function to get emails from auth.users
+    const parsed = requestSchema.safeParse(await request.json().catch(() => null));
+    if (!parsed.success) {
+      return NextResponse.json({ error: "Invalid user IDs." }, { status: 400 });
+    }
+
+    const userIds = [...new Set(parsed.data.userIds)];
+
+    if (userIds.length === 0) {
+      return NextResponse.json({ emails: {} });
+    }
+
+    const supabase = await createClient();
     const { data, error } = await supabase.rpc("get_user_emails", {
       user_ids: userIds,
     });

@@ -66,7 +66,7 @@ export function DashboardAdBanner() {
         )}
 
         <div className="flex min-w-0 flex-1 flex-col justify-center p-5 pr-12 sm:px-6 sm:py-4 sm:pr-5">
-          <span className="mb-1.5 text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
+          <span className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-primary">
             {ad.label}
           </span>
           <h2 className="text-lg font-semibold tracking-tight text-foreground">{ad.title}</h2>

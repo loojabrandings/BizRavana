@@ -215,29 +215,26 @@ export function TemplateSelectionDialog({
           <div className="flex items-center justify-between gap-3">
             <Button
               variant="ghost"
-              size="xs"
+              size="sm"
               onClick={onManageTemplates}
-              className="gap-1.5 h-7 text-xxs text-muted-foreground/50 hover:text-foreground"
             >
-              <Settings className="size-2.5" />
+              <Settings />
               Manage Templates
             </Button>
             <div className="flex items-center gap-1.5">
               <Button
                 variant="ghost"
-                size="xs"
+                size="sm"
                 onClick={() => onOpenChange(false)}
-                className="h-7 text-xxs text-muted-foreground/50"
               >
                 Cancel
               </Button>
               <Button
                 variant="gradient"
-                size="xs"
+                size="sm"
                 onClick={handleConfirm}
-                className="h-7 text-xxs gap-1"
               >
-                <MessageCircle className="size-2.5" />
+                <MessageCircle />
                 Send
               </Button>
             </div>

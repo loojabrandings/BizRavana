@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { ArrowLeft, Pencil, X, Package } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
@@ -31,43 +31,51 @@ interface StockPreviewProps {
 export function StockPreview({ item, onBack, onEdit }: StockPreviewProps) {
   const isMobile = useIsMobile();
   const [transactions, setTransactions] = useState<InventoryTransaction[]>([]);
-  const [txnLoading, setTxnLoading] = useState(true);
+  const [loadedItemId, setLoadedItemId] = useState<string | null>(null);
   const status = getStockStatus(item);
+  const txnLoading = loadedItemId !== item.id;
+  const visibleTransactions = loadedItemId === item.id ? transactions : [];
 
   // ─── Fetch transaction history ─────────────────────────────────
-  const fetchTransactions = useCallback(async () => {
-    setTxnLoading(true);
-    try {
-      const supabase = createClient();
-      const { data } = await supabase
-        .from("inventory_transactions")
-        .select("*")
-        .eq("inventory_item_id", item.id)
-        .order("created_at", { ascending: false })
-        .limit(50);
-
-      setTransactions((data || []).map((t) => ({
-        id: String(t.id),
-        inventory_item_id: String(t.inventory_item_id),
-        type: t.type as InventoryTransaction["type"],
-        quantity: Number(t.quantity),
-        unit_cost: t.unit_cost ? Number(t.unit_cost) : null,
-        reference_type: t.reference_type ? String(t.reference_type) : null,
-        reference_id: t.reference_id ? String(t.reference_id) : null,
-        notes: t.notes ? String(t.notes) : null,
-        created_by: t.created_by ? String(t.created_by) : null,
-        created_at: String(t.created_at),
-      })));
-    } catch (err) {
-      console.error("Failed to fetch transactions:", err);
-    } finally {
-      setTxnLoading(false);
-    }
-  }, [item.id]);
-
   useEffect(() => {
-    fetchTransactions();
-  }, [fetchTransactions]);
+    let cancelled = false;
+
+    const fetchTransactions = async () => {
+      try {
+        const supabase = createClient();
+        const { data } = await supabase
+          .from("inventory_transactions")
+          .select("*")
+          .eq("inventory_item_id", item.id)
+          .order("created_at", { ascending: false })
+          .limit(50);
+
+        if (!cancelled) {
+          setTransactions((data || []).map((transaction) => ({
+            id: String(transaction.id),
+            inventory_item_id: String(transaction.inventory_item_id),
+            type: transaction.type as InventoryTransaction["type"],
+            quantity: Number(transaction.quantity),
+            unit_cost: transaction.unit_cost ? Number(transaction.unit_cost) : null,
+            reference_type: transaction.reference_type ? String(transaction.reference_type) : null,
+            reference_id: transaction.reference_id ? String(transaction.reference_id) : null,
+            notes: transaction.notes ? String(transaction.notes) : null,
+            created_by: transaction.created_by ? String(transaction.created_by) : null,
+            created_at: String(transaction.created_at),
+          })));
+        }
+      } catch (error) {
+        console.error("Failed to fetch transactions:", error);
+      } finally {
+        if (!cancelled) setLoadedItemId(item.id);
+      }
+    };
+
+    void fetchTransactions();
+    return () => {
+      cancelled = true;
+    };
+  }, [item.id]);
 
   // ─── Escape key ──────────────────────────────────────────────
   useEffect(() => {
@@ -88,7 +96,7 @@ export function StockPreview({ item, onBack, onEdit }: StockPreviewProps) {
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, ease: "easeOut" }}
-      className="flex flex-col rounded-2xl glass-card"
+      className="flex flex-col rounded-xl glass-card"
     >
       {/* ═══════ Header ════════════════════════════════════════════ */}
       <div className={isMobile ? "px-4 pt-4 pb-3" : "flex items-start justify-between px-8 pt-7 pb-5"}>
@@ -138,9 +146,9 @@ export function StockPreview({ item, onBack, onEdit }: StockPreviewProps) {
             <div className="mt-4 flex items-center gap-2">
               <Button
                 variant="outline"
-                size="sm"
+                size="md"
                 onClick={onBack}
-                className="flex-1 gap-1.5 text-sm font-medium h-9"
+                className="flex-1"
               >
                 <ArrowLeft className="size-3.5" />
                 Back
@@ -148,9 +156,9 @@ export function StockPreview({ item, onBack, onEdit }: StockPreviewProps) {
               {onEdit && (
                 <Button
                   variant="gradient"
-                  size="sm"
+                  size="md"
                   onClick={onEdit}
-                  className="flex-1 gap-1.5 text-sm font-medium h-9"
+                  className="flex-1"
                 >
                   <Pencil className="size-3.5" />
                   Edit
@@ -289,7 +297,7 @@ export function StockPreview({ item, onBack, onEdit }: StockPreviewProps) {
               <div className="flex items-center justify-center py-10">
                 <p className="text-sm text-muted-foreground">Loading...</p>
               </div>
-            ) : transactions.length === 0 ? (
+            ) : visibleTransactions.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-10 text-center">
                 <Package className="size-8 text-muted-foreground/30 mb-3" />
                 <p className="text-sm text-muted-foreground">No transactions yet</p>
@@ -306,7 +314,7 @@ export function StockPreview({ item, onBack, onEdit }: StockPreviewProps) {
                     </tr>
                   </thead>
                   <tbody>
-                    {transactions.map((txn) => (
+                    {visibleTransactions.map((txn) => (
                       <tr key={txn.id} className="border-b border-border/20 hover:bg-muted/10 transition-colors">
                         <td className="px-3 py-2.5 sm:px-4 text-muted-foreground whitespace-nowrap text-xs sm:text-sm">
                           {formatDateTime(txn.created_at)}

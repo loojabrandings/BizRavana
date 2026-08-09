@@ -59,7 +59,7 @@ export async function initializeQuotationSequence(
 ): Promise<void> {
   const settings = useQuotationSettings.getState();
   const prefix = settings.quotationNumberPrefix || "";
-  const { startNum, padding: _unused } = parseStart(settings.quotationNumberStart || "1");
+  const { startNum } = parseStart(settings.quotationNumberStart || "1");
 
   try {
     const supabase = createClient();

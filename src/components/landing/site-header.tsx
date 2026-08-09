@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
@@ -60,9 +61,12 @@ export function SiteHeader() {
     <header className="fixed inset-x-0 top-0 z-50 border-b border-border/40 bg-background/70 backdrop-blur-xl">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 lg:px-8">
         <Link href="/" className="flex items-center gap-2 font-semibold">
-          <img
+          <Image
             src="/darkmode-logo.png"
             alt="BizRavana"
+            width={28}
+            height={28}
+            style={{ width: "auto" }}
             className="h-7 w-auto object-contain"
           />
           <span className="max-sm:hidden">BizRavana</span>

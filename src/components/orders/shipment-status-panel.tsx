@@ -103,7 +103,10 @@ export function ShipmentStatusPanel({ data }: ShipmentStatusPanelProps) {
   }, [data.waybill_id]);
 
   useEffect(() => {
-    fetchData();
+    const taskId = window.setTimeout(() => {
+      void fetchData();
+    }, 0);
+    return () => window.clearTimeout(taskId);
   }, [fetchData]);
 
   const currentStatus = trackingEvents[0]?.status;
@@ -137,7 +140,7 @@ export function ShipmentStatusPanel({ data }: ShipmentStatusPanelProps) {
       {/* ────── Current Status Card ─────────────────────────── */}
       {hasWaybill && (
         <div className="mt-5 rounded-xl border border-border/30 bg-muted/10 p-4">
-          <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/50">
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             Current Status
           </p>
 
@@ -172,7 +175,7 @@ export function ShipmentStatusPanel({ data }: ShipmentStatusPanelProps) {
       {/* ────── Shipment History (scrollable) ───────────────── */}
       {hasWaybill && trackingEvents.length > 0 && (
         <div className="mt-5">
-          <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/50">
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             Shipment History
           </p>
           <div
@@ -244,7 +247,7 @@ export function ShipmentStatusPanel({ data }: ShipmentStatusPanelProps) {
 
       {/* ────── Finance Status ──────────────────────────────── */}
       <div>
-        <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/50">
+        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
           Finance Status
         </p>
 

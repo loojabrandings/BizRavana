@@ -66,19 +66,23 @@ function QuotationItemCard({
   const [products, setProducts] = useState<
     { id: string; name: string; selling_price: number }[]
   >([]);
-  const [loadingProducts, setLoadingProducts] = useState(false);
+  const [loadedProductRequest, setLoadedProductRequest] = useState<string | null>(null);
 
   const lineTotal = item.quantity * item.unit_price;
+  const productRequest = businessId && item.category.trim()
+    ? `${businessId}:${item.category}`
+    : null;
+  const visibleProducts = loadedProductRequest === productRequest ? products : [];
+  const loadingProducts = productRequest !== null && loadedProductRequest !== productRequest;
 
   // ─── Fetch products when category changes ─────────────────────
   useEffect(() => {
     if (!businessId || !item.category.trim()) {
-      setProducts([]);
       return;
     }
 
     let cancelled = false;
-    setLoadingProducts(true);
+    const requestKey = `${businessId}:${item.category}`;
 
     const fetchProducts = async () => {
       const supabase = createClient();
@@ -99,7 +103,7 @@ function QuotationItemCard({
             selling_price: Number(p.selling_price || 0),
           })),
         );
-        setLoadingProducts(false);
+        setLoadedProductRequest(requestKey);
       }
     };
 
@@ -209,7 +213,7 @@ function QuotationItemCard({
                         : "Select a category first."}
                   </CommandEmpty>
                   <CommandGroup>
-                    {products.map((product) => (
+                    {visibleProducts.map((product) => (
                       <CommandItem
                         key={product.id}
                         value={product.name}

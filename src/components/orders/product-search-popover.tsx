@@ -27,8 +27,6 @@ export function ProductSearchPopover({
 
   useEffect(() => {
     if (!query.trim()) {
-      setResults([]);
-      setOpen(false);
       return;
     }
 
@@ -101,7 +99,14 @@ export function ProductSearchPopover({
           type="text"
           placeholder="Search products..."
           value={query}
-          onChange={(e) => setQuery(e.target.value)}
+          onChange={(event) => {
+            const nextQuery = event.target.value;
+            setQuery(nextQuery);
+            if (!nextQuery.trim()) {
+              setResults([]);
+              setOpen(false);
+            }
+          }}
           onFocus={() => results.length > 0 && setOpen(true)}
           className="pl-8 h-9"
         />
@@ -126,6 +131,7 @@ export function ProductSearchPopover({
                 onClick={() => {
                   onSelect(product);
                   setQuery("");
+                  setResults([]);
                   setOpen(false);
                   inputRef.current?.focus();
                 }}

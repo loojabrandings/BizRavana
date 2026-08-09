@@ -13,6 +13,11 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
+import {
+  deleteUploadedFiles,
+  storagePathFromPublicUrl,
+  uploadFile,
+} from "@/lib/uploads";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -137,52 +142,21 @@ export default function AdminProfilePage() {
       return;
     }
 
-    const extensionByType: Record<string, string> = {
-      "image/jpeg": "jpg",
-      "image/png": "png",
-      "image/webp": "webp",
-      "image/gif": "gif",
-      "image/avif": "avif",
-    };
-    const extension = extensionByType[file.type];
-    if (!extension) {
+    if (!["image/jpeg", "image/png", "image/webp", "image/gif", "image/avif"].includes(file.type)) {
       toast.error("Use a JPG, PNG, WebP, GIF, or AVIF image.");
       return;
     }
 
     setUploadingAvatar(true);
-    const folder = `avatars/${userId}`;
-    const filePath = `${folder}/admin-avatar.${extension}`;
-
-    const { data: existingFiles } = await supabase.storage
-      .from("profile-images")
-      .list(folder, { limit: 20 });
-    const oldAvatarPaths = (existingFiles ?? [])
-      .filter((item) => item.name.startsWith("admin-avatar."))
-      .map((item) => `${folder}/${item.name}`);
-
-    if (oldAvatarPaths.length > 0) {
-      await supabase.storage.from("profile-images").remove(oldAvatarPaths);
-    }
-
-    const { error: uploadError } = await supabase.storage
-      .from("profile-images")
-      .upload(filePath, file, {
-        cacheControl: "3600",
-        contentType: file.type,
-        upsert: true,
-      });
-
-    if (uploadError) {
+    let publicUrl: string;
+    try {
+      const uploaded = await uploadFile("admin-avatar", file);
+      publicUrl = `${uploaded.publicUrl}?v=${Date.now()}`;
+    } catch (error) {
       setUploadingAvatar(false);
-      toast.error(uploadError.message);
+      toast.error(error instanceof Error ? error.message : "Avatar upload failed.");
       return;
     }
-
-    const { data } = supabase.storage
-      .from("profile-images")
-      .getPublicUrl(filePath);
-    const publicUrl = `${data.publicUrl}?v=${Date.now()}`;
     const { error: metadataError } = await supabase.auth.updateUser({
       data: { avatar_url: publicUrl },
     });
@@ -200,21 +174,15 @@ export default function AdminProfilePage() {
 
   const removeAvatar = async () => {
     setUploadingAvatar(true);
-    const folder = `avatars/${userId}`;
-    const { data: existingFiles } = await supabase.storage
-      .from("profile-images")
-      .list(folder, { limit: 20 });
-    const avatarPaths = (existingFiles ?? [])
-      .filter((item) => item.name.startsWith("admin-avatar."))
-      .map((item) => `${folder}/${item.name}`);
-
-    if (avatarPaths.length > 0) {
-      const { error: removeError } = await supabase.storage
-        .from("profile-images")
-        .remove(avatarPaths);
-      if (removeError) {
+    const avatarPath = avatarUrl
+      ? storagePathFromPublicUrl(avatarUrl, "profile-images")
+      : null;
+    if (avatarPath) {
+      try {
+        await deleteUploadedFiles("admin-avatar", [avatarPath]);
+      } catch (error) {
         setUploadingAvatar(false);
-        toast.error(removeError.message);
+        toast.error(error instanceof Error ? error.message : "Avatar removal failed.");
         return;
       }
     }

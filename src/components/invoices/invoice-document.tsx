@@ -32,15 +32,6 @@ function formatDate(dateStr: string): string {
   return fmtDate(dateStr);
 }
 
-function statusTextClass(status: string): string {
-  const s = status?.toLowerCase() || "";
-  if (s === "paid" || s === "delivered" || s === "active") return "text-success";
-  if (s === "advanced" || s === "dispatched" || s === "packed") return "text-warning";
-  if (s === "pending" || s === "new_order" || s === "ready") return "text-status-info";
-  if (s === "cancelled" || s === "returned") return "text-destructive";
-  return "text-muted-foreground";
-}
-
 function statusLabel(status: string): string {
   const map: Record<string, string> = {
     new_order: "New Order", ready: "Ready", packed: "Packed",

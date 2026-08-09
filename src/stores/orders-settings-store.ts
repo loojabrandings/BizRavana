@@ -14,7 +14,6 @@ export interface OrdersSettings {
   deductStockAt: string;
   enableBarcodeScanner: boolean;
   defaultCourier: string;
-  courierCharge: number;
   defaultSorting: string;
   defaultRowsPerPage: number;
   defaultPaymentMethod: string;
@@ -37,7 +36,6 @@ interface OrdersSettingsStore extends OrdersSettings {
   setDeductStockAt: (v: string) => void;
   setEnableBarcodeScanner: (v: boolean) => void;
   setDefaultCourier: (v: string) => void;
-  setCourierCharge: (v: number) => void;
   setDefaultSorting: (v: string) => void;
   setDefaultRowsPerPage: (v: number) => void;
   setDefaultPaymentMethod: (v: string) => void;
@@ -73,7 +71,6 @@ export const useOrdersSettings = create<OrdersSettingsStore>()(
       deductStockAt: "packed",
       enableBarcodeScanner: true,
       defaultCourier: "",
-      courierCharge: 0,
       defaultSorting: "created_at_desc",
       defaultRowsPerPage: 25,
       defaultPaymentMethod: "cash",
@@ -102,7 +99,6 @@ export const useOrdersSettings = create<OrdersSettingsStore>()(
       setDeductStockAt: (v) => set({ deductStockAt: v }),
       setEnableBarcodeScanner: (v) => set({ enableBarcodeScanner: v }),
       setDefaultCourier: (v) => set({ defaultCourier: v }),
-      setCourierCharge: (v) => set({ courierCharge: v }),
       setDefaultSorting: (v) => set({ defaultSorting: v }),
       setDefaultRowsPerPage: (v) => set({ defaultRowsPerPage: v }),
       setDefaultPaymentMethod: (v) => set({ defaultPaymentMethod: v }),

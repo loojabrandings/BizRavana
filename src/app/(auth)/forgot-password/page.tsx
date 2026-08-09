@@ -107,8 +107,9 @@ function ForgotPasswordForm() {
             <div className="mt-7 space-y-4">
               <Button
                 variant="outline"
+                size="lg"
                 onClick={() => setSent(false)}
-                className="h-12 w-full rounded-xl text-sm font-semibold"
+                className="w-full"
               >
                 Try a different email
               </Button>
@@ -172,8 +173,9 @@ function ForgotPasswordForm() {
 
               <Button
                 type="submit"
+                size="lg"
                 disabled={loading || !email.trim()}
-                className="group btn-gradient btn-gradient-shadow h-12 w-full rounded-xl text-sm font-semibold text-primary-foreground transition-all hover:-translate-y-0.5 hover:btn-gradient-hover hover:shadow-xl disabled:translate-y-0"
+                className="w-full"
               >
                 {loading ? (
                   <>

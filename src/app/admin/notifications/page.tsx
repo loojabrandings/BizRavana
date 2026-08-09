@@ -6,15 +6,10 @@ import {
   BellOff,
   BellRing,
   CalendarClock,
-  CheckCheck,
-  Clock,
   Copy,
-  ExternalLink,
-  Eye,
   EyeOff,
   Loader2,
   Megaphone,
-  MessageSquare,
   PauseCircle,
   PlayCircle,
   Send,
@@ -45,7 +40,6 @@ import {
 } from "@/components/ui/dialog";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { toast } from "sonner";
-import { useRouter } from "next/navigation";
 
 // ══ Responsive Admin Components ══════════════════════════════════
 import { AdminPageHeader } from "@/components/admin/page-header";
@@ -228,7 +222,25 @@ function CreateBroadcastDialog({ open, onOpenChange, onCreated }: {
 
   const supabase = useMemo(() => createClient(), []);
 
-  useEffect(() => { if (open) { setTitle(""); setMessage(""); setCategory("announcement"); setPriority("normal"); setAudienceType("all"); setActionLabel(""); setActionUrl(""); setSendTiming("now"); setScheduledDate(""); setScheduledTime(""); setRecipientPreview(null); } }, [open]);
+  useEffect(() => {
+    if (!open) return;
+
+    const timeoutId = window.setTimeout(() => {
+      setTitle("");
+      setMessage("");
+      setCategory("announcement");
+      setPriority("normal");
+      setAudienceType("all");
+      setActionLabel("");
+      setActionUrl("");
+      setSendTiming("now");
+      setScheduledDate("");
+      setScheduledTime("");
+      setRecipientPreview(null);
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [open]);
 
   // ── Preview recipient count ───────────────────────────────
   const fetchRecipientCount = useCallback(async () => {
@@ -251,7 +263,15 @@ function CreateBroadcastDialog({ open, onOpenChange, onCreated }: {
     } catch { setRecipientPreview(null); }
   }, [audienceType, supabase]);
 
-  useEffect(() => { if (open && audienceType !== "selected") fetchRecipientCount(); }, [open, audienceType, fetchRecipientCount]);
+  useEffect(() => {
+    if (!open || audienceType === "selected") return;
+
+    const timeoutId = window.setTimeout(() => {
+      void fetchRecipientCount();
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [open, audienceType, fetchRecipientCount]);
 
   // ── Save ──────────────────────────────────────────────────
   const handleSave = useCallback(async () => {
@@ -263,7 +283,7 @@ function CreateBroadcastDialog({ open, onOpenChange, onCreated }: {
     setSaving(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      const status = sendTiming === "draft" ? "draft" : sendTiming === "schedule" ? "scheduled" : "sent";
+      const status = sendTiming === "schedule" ? "scheduled" : "draft";
       let scheduledAt: string | null = null;
       if (sendTiming === "schedule" && scheduledDate) {
         scheduledAt = scheduledTime ? `${scheduledDate}T${scheduledTime}:00` : `${scheduledDate}T00:00:00`;
@@ -287,11 +307,6 @@ function CreateBroadcastDialog({ open, onOpenChange, onCreated }: {
 
       // If sending now, deliver immediately via the server API
       if (sendTiming === "now" && data) {
-        await supabase.from("notification_broadcasts").update({
-          status: "sent",
-          sent_at: new Date().toISOString(),
-        }).eq("id", data.id);
-
         // Call the deliver API to actually insert notification records
         const res = await fetch("/api/admin/deliver-broadcast", {
           method: "POST",
@@ -450,7 +465,7 @@ function CreateBroadcastDialog({ open, onOpenChange, onCreated }: {
                 </div>
                 <p className="mt-0.5 text-xs text-muted-foreground/70 line-clamp-2">{message || "Notification message will appear here."}</p>
                 <div className="flex items-center gap-2 mt-1.5">
-                  <span className="text-[10px] text-muted-foreground/40">Just now</span>
+                  <span className="text-xs text-muted-foreground">Just now</span>
                   <CategoryBadge category={category} />
                   <AudienceBadge type={audienceType} />
                 </div>
@@ -490,7 +505,6 @@ export default function AdminNotificationsPage() {
   const [cancelTarget, setCancelTarget] = useState<Broadcast | null>(null);
 
   const supabase = useMemo(() => createClient(), []);
-  const router = useRouter();
 
   // ── Fetch Data ────────────────────────────────────────────
   const fetchData = useCallback(async () => {
@@ -519,7 +533,13 @@ export default function AdminNotificationsPage() {
     } finally { setLoading(false); }
   }, [supabase]);
 
-  useEffect(() => { fetchData(); }, [fetchData]);
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      void fetchData();
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [fetchData]);
 
   // ── Cancel Scheduled ─────────────────────────────────────
   const handleCancel = useCallback(async () => {
@@ -716,14 +736,14 @@ export default function AdminNotificationsPage() {
                   toast.error(result.error || "Delivery failed");
                 }
               }).catch(() => toast.error("Delivery failed"));
-            }} className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-primary text-primary-foreground px-3 py-2 text-xs font-medium min-h-11 hover:bg-primary/90 transition-colors">
+            }} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-[10px] bg-primary px-4 text-sm font-medium text-white shadow-sm shadow-primary/20 transition-all hover:-translate-y-0.5 hover:bg-primary/90 hover:shadow-md">
               <Send className="size-3.5" /> Send Now
             </button>
           )}
         </>
       }
     />
-  ), []);
+  ), [fetchData]);
 
   // ── Mobile card: Rules ───────────────────────────────────
   const renderRuleMobileCard = useCallback((r: NotificationRule) => (
@@ -740,7 +760,7 @@ export default function AdminNotificationsPage() {
       ]}
       actions={
         <button type="button" onClick={() => handleToggleRule(r)}
-          className={cn("inline-flex items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-xs font-medium min-h-11",
+          className={cn("inline-flex min-h-11 items-center justify-center gap-2 rounded-[10px] px-4 text-sm font-medium transition-all",
             r.is_enabled ? "bg-warning/10 text-warning border border-warning/20" : "bg-success/10 text-success border border-success/20")}>
           {r.is_enabled ? <PauseCircle className="size-3.5" /> : <PlayCircle className="size-3.5" />}
           {r.is_enabled ? "Disable" : "Enable"}
@@ -836,14 +856,14 @@ export default function AdminNotificationsPage() {
                       <div className="flex flex-wrap items-center gap-2">
                         <p className="text-sm font-medium text-foreground">{rule.name}</p>
                         {rule.is_essential && (
-                          <span className="rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold text-primary">Essential</span>
+                          <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">Essential</span>
                         )}
                       </div>
                       {rule.description && <p className="text-xs text-muted-foreground/60 mt-0.5">{rule.description}</p>}
                       <div className="flex items-center gap-2 mt-1.5">
                         <CategoryBadge category={rule.category} />
                         <PriorityBadge priority={rule.priority} />
-                        <span className="text-[10px] text-muted-foreground/40 font-mono">{rule.rule_key}</span>
+                        <span className="font-mono text-xs text-muted-foreground">{rule.rule_key}</span>
                       </div>
                     </div>
                   </div>

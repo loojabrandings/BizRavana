@@ -1,16 +1,12 @@
 import { NextResponse } from "next/server";
+import { validateUploadedFile } from "@/lib/file-signature";
 import { getAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
 
 const MAX_RECEIPT_SIZE = 5 * 1024 * 1024;
-const RECEIPT_TYPES: Record<string, string> = {
-  "image/jpeg": "jpg",
-  "image/png": "png",
-  "image/webp": "webp",
-  "application/pdf": "pdf",
-};
+const RECEIPT_TYPES = ["image/jpeg", "image/png", "image/webp", "application/pdf"] as const;
 
 function errorResponse(message: string, status: number) {
   return NextResponse.json({ error: message }, { status });
@@ -34,12 +30,18 @@ export async function POST(request: Request) {
     return errorResponse("Please attach your bank-transfer receipt.", 400);
   }
 
-  const extension = RECEIPT_TYPES[receipt.type];
-  if (!extension) {
-    return errorResponse("Receipt must be a JPG, PNG, WEBP, or PDF file.", 400);
-  }
-  if (receipt.size <= 0 || receipt.size > MAX_RECEIPT_SIZE) {
-    return errorResponse("Receipt must be smaller than 5 MB.", 400);
+  let validatedReceipt: Awaited<ReturnType<typeof validateUploadedFile>>;
+  try {
+    validatedReceipt = await validateUploadedFile(
+      receipt,
+      RECEIPT_TYPES,
+      MAX_RECEIPT_SIZE,
+    );
+  } catch (error) {
+    return errorResponse(
+      error instanceof Error ? error.message : "Invalid receipt file.",
+      400,
+    );
   }
 
   const { data: profile, error: profileError } = await supabase
@@ -52,7 +54,7 @@ export async function POST(request: Request) {
     return errorResponse("Your business account could not be found.", 403);
   }
   if (!["owner", "admin"].includes(profile.role)) {
-    return errorResponse("Only a business owner or admin can submit payments.", 403);
+    return errorResponse("Only a business owner or Business Manager can submit payments.", 403);
   }
 
   const admin = getAdminClient();
@@ -95,12 +97,11 @@ export async function POST(request: Request) {
     return errorResponse("You already have a payment waiting for review.", 409);
   }
 
-  const receiptPath = `proofs/${business.id}/${crypto.randomUUID()}.${extension}`;
-  const receiptBytes = Buffer.from(await receipt.arrayBuffer());
+  const receiptPath = `proofs/${business.id}/${crypto.randomUUID()}.${validatedReceipt.extension}`;
   const { error: uploadError } = await admin.storage
     .from("payment-proofs")
-    .upload(receiptPath, receiptBytes, {
-      contentType: receipt.type,
+    .upload(receiptPath, validatedReceipt.bytes, {
+      contentType: validatedReceipt.mime,
       cacheControl: "3600",
       upsert: false,
     });

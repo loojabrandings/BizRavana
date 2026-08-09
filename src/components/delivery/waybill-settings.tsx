@@ -40,7 +40,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { useIsMobile } from "@/hooks/use-media-query";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { Pagination } from "@/components/ui/pagination";
 import { toast } from "sonner";
@@ -101,11 +100,11 @@ function SummaryCard({
   color: string;
 }) {
   return (
-    <div className="flex flex-col items-center rounded-lg border border-border/20 bg-muted/10 px-3 py-2">
+    <div className="glass-inset flex flex-col items-center rounded-[10px] px-3 py-2.5">
       <span className={cn("text-lg font-bold tabular-nums", color)}>
         {count}
       </span>
-      <span className="text-nano font-medium text-muted-foreground/60 uppercase tracking-wider">
+      <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
         {label}
       </span>
     </div>
@@ -115,8 +114,6 @@ function SummaryCard({
 // ─── Main Component ─────────────────────────────────────────────────
 
 export function WaybillSettings({ businessId, userId, providerId, onNavigateToProvider }: WaybillSettingsProps) {
-  const isMobile = useIsMobile();
-
   // ── State ──────────────────────────────────────────────────────
   const [loading, setLoading] = useState(true);
   const [method, setMethod] = useState<"manual" | "auto">("manual");
@@ -134,7 +131,6 @@ export function WaybillSettings({ businessId, userId, providerId, onNavigateToPr
   const [addInput, setAddInput] = useState("");
   const [debouncedFilter, setDebouncedFilter] = useState("");
   const filterTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [addingSingle, setAddingSingle] = useState(false);
 
   // Add multiple dialog
   const [multipleDialogOpen, setMultipleDialogOpen] = useState(false);
@@ -176,23 +172,20 @@ export function WaybillSettings({ businessId, userId, providerId, onNavigateToPr
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
 
-  // Reset to page 1 when filters change
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [statusFilter, debouncedFilter]);
-
   // ── Search debounce — singleId doubles as the search query
   const handleSearchChange = useCallback((value: string) => {
     setAddInput(value);
     if (filterTimerRef.current) clearTimeout(filterTimerRef.current);
     filterTimerRef.current = setTimeout(() => {
       setDebouncedFilter(value);
+      setCurrentPage(1);
     }, 300);
   }, []);
 
   const handleClearSearch = useCallback(() => {
     setAddInput("");
     setDebouncedFilter("");
+    setCurrentPage(1);
     if (filterTimerRef.current) clearTimeout(filterTimerRef.current);
   }, []);
 
@@ -225,10 +218,13 @@ export function WaybillSettings({ businessId, userId, providerId, onNavigateToPr
     } finally {
       setLoading(false);
     }
-  }, [businessId, statusFilter, debouncedFilter, currentPage, pageSize]);
+  }, [businessId, statusFilter, debouncedFilter, currentPage, pageSize, providerId]);
 
   useEffect(() => {
-    loadData();
+    const taskId = window.setTimeout(() => {
+      void loadData();
+    }, 0);
+    return () => window.clearTimeout(taskId);
   }, [loadData]);
 
   // Cleanup filter timer on unmount
@@ -244,23 +240,22 @@ export function WaybillSettings({ businessId, userId, providerId, onNavigateToPr
       if (!businessId) return;
       setSavingMethod(true);
       try {
-        await setWaybillMethod(businessId, newMethod, userId);
+        await setWaybillMethod(businessId, newMethod);
         setMethod(newMethod);
         toast.success(`Waybill method set to ${newMethod}`);
-      } catch (err) {
+      } catch {
         toast.error("Failed to update waybill method");
       } finally {
         setSavingMethod(false);
       }
     },
-    [businessId, userId],
+    [businessId],
   );
 
   // ── Add single (also clears the filter) ────────────────────────
   const handleAddSingle = useCallback(async () => {
     const value = addInput.trim();
     if (!businessId || !value) return;
-    setAddingSingle(true);
     try {
       const result = await addManualWaybill(businessId, value, userId, providerId);
       if (result.success) {
@@ -270,12 +265,10 @@ export function WaybillSettings({ businessId, userId, providerId, onNavigateToPr
       } else {
         toast.error(result.error || "Failed to add waybill");
       }
-    } catch (err) {
+    } catch {
       toast.error("Failed to add waybill");
-    } finally {
-      setAddingSingle(false);
     }
-  }, [businessId, addInput, userId, loadData, handleClearSearch]);
+  }, [businessId, addInput, userId, providerId, loadData, handleClearSearch]);
 
   // ── Add multiple ──────────────────────────────────────────────
   const parsedMultiplePreview = useMemo(() => {
@@ -310,12 +303,12 @@ export function WaybillSettings({ businessId, userId, providerId, onNavigateToPr
       setMultipleInput("");
       setMultipleDialogOpen(false);
       await loadData();
-    } catch (err) {
+    } catch {
       toast.error("Failed to add waybills");
     } finally {
       setAddingMultiple(false);
     }
-  }, [businessId, multipleInput, userId, loadData]);
+  }, [businessId, multipleInput, userId, providerId, loadData]);
 
   // ── Range preview ──────────────────────────────────────────────
   const rangePreview = useMemo(() => {
@@ -407,12 +400,12 @@ export function WaybillSettings({ businessId, userId, providerId, onNavigateToPr
       setRangePrefix("");
       setRangeDialogOpen(false);
       await loadData();
-    } catch (err) {
+    } catch {
       toast.error("Failed to generate waybill range");
     } finally {
       setGeneratingRange(false);
     }
-  }, [businessId, rangeFrom, rangeTo, rangePrefix, userId, loadData]);
+  }, [businessId, rangeFrom, rangeTo, rangePrefix, userId, providerId, loadData]);
 
   // ── Manual status update ──────────────────────────────────────
   const handleStatusUpdate = useCallback(
@@ -556,7 +549,7 @@ export function WaybillSettings({ businessId, userId, providerId, onNavigateToPr
   // ── No courier provider selected ────────────────────────────
   if (!providerId) {
     return (
-      <div className="rounded-xl border border-info/20 bg-info/5 p-6 text-center">
+      <div className="glass-inset rounded-xl p-6 text-center">
         <div className="mx-auto flex size-12 items-center justify-center rounded-xl bg-info/10">
           <Truck className="size-6 text-info" />
         </div>
@@ -567,15 +560,16 @@ export function WaybillSettings({ businessId, userId, providerId, onNavigateToPr
           Select a courier provider first to start managing waybill IDs
           for your shipments and deliveries.
         </p>
-        <button
+        <Button
           type="button"
           onClick={() => onNavigateToProvider?.()}
-          className="mt-5 inline-flex items-center gap-2 rounded-lg bg-info px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-info/90 active:scale-[0.97]"
+          size="md"
+          className="mt-5 max-sm:h-11 max-sm:w-full max-sm:px-3 max-sm:text-xs"
         >
           <Truck className="size-4" />
           Go to Courier Provider Settings
           <ArrowRight className="size-4" />
-        </button>
+        </Button>
       </div>
     );
   }
@@ -584,7 +578,7 @@ export function WaybillSettings({ businessId, userId, providerId, onNavigateToPr
   if (loading) {
     return (
       <div className="flex items-center justify-center py-8">
-        <Loader2 className="size-4 animate-spin text-muted-foreground/40" />
+        <Loader2 className="size-4 animate-spin text-muted-foreground" />
       </div>
     );
   }
@@ -593,10 +587,10 @@ export function WaybillSettings({ businessId, userId, providerId, onNavigateToPr
     <div className="space-y-5">
       {/* ── Waybill Method ────────────────────────────────────── */}
       <div>
-        <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/50">
+        <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
           Waybill Method
         </Label>
-        <p className="mt-0.5 text-xs text-muted-foreground/50">
+        <p className="mt-0.5 text-xs text-muted-foreground">
           Choose how waybill IDs are assigned to orders.
         </p>
         <div className="relative mt-2 grid grid-cols-2 gap-2">
@@ -618,26 +612,27 @@ export function WaybillSettings({ businessId, userId, providerId, onNavigateToPr
             type="button"
             onClick={() => handleMethodChange("manual")}
             disabled={savingMethod}
+            aria-pressed={method === "manual"}
             className={cn(
-              "relative flex flex-col items-center gap-1.5 rounded-xl border-2 px-4 py-3 text-center transition-all duration-150",
+              "relative flex min-h-11 flex-col items-center gap-1.5 rounded-[10px] border-2 px-4 py-3 text-center transition-all duration-150 outline-none focus-visible:border-primary/50 focus-visible:ring-3 focus-visible:ring-primary/20 active:scale-[0.98]",
               method === "manual"
                 ? "border-primary/30 bg-primary/[0.05] text-foreground shadow-sm"
-                : "border-border/20 text-muted-foreground/60 hover:border-border/40 hover:bg-muted/5",
+                : "border-border/40 text-muted-foreground hover:border-border/60 hover:bg-muted/10",
             )}
           >
             <span
               className={cn(
-                "flex size-8 items-center justify-center rounded-lg transition-colors",
+                "flex size-8 items-center justify-center rounded-[10px] transition-colors",
                 method === "manual"
                   ? "bg-primary/10 text-primary"
-                  : "bg-muted/20 text-muted-foreground/40",
+                  : "bg-muted/20 text-muted-foreground",
               )}
             >
               <PenLine className="size-4" />
             </span>
             <div>
               <span className="block text-sm font-semibold">Manual</span>
-              <span className="block text-xxs text-muted-foreground/50 mt-0.5 leading-tight">
+              <span className="mt-0.5 block text-xs leading-tight text-muted-foreground">
                 You provide waybill IDs manually
               </span>
             </div>
@@ -647,26 +642,27 @@ export function WaybillSettings({ businessId, userId, providerId, onNavigateToPr
             type="button"
             onClick={() => handleMethodChange("auto")}
             disabled={savingMethod}
+            aria-pressed={method === "auto"}
             className={cn(
-              "relative flex flex-col items-center gap-1.5 rounded-xl border-2 px-4 py-3 text-center transition-all duration-150",
+              "relative flex min-h-11 flex-col items-center gap-1.5 rounded-[10px] border-2 px-4 py-3 text-center transition-all duration-150 outline-none focus-visible:border-primary/50 focus-visible:ring-3 focus-visible:ring-primary/20 active:scale-[0.98]",
               method === "auto"
                 ? "border-primary/30 bg-primary/[0.05] text-foreground shadow-sm"
-                : "border-border/20 text-muted-foreground/60 hover:border-border/40 hover:bg-muted/5",
+                : "border-border/40 text-muted-foreground hover:border-border/60 hover:bg-muted/10",
             )}
           >
             <span
               className={cn(
-                "flex size-8 items-center justify-center rounded-lg transition-colors",
+                "flex size-8 items-center justify-center rounded-[10px] transition-colors",
                 method === "auto"
                   ? "bg-primary/10 text-primary"
-                  : "bg-muted/20 text-muted-foreground/40",
+                  : "bg-muted/20 text-muted-foreground",
               )}
             >
               <Zap className="size-4" />
             </span>
             <div>
               <span className="block text-sm font-semibold">Auto</span>
-              <span className="block text-xxs text-muted-foreground/50 mt-0.5 leading-tight">
+              <span className="mt-0.5 block text-xs leading-tight text-muted-foreground">
                 Waybill IDs from courier API
               </span>
             </div>
@@ -682,8 +678,8 @@ export function WaybillSettings({ businessId, userId, providerId, onNavigateToPr
 
       {/* ── Auto Mode Helper ─────────────────────────────────── */}
       {method === "auto" && (
-        <div className="rounded-lg bg-info/5 border border-info/20 px-3 py-2.5">
-          <p className="text-xxs text-info/70 leading-relaxed">
+        <div className="rounded-[10px] border border-info/20 bg-info/5 px-3 py-2.5">
+          <p className="text-xs leading-relaxed text-info">
             Waybill IDs will be provided automatically by the connected
             courier integration. No manual waybill management needed.
           </p>
@@ -695,36 +691,39 @@ export function WaybillSettings({ businessId, userId, providerId, onNavigateToPr
         <div className="space-y-4">
           {/* ── Add Section ────────────────────────────────────── */}
           <div className="space-y-2">
-            <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/50">
+            <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               Add Waybill IDs
             </Label>
 
             {/* Merged Add/Search input — typing here both filters the list and can add a new ID */}
             <div className="relative flex flex-wrap gap-2">
               <div className="relative flex-1 min-w-[180px]">
-                <Search className="absolute left-2.5 top-1/2 size-3 -translate-y-1/2 text-muted-foreground/30" />
+                <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                 <input
                   value={addInput}
                   onChange={(e) => handleSearchChange(e.target.value)}
                   placeholder="Search or add waybill ID..."
-                  className="w-full h-9 rounded-lg border border-border/20 bg-muted/10 pl-7 pr-6 text-sm text-foreground placeholder:text-muted-foreground/30 focus:outline-none focus:border-primary/30 focus:bg-primary/[0.02] transition-colors"
+                  className="h-10 w-full rounded-[10px] border border-border/40 bg-transparent pl-10 pr-10 text-sm text-foreground placeholder:text-muted-foreground transition-colors focus:border-primary/50 focus:outline-none focus:ring-3 focus:ring-primary/20 max-sm:h-11"
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && addInput.trim()) handleAddSingle();
                   }}
                 />
                 {addInput && (
-                  <button
+                  <Button
                     type="button"
+                    variant="ghost"
+                    size="icon"
                     onClick={handleClearSearch}
-                    className="absolute right-1 top-1/2 -translate-y-1/2 text-muted-foreground/30 hover:text-foreground transition-colors"
+                    aria-label="Clear waybill search"
+                    className="absolute right-0 top-0 text-muted-foreground hover:text-foreground"
                   >
-                    <X className="size-2.5" />
-                  </button>
+                    <X className="size-4" />
+                  </Button>
                 )}
               </div>
               <DropdownMenu>
                 <DropdownMenuTrigger
-                  className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+                  className={cn(buttonVariants({ variant: "outline", size: "md" }), "max-sm:h-11")}
                 >
                   <Plus className="size-3.5" />
                   Add IDs
@@ -736,10 +735,10 @@ export function WaybillSettings({ businessId, userId, providerId, onNavigateToPr
                       onClick={() => setMultipleDialogOpen(true)}
                       className="gap-2"
                     >
-                      <Copy className="size-3.5 text-muted-foreground/60" />
+                      <Copy className="size-3.5 text-muted-foreground" />
                       <div>
                         <span className="block text-xs font-medium">Add IDs</span>
-                        <span className="block text-nano text-muted-foreground/50">
+                        <span className="block text-xs text-muted-foreground">
                           Paste comma/newline separated IDs
                         </span>
                       </div>
@@ -748,10 +747,10 @@ export function WaybillSettings({ businessId, userId, providerId, onNavigateToPr
                       onClick={() => setRangeDialogOpen(true)}
                       className="gap-2"
                     >
-                      <ListOrdered className="size-3.5 text-muted-foreground/60" />
+                      <ListOrdered className="size-3.5 text-muted-foreground" />
                       <div>
                         <span className="block text-xs font-medium">Add Range</span>
-                        <span className="block text-nano text-muted-foreground/50">
+                        <span className="block text-xs text-muted-foreground">
                           Generate sequential IDs
                         </span>
                       </div>
@@ -790,7 +789,7 @@ export function WaybillSettings({ businessId, userId, providerId, onNavigateToPr
           <div className="space-y-2">
             {/* Adding helper text to show the list doubles as filtered results */}
             {addInput && (
-              <p className="text-nano text-muted-foreground/40">
+              <p className="text-xs text-muted-foreground">
                 Showing waybills matching &ldquo;{addInput}&rdquo;. Press Enter to add it as a new ID.
               </p>
             )}
@@ -801,12 +800,16 @@ export function WaybillSettings({ businessId, userId, providerId, onNavigateToPr
                 <button
                   key={opt.value}
                   type="button"
-                  onClick={() => setStatusFilter(opt.value)}
+                  onClick={() => {
+                    setStatusFilter(opt.value);
+                    setCurrentPage(1);
+                  }}
+                  aria-pressed={statusFilter === opt.value}
                   className={cn(
-                    "shrink-0 rounded-lg border px-2.5 py-1 text-xxs font-medium transition-all whitespace-nowrap",
+                    "min-h-8 shrink-0 whitespace-nowrap rounded-[10px] border px-2.5 py-1 text-xs font-medium transition-all outline-none focus-visible:border-primary/50 focus-visible:ring-3 focus-visible:ring-primary/20 active:scale-[0.98] max-sm:min-h-11",
                     statusFilter === opt.value
                       ? "border-primary/30 bg-primary/[0.04] text-foreground"
-                      : "border-border/20 text-muted-foreground/60 hover:border-border/40",
+                      : "border-border/40 text-muted-foreground hover:border-border/60 hover:bg-muted/10",
                   )}
                 >
                   {opt.label}
@@ -819,14 +822,14 @@ export function WaybillSettings({ businessId, userId, providerId, onNavigateToPr
           {waybills.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-8 text-center">
               <div className="flex size-10 items-center justify-center rounded-xl bg-muted/20 border border-border/10">
-                <Hash className="size-4 text-muted-foreground/30" />
+                <Hash className="size-4 text-muted-foreground" />
               </div>
-              <p className="mt-3 text-xs font-medium text-muted-foreground/50">
+              <p className="mt-3 text-xs font-medium text-muted-foreground">
                 {addInput || statusFilter !== "all"
                   ? "No matching waybill IDs found"
                   : "No manual waybill IDs added yet"}
               </p>
-              <p className="mt-0.5 text-xxs text-muted-foreground/30">
+              <p className="mt-0.5 text-xs text-muted-foreground">
                 {addInput || statusFilter !== "all"
                   ? "Try a different search or clear filters"
                   : "Add waybill IDs to use when dispatching orders."}
@@ -838,8 +841,9 @@ export function WaybillSettings({ businessId, userId, providerId, onNavigateToPr
                   onClick={() => {
                     handleClearSearch();
                     setStatusFilter("all");
+                    setCurrentPage(1);
                   }}
-                  className="mt-2 h-6 text-xxs"
+                  className="mt-2"
                 >
                   Clear Filters
                 </Button>
@@ -851,7 +855,7 @@ export function WaybillSettings({ businessId, userId, providerId, onNavigateToPr
                     const input = document.querySelector<HTMLInputElement>('[placeholder*="Search or add"]');
                     input?.focus();
                   }}
-                  className="mt-3 gap-1.5 h-8 text-xs"
+                  className="mt-3"
                 >
                   <Plus className="size-3" />
                   Add Waybill IDs
@@ -879,7 +883,7 @@ export function WaybillSettings({ businessId, userId, providerId, onNavigateToPr
                     checked={allSelected}
                     onCheckedChange={handleSelectAll}
                   />
-                  <span className="text-xxs font-medium text-muted-foreground/60">
+                  <span className="text-xs font-medium text-muted-foreground">
                     {someSelected
                       ? `${selectedIds.size} selected`
                       : `Select all (${waybills.length})`}
@@ -891,7 +895,7 @@ export function WaybillSettings({ businessId, userId, providerId, onNavigateToPr
                     <DropdownMenu open={bulkStatusOpen} onOpenChange={setBulkStatusOpen}>
                       <DropdownMenuTrigger
                         disabled={bulkUpdating}
-                        className="inline-flex items-center gap-1 h-7 px-2 rounded-md text-xxs font-medium text-muted-foreground/60 hover:text-foreground hover:bg-accent/30 transition-all whitespace-nowrap"
+                        className={cn(buttonVariants({ variant: "outline", size: "sm" }), "max-sm:h-11")}
                       >
                         {bulkUpdating ? (
                           <Loader2 className="size-2.5 animate-spin" />
@@ -920,11 +924,10 @@ export function WaybillSettings({ businessId, userId, providerId, onNavigateToPr
                     </DropdownMenu>
 
                     <Button
-                      variant="ghost"
-                      size="xs"
+                      variant="destructive"
+                      size="sm"
                       disabled={bulkDeleting}
                       onClick={() => setBulkDeleteConfirmOpen(true)}
-                      className="gap-1 h-7 text-xxs text-muted-foreground/60 hover:text-destructive"
                     >
                       {bulkDeleting ? (
                         <Loader2 className="size-2.5 animate-spin" />
@@ -936,9 +939,8 @@ export function WaybillSettings({ businessId, userId, providerId, onNavigateToPr
 
                     <Button
                       variant="ghost"
-                      size="xs"
+                      size="sm"
                       onClick={handleClearSelection}
-                      className="h-7 text-xxs text-muted-foreground/40 hover:text-foreground"
                     >
                       Clear
                     </Button>
@@ -952,10 +954,10 @@ export function WaybillSettings({ businessId, userId, providerId, onNavigateToPr
                   <div
                     key={wb.id}
                     className={cn(
-                      "flex items-center gap-1.5 rounded-lg border px-2.5 py-2 transition-colors",
+                      "glass-inset flex items-center gap-1.5 rounded-[10px] px-2.5 py-2 transition-colors",
                       selectedIds.has(wb.id)
                         ? "border-primary/30 bg-primary/[0.03]"
-                        : "border-border/20 bg-muted/5 hover:bg-muted/10",
+                        : "hover:bg-muted/10",
                     )}
                   >
                     {/* Selection checkbox */}
@@ -971,7 +973,7 @@ export function WaybillSettings({ businessId, userId, providerId, onNavigateToPr
                         {wb.waybill_id}
                       </span>
                       {wb.assigned_order_number && (
-                        <span className="block text-nano text-muted-foreground/50 mt-0.5 truncate">
+                        <span className="mt-0.5 block truncate text-xs text-muted-foreground">
                           Order #{wb.assigned_order_number}
                         </span>
                       )}
@@ -984,7 +986,7 @@ export function WaybillSettings({ businessId, userId, providerId, onNavigateToPr
                         <DropdownMenuTrigger
                           disabled={updatingStatusId === wb.id}
                           className={cn(
-                            "inline-flex items-center justify-center gap-1 rounded-md px-2 py-0.5 text-sm font-semibold whitespace-nowrap transition-all cursor-pointer bg-transparent min-w-[80px]",
+                            "inline-flex min-h-8 min-w-[80px] cursor-pointer items-center justify-center gap-1 whitespace-nowrap rounded-[10px] border bg-transparent px-2 py-1 text-xs font-semibold transition-all outline-none focus-visible:ring-3 focus-visible:ring-primary/20 max-sm:min-h-11",
                             "hover:bg-accent/30",
                             "active:scale-[0.97]",
                             STATUS_COLORS[wb.status],
@@ -1039,19 +1041,21 @@ export function WaybillSettings({ businessId, userId, providerId, onNavigateToPr
                       </DropdownMenu>
 
                       {/* Delete action */}
-                      <button
+                      <Button
                         type="button"
+                        variant="ghost"
+                        size="icon-sm"
                         onClick={() => handleDeleteClick(wb.id)}
                         disabled={deletingId === wb.id}
-                        className="flex shrink-0 items-center justify-center rounded-md p-1 text-muted-foreground/30 transition-colors hover:bg-destructive/10 hover:text-destructive"
-                        title="Delete waybill"
+                        className="shrink-0 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                        aria-label="Delete waybill"
                       >
                         {deletingId === wb.id ? (
                           <Loader2 className="size-3 animate-spin" />
                         ) : (
                           <Trash2 className="size-3" />
                         )}
-                      </button>
+                      </Button>
                     </div>
                   </div>
                 ))}
@@ -1082,9 +1086,9 @@ export function WaybillSettings({ businessId, userId, providerId, onNavigateToPr
 
             {/* Preview */}
             {parsedMultiplePreview && (
-              <div className="flex items-center gap-3 rounded-lg bg-muted/20 px-3 py-2">
+              <div className="glass-inset flex items-center gap-3 rounded-[10px] px-3 py-2">
                 <div className="flex items-center gap-1.5">
-                  <span className="text-xxs font-medium text-muted-foreground/60">
+                  <span className="text-xs font-medium text-muted-foreground">
                     Valid:
                   </span>
                   <span className="text-xs font-semibold text-foreground tabular-nums">
@@ -1093,7 +1097,7 @@ export function WaybillSettings({ businessId, userId, providerId, onNavigateToPr
                 </div>
                 {parsedMultiplePreview.duplicates > 0 && (
                   <div className="flex items-center gap-1.5">
-                    <span className="text-xxs font-medium text-muted-foreground/60">
+                    <span className="text-xs font-medium text-muted-foreground">
                       Duplicates:
                     </span>
                     <span className="text-xs font-semibold text-warning tabular-nums">
@@ -1193,40 +1197,40 @@ export function WaybillSettings({ businessId, userId, providerId, onNavigateToPr
           <div className="space-y-3">
             {/* Optional Prefix */}
             <div>
-              <Label className="text-xs font-medium text-foreground/70">
+              <Label className="text-xs font-medium text-foreground">
                 Optional Prefix
               </Label>
               <Input
                 value={rangePrefix}
                 onChange={(e) => setRangePrefix(e.target.value)}
                 placeholder="e.g. RA"
-                className="h-9 text-sm font-mono mt-1"
+                className="mt-1 font-mono text-sm"
               />
             </div>
 
             {/* From / To */}
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label className="text-xs font-medium text-foreground/70">
+                <Label className="text-xs font-medium text-foreground">
                   From Waybill ID
                 </Label>
                 <Input
                   value={rangeFrom}
                   onChange={(e) => setRangeFrom(e.target.value)}
                   placeholder="100050"
-                  className="h-9 text-sm font-mono mt-1"
+                  className="mt-1 font-mono text-sm"
                   inputMode="numeric"
                 />
               </div>
               <div>
-                <Label className="text-xs font-medium text-foreground/70">
+                <Label className="text-xs font-medium text-foreground">
                   To Waybill ID
                 </Label>
                 <Input
                   value={rangeTo}
                   onChange={(e) => setRangeTo(e.target.value)}
                   placeholder="100150"
-                  className="h-9 text-sm font-mono mt-1"
+                  className="mt-1 font-mono text-sm"
                   inputMode="numeric"
                 />
               </div>
@@ -1234,11 +1238,11 @@ export function WaybillSettings({ businessId, userId, providerId, onNavigateToPr
 
             {/* Preview */}
             {rangePreview && (
-              <div className="rounded-lg border border-border/20 bg-muted/10 px-3 py-2.5 space-y-1.5">
+              <div className="glass-inset space-y-1.5 rounded-[10px] px-3 py-2.5">
                 {rangePreview.valid ? (
                   <>
                     <div className="flex items-center justify-between">
-                      <span className="text-xxs font-medium text-muted-foreground/60">
+                      <span className="text-xs font-medium text-muted-foreground">
                         Range:
                       </span>
                       <span className="text-xs font-mono font-medium text-foreground">
@@ -1246,27 +1250,27 @@ export function WaybillSettings({ businessId, userId, providerId, onNavigateToPr
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-xxs font-medium text-muted-foreground/60">
+                      <span className="text-xs font-medium text-muted-foreground">
                         IDs to generate:
                       </span>
                       <span className="text-xs font-semibold tabular-nums text-foreground">
                         {rangePreview.count}
                       </span>
                     </div>
-                    <div className="flex items-center gap-1.5 pt-0.5 text-nano text-muted-foreground/50">
+                    <div className="flex items-center gap-1.5 pt-0.5 text-xs text-muted-foreground">
                       <span>Preview:</span>
                       {rangePreview.sampleIds.map((id, i) => (
-                        <span key={i} className="font-mono text-foreground/60">
+                        <span key={i} className="font-mono text-foreground">
                           {id}
                           {i < rangePreview.sampleIds.length - 1 && (
-                            <span className="text-muted-foreground/30 mx-0.5">,</span>
+                            <span className="mx-0.5 text-muted-foreground">,</span>
                           )}
                         </span>
                       ))}
                     </div>
                   </>
                 ) : (
-                  <p className="text-xxs text-warning/80">{rangePreview.error}</p>
+                  <p className="text-xs text-warning">{rangePreview.error}</p>
                 )}
               </div>
             )}

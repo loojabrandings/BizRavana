@@ -1,247 +1,255 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
-import { getAdminClient } from "@/lib/supabase/admin";
+import { z } from "zod";
+import { requireBusinessUser } from "@/lib/business-authorization";
 
-// ─── Helper: Verify user has access to the business ────────────────
+const templateContextSchema = z.enum([
+  "order_whatsapp",
+  "order_table_whatsapp",
+  "order_preview_whatsapp",
+  "quotation_preview_whatsapp",
+]);
 
-async function getUserBusinessId(): Promise<string | null> {
-  const supabase = await createClient();
-  const { data: { session } } = await supabase.auth.getSession();
-  if (!session?.user) return null;
+const createSchema = z
+  .object({
+    template_context: templateContextSchema,
+    title: z.string().trim().min(1).max(120),
+    content: z.string().min(1).max(20_000),
+  })
+  .strict();
 
-  const { data } = await supabase
-    .from("profiles")
-    .select("business_id")
-    .eq("user_id", session.user.id)
-    .single();
+const updateSchema = z
+  .object({
+    id: z.string().uuid(),
+    title: z.string().trim().min(1).max(120).optional(),
+    content: z.string().min(1).max(20_000).optional(),
+  })
+  .strict()
+  .refine((value) => value.title !== undefined || value.content !== undefined);
 
-  return data?.business_id ?? null;
+const defaultSchema = z
+  .object({
+    id: z.string().uuid(),
+  })
+  .strict();
+
+type TemplateContext = z.infer<typeof templateContextSchema>;
+
+function errorResponse(error: string, status: number) {
+  return NextResponse.json({ error }, { status });
 }
 
-// ─── GET /api/message-templates ───────────────────────────────────
-
-export async function GET(req: NextRequest) {
-  const businessId = await getUserBusinessId();
-  if (!businessId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+function contextGroup(context: TemplateContext): TemplateContext[] {
+  if (context.startsWith("order")) {
+    return [
+      "order_whatsapp",
+      "order_table_whatsapp",
+      "order_preview_whatsapp",
+    ];
   }
 
-  const { searchParams } = new URL(req.url);
-  const context = searchParams.get("context");
+  return [context];
+}
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const admin: any = getAdminClient();
-  let query = admin
+function databaseErrorResponse(error: { code?: string; message: string }) {
+  if (error.code === "23505") {
+    return errorResponse("A template with this title or default already exists.", 409);
+  }
+
+  console.error("Message Template database error:", error);
+  return errorResponse("The template operation could not be completed.", 500);
+}
+
+export async function GET(request: NextRequest) {
+  const authorization = await requireBusinessUser();
+  if (!authorization.ok) {
+    return errorResponse(authorization.error, authorization.status);
+  }
+
+  const rawContext = request.nextUrl.searchParams.get("context");
+  const context = rawContext
+    ? templateContextSchema.safeParse(rawContext)
+    : null;
+  if (context && !context.success) {
+    return errorResponse("Invalid template context.", 400);
+  }
+
+  let query = authorization.supabase
     .from("message_templates")
     .select("*")
-    .eq("business_id", businessId)
+    .eq("business_id", authorization.businessId)
     .is("deleted_at", null)
     .order("is_default", { ascending: false })
     .order("sort_order", { ascending: true })
     .order("created_at", { ascending: false });
 
-  if (context) {
-    // For the unified "order_whatsapp" context, also include legacy order contexts
-    if (context === "order_whatsapp") {
-      query = query.in("template_context", ["order_whatsapp", "order_table_whatsapp", "order_preview_whatsapp"]);
-    } else {
-      query = query.eq("template_context", context);
-    }
+  if (context?.success) {
+    query = query.in("template_context", contextGroup(context.data));
   }
 
   const { data, error } = await query;
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
+  if (error) return databaseErrorResponse(error);
 
   return NextResponse.json(data);
 }
 
-// ─── POST /api/message-templates ──────────────────────────────────
-
-export async function POST(req: NextRequest) {
-  const businessId = await getUserBusinessId();
-  if (!businessId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+export async function POST(request: NextRequest) {
+  const authorization = await requireBusinessUser();
+  if (!authorization.ok) {
+    return errorResponse(authorization.error, authorization.status);
   }
 
-  const supabase = await createClient();
-  const { data: { session } } = await supabase.auth.getSession();
-  const userId = session?.user?.id ?? null;
-
-  const body = await req.json();
-  const { template_context, title, content } = body;
-
-  if (!template_context || !title || !content) {
-    return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+  const body = createSchema.safeParse(await request.json().catch(() => null));
+  if (!body.success) {
+    return errorResponse("Invalid template details.", 400);
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const admin: any = getAdminClient();
-
-  // Check if this is the first template (auto-set as default)
-  const { count } = await admin
+  const { count, error: countError } = await authorization.supabase
     .from("message_templates")
-    .select("*", { count: "exact", head: true })
-    .eq("business_id", businessId)
-    .eq("template_context", template_context)
+    .select("id", { count: "exact", head: true })
+    .eq("business_id", authorization.businessId)
+    .in("template_context", contextGroup(body.data.template_context))
     .is("deleted_at", null);
 
-  const isDefault = count === 0;
+  if (countError) return databaseErrorResponse(countError);
 
-  const { data, error } = await admin
+  const { data, error } = await authorization.supabase
     .from("message_templates")
     .insert({
-      business_id: businessId,
-      template_context,
-      title: title.trim(),
-      content,
-      is_default: isDefault,
-      created_by: userId,
+      business_id: authorization.businessId,
+      template_context: body.data.template_context,
+      title: body.data.title,
+      content: body.data.content,
+      is_default: count === 0,
+      created_by: authorization.userId,
     })
     .select()
     .single();
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
-
+  if (error) return databaseErrorResponse(error);
   return NextResponse.json(data, { status: 201 });
 }
 
-// ─── PATCH /api/message-templates ─────────────────────────────────
-
-export async function PATCH(req: NextRequest) {
-  const businessId = await getUserBusinessId();
-  if (!businessId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+export async function PATCH(request: NextRequest) {
+  const authorization = await requireBusinessUser();
+  if (!authorization.ok) {
+    return errorResponse(authorization.error, authorization.status);
   }
 
-  const supabase = await createClient();
-  const { data: { session } } = await supabase.auth.getSession();
-  const userId = session?.user?.id ?? null;
-
-  const body = await req.json();
-  const { id, title, content } = body;
-
-  if (!id) {
-    return NextResponse.json({ error: "Missing template id" }, { status: 400 });
+  const body = updateSchema.safeParse(await request.json().catch(() => null));
+  if (!body.success) {
+    return errorResponse("Invalid template update.", 400);
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const admin: any = getAdminClient();
-  const { data, error } = await admin
+  const update: {
+    title?: string;
+    content?: string;
+    updated_by: string;
+    updated_at: string;
+  } = {
+    updated_by: authorization.userId,
+    updated_at: new Date().toISOString(),
+  };
+  if (body.data.title !== undefined) update.title = body.data.title;
+  if (body.data.content !== undefined) update.content = body.data.content;
+
+  const { data, error } = await authorization.supabase
     .from("message_templates")
-    .update({
-      title: title?.trim(),
-      content,
-      updated_by: userId,
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", id)
-    .eq("business_id", businessId)
+    .update(update)
+    .eq("id", body.data.id)
+    .eq("business_id", authorization.businessId)
     .is("deleted_at", null)
     .select()
-    .single();
+    .maybeSingle();
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
+  if (error) return databaseErrorResponse(error);
+  if (!data) return errorResponse("Template not found.", 404);
 
   return NextResponse.json(data);
 }
 
-// ─── DELETE /api/message-templates ────────────────────────────────
-
-export async function DELETE(req: NextRequest) {
-  const businessId = await getUserBusinessId();
-  if (!businessId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+export async function DELETE(request: NextRequest) {
+  const authorization = await requireBusinessUser();
+  if (!authorization.ok) {
+    return errorResponse(authorization.error, authorization.status);
   }
 
-  const supabase = await createClient();
-  const { data: { session } } = await supabase.auth.getSession();
-  const userId = session?.user?.id ?? null;
-
-  const { searchParams } = new URL(req.url);
-  const id = searchParams.get("id");
-
-  if (!id) {
-    return NextResponse.json({ error: "Missing template id" }, { status: 400 });
+  const templateId = z
+    .string()
+    .uuid()
+    .safeParse(request.nextUrl.searchParams.get("id"));
+  if (!templateId.success) {
+    return errorResponse("Invalid template ID.", 400);
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const admin: any = getAdminClient();
-  const { error } = await admin
-    .from("message_templates")
-    .update({
-      deleted_at: new Date().toISOString(),
-      deleted_by: userId,
-      is_active: false,
-    })
-    .eq("id", id)
-    .eq("business_id", businessId)
-    .is("deleted_at", null);
+  const { data: deleted, error } = await authorization.supabase.rpc(
+    "soft_delete_message_template",
+    { p_template_id: templateId.data },
+  );
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
+  if (error) return databaseErrorResponse(error);
+  if (!deleted) return errorResponse("Template not found.", 404);
 
   return NextResponse.json({ success: true });
 }
 
-// ─── PUT /api/message-templates/default ───────────────────────────
-
-export async function PUT(req: NextRequest) {
-  const businessId = await getUserBusinessId();
-  if (!businessId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+export async function PUT(request: NextRequest) {
+  const authorization = await requireBusinessUser();
+  if (!authorization.ok) {
+    return errorResponse(authorization.error, authorization.status);
   }
 
-  const supabase = await createClient();
-  const { data: { session } } = await supabase.auth.getSession();
-  const userId = session?.user?.id ?? null;
-
-  const body = await req.json();
-  const { id, template_context } = body;
-
-  if (!id || !template_context) {
-    return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+  const body = defaultSchema.safeParse(await request.json().catch(() => null));
+  if (!body.success) {
+    return errorResponse("Invalid default template request.", 400);
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const admin: any = getAdminClient();
+  const { data: target, error: targetError } = await authorization.supabase
+    .from("message_templates")
+    .select("id, template_context")
+    .eq("id", body.data.id)
+    .eq("business_id", authorization.businessId)
+    .is("deleted_at", null)
+    .maybeSingle();
 
-  // Clear current default
-  const { error: clearError } = await admin
+  if (targetError) return databaseErrorResponse(targetError);
+  if (!target) return errorResponse("Template not found.", 404);
+
+  const targetContext = templateContextSchema.safeParse(target.template_context);
+  if (!targetContext.success) {
+    return errorResponse("Template has an unsupported context.", 409);
+  }
+
+  const now = new Date().toISOString();
+  const { error: clearError } = await authorization.supabase
     .from("message_templates")
     .update({
       is_default: false,
-      updated_by: userId,
-      updated_at: new Date().toISOString(),
+      updated_by: authorization.userId,
+      updated_at: now,
     })
-    .eq("business_id", businessId)
-    .eq("template_context", template_context)
+    .eq("business_id", authorization.businessId)
+    .in("template_context", contextGroup(targetContext.data))
     .eq("is_default", true)
     .is("deleted_at", null);
 
-  if (clearError) {
-    return NextResponse.json({ error: clearError.message }, { status: 500 });
-  }
+  if (clearError) return databaseErrorResponse(clearError);
 
-  // Set new default
-  const { error: setError } = await admin
+  const { data, error } = await authorization.supabase
     .from("message_templates")
     .update({
       is_default: true,
-      updated_by: userId,
-      updated_at: new Date().toISOString(),
+      updated_by: authorization.userId,
+      updated_at: now,
     })
-    .eq("id", id);
+    .eq("id", target.id)
+    .eq("business_id", authorization.businessId)
+    .eq("template_context", target.template_context)
+    .is("deleted_at", null)
+    .select("id")
+    .maybeSingle();
 
-  if (setError) {
-    return NextResponse.json({ error: setError.message }, { status: 500 });
-  }
+  if (error) return databaseErrorResponse(error);
+  if (!data) return errorResponse("Template not found.", 404);
 
   return NextResponse.json({ success: true });
 }

@@ -59,9 +59,9 @@ export function EmptyState({
   // If columns are provided, render the table shell with header row
   if (columns) {
     return (
-      <div className={cn("rounded-2xl border border-border bg-card", className)}>
-        <div className="border-b border-border/50 px-6 py-3">
-          <div className="flex gap-6 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+      <div className={cn("glass-card overflow-hidden rounded-xl", className)}>
+        <div className="border-b border-border/50 bg-muted/30 px-4 py-3 backdrop-blur-md">
+          <div className="flex gap-6 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             {showCheckbox && <span className="w-10 shrink-0" />}
             {columns.map((col) => (
               <span
@@ -80,7 +80,7 @@ export function EmptyState({
 
   // Standalone variant (no column headers)
   return (
-    <div className={cn("rounded-2xl border border-border bg-card", className)}>
+    <div className={cn("glass-card rounded-xl", className)}>
       {content}
     </div>
   );

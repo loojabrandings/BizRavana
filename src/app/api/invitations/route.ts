@@ -1,89 +1,88 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { getAdminClient } from "@/lib/supabase/admin";
+import { requireTeamManager } from "@/lib/team-authorization";
 
-/**
- * GET /api/invitations?business_id=xxx
- * List all invitations for a business (owner/admin only).
- */
+const inviteSchema = z.object({
+  business_id: z.string().uuid().optional(),
+  email: z.string().trim().email().max(254),
+  role: z.enum(["admin", "member"]),
+});
+
+function authorizationResponse(
+  result: Extract<Awaited<ReturnType<typeof requireTeamManager>>, { ok: false }>,
+) {
+  return NextResponse.json({ error: result.error }, { status: result.status });
+}
+
+/** List invitations for the authenticated owner/business-manager's business. */
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
-    const businessId = searchParams.get("business_id");
+    const authorization = await requireTeamManager();
+    if (!authorization.ok) return authorizationResponse(authorization);
 
-    if (!businessId) {
-      return NextResponse.json(
-        { error: "business_id is required" },
-        { status: 400 },
-      );
+    const requestedBusinessId = request.nextUrl.searchParams.get("business_id");
+    if (
+      requestedBusinessId &&
+      requestedBusinessId !== authorization.actor.businessId
+    ) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const adminClient = getAdminClient();
-    const { data, error } = await adminClient
+    const admin = getAdminClient();
+    const { data, error } = await admin
       .from("team_invitations")
-      .select("*")
-      .eq("business_id", businessId)
+      .select("id, email, role, status, expires_at, created_at")
+      .eq("business_id", authorization.actor.businessId)
       .order("created_at", { ascending: false });
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json(
+        { error: "Invitations could not be loaded" },
+        { status: 500 },
+      );
     }
 
     return NextResponse.json({ data });
-  } catch (err) {
+  } catch (error) {
+    console.error("Invitation list failed:", error);
     return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Internal server error" },
+      { error: "Internal server error" },
       { status: 500 },
     );
   }
 }
 
-/**
- * POST /api/invitations
- * Create a new team invitation (owner/admin only).
- * Body: { business_id, email, role }
- */
+/** Create an invitation for the authenticated owner/business-manager's business. */
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { business_id, email, role, invited_by } = body;
+    const authorization = await requireTeamManager();
+    if (!authorization.ok) return authorizationResponse(authorization);
 
-    if (!business_id || !email || !invited_by) {
+    const parsed = inviteSchema.safeParse(await request.json().catch(() => null));
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: "business_id, email, and invited_by are required" },
+        { error: "A valid email and role are required" },
         { status: 400 },
       );
     }
 
-    if (!role || !["admin", "member"].includes(role)) {
-      return NextResponse.json(
-        { error: "role must be 'admin' or 'member'" },
-        { status: 400 },
-      );
+    if (
+      parsed.data.business_id &&
+      parsed.data.business_id !== authorization.actor.businessId
+    ) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const adminClient = getAdminClient();
+    const admin = getAdminClient();
+    const email = parsed.data.email.toLowerCase();
+    const businessId = authorization.actor.businessId;
 
-    // Check if user already has a profile for this business
-    const { data: existingProfile } = await adminClient
-      .from("profiles")
-      .select("id")
-      .eq("business_id", business_id)
-      .eq("user_id", invited_by)
-      .single();
-
-    if (!existingProfile) {
-      return NextResponse.json(
-        { error: "You are not a member of this business" },
-        { status: 403 },
-      );
-    }
-
-    // Check if there's already a pending invitation for this email in this business
-    const { data: existingInvite } = await adminClient
+    const { data: existingInvite } = await admin
       .from("team_invitations")
       .select("id")
-      .eq("business_id", business_id)
-      .eq("email", email.toLowerCase().trim())
+      .eq("business_id", businessId)
+      .eq("email", email)
       .eq("status", "pending")
       .maybeSingle();
 
@@ -94,111 +93,112 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const invitedEmailNormalized = email.toLowerCase().trim();
-
-    // ── Check subscription plan's team_members limit ──
-    // Count current members + pending invitations
     const [currentMembersResult, pendingInvitesResult] = await Promise.all([
-      adminClient
+      admin
         .from("profiles")
         .select("id", { count: "exact", head: true })
-        .eq("business_id", business_id),
-      adminClient
+        .eq("business_id", businessId),
+      admin
         .from("team_invitations")
         .select("id", { count: "exact", head: true })
-        .eq("business_id", business_id)
+        .eq("business_id", businessId)
         .eq("status", "pending"),
     ]);
 
-    const currentCount = currentMembersResult.count || 0;
-    const pendingCount = pendingInvitesResult.count || 0;
-
-    // Fetch business plan to get team_members limit
-    const { data: business } = await adminClient
+    const { data: business } = await admin
       .from("businesses")
       .select("plan_id")
-      .eq("id", business_id)
+      .eq("id", businessId)
       .single();
 
     if (business?.plan_id) {
-      const { data: plan } = await adminClient
+      const { data: plan } = await admin
         .from("subscription_plans")
         .select("team_members")
         .eq("id", business.plan_id)
         .single();
 
-      if (plan) {
-        const limit = plan.team_members;
-        if (currentCount + pendingCount >= limit) {
-          return NextResponse.json(
-            {
-              error: "Team member limit reached",
-              detail: `Your plan allows ${limit} team member${limit !== 1 ? "s" : ""}. You currently have ${currentCount} member${currentCount !== 1 ? "s" : ""} and ${pendingCount} pending invitation${pendingCount !== 1 ? "s" : ""}. Please upgrade your plan or remove existing members to invite more.`,
-            },
-            { status: 403 },
-          );
-        }
+      const currentCount = currentMembersResult.count ?? 0;
+      const pendingCount = pendingInvitesResult.count ?? 0;
+      if (plan && currentCount + pendingCount >= plan.team_members) {
+        return NextResponse.json(
+          { error: "Team member limit reached" },
+          { status: 403 },
+        );
       }
     }
 
-    // Create the invitation
-    const { data, error } = await adminClient
+    const { data, error } = await admin
       .from("team_invitations")
       .insert({
-        business_id,
-        email: invitedEmailNormalized,
-        role,
-        invited_by,
+        business_id: businessId,
+        email,
+        role: parsed.data.role,
+        invited_by: authorization.actor.userId,
       })
-      .select()
+      .select("id, email, role, status, expires_at, created_at")
       .single();
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      console.error("Invitation creation failed:", error);
+      return NextResponse.json(
+        { error: "Invitation could not be created" },
+        { status: 500 },
+      );
     }
 
     return NextResponse.json({ data }, { status: 201 });
-  } catch (err) {
+  } catch (error) {
+    console.error("Invitation creation failed:", error);
     return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Internal server error" },
+      { error: "Internal server error" },
       { status: 500 },
     );
   }
 }
 
-/**
- * DELETE /api/invitations?id=xxx
- * Cancel a pending invitation.
- */
+/** Cancel an invitation owned by the authenticated actor's business. */
 export async function DELETE(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
-    const id = searchParams.get("id");
+    const authorization = await requireTeamManager();
+    if (!authorization.ok) return authorizationResponse(authorization);
 
-    if (!id) {
+    const id = request.nextUrl.searchParams.get("id");
+    if (!id || !z.string().uuid().safeParse(id).success) {
       return NextResponse.json(
-        { error: "invitation id is required" },
+        { error: "A valid invitation id is required" },
         { status: 400 },
       );
     }
 
-    const adminClient = getAdminClient();
-
-    const { data, error } = await adminClient
+    const admin = getAdminClient();
+    const { data, error } = await admin
       .from("team_invitations")
       .update({ status: "cancelled", updated_at: new Date().toISOString() })
       .eq("id", id)
-      .select()
-      .single();
+      .eq("business_id", authorization.actor.businessId)
+      .eq("status", "pending")
+      .select("id, email, role, status, expires_at, created_at")
+      .maybeSingle();
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json(
+        { error: "Invitation could not be cancelled" },
+        { status: 500 },
+      );
+    }
+    if (!data) {
+      return NextResponse.json(
+        { error: "Pending invitation not found" },
+        { status: 404 },
+      );
     }
 
     return NextResponse.json({ data });
-  } catch (err) {
+  } catch (error) {
+    console.error("Invitation cancellation failed:", error);
     return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Internal server error" },
+      { error: "Internal server error" },
       { status: 500 },
     );
   }

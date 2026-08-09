@@ -6,7 +6,6 @@ import {
   ChevronDown,
   Eye,
   FileDown,
-  Layers3,
   Pencil,
   Plus,
   ReceiptText,
@@ -26,6 +25,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Dropdown } from "@/components/ui/dropdown";
 import { FilterBar } from "@/components/shared/filter-bar";
+import { DateRangePickerModal } from "@/components/shared/lazy-date-range-picker-modal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -137,6 +137,7 @@ function ExpensesPageInner() {
   const [dateFilter, setDateFilter] = useState<string>("this_month");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [activeSort, setActiveSort] = useState<{ key: string; direction: "asc" | "desc" } | null>(null);
   const [activeCategoryTab, setActiveCategoryTab] = useState("all");
   const [paymentStatusTab, setPaymentStatusTab] = useState("all");
@@ -198,16 +199,19 @@ function ExpensesPageInner() {
   // ─── Read query params ────────────────────────────────────────
   const searchParams = useSearchParams();
 
-  // ─── Auto-open form when ?action=new ─────────────────────────
+  // ─── Auto-open form when ?action=new, apply ?search filter ──
   useEffect(() => {
-    if (searchParams.get("action") === "new") {
-      setShowForm(true);
-    }
+    const taskId = window.setTimeout(() => {
+      if (searchParams.get("action") === "new") {
+        setShowForm(true);
+      }
+      const search = searchParams.get("search");
+      if (search) setSearchQuery(search);
+    }, 0);
+    return () => window.clearTimeout(taskId);
   }, [searchParams]);
 
   // ─── Refetch trigger ──────────────────────────────────────────
-  const [fetchTrigger, setFetchTrigger] = useState(0);
-
   // ─── Data Fetching ─────────────────────────────────────────────
   useEffect(() => {
     const fetchExpenses = async () => {
@@ -258,7 +262,7 @@ function ExpensesPageInner() {
       } finally { setLoading(false); }
     };
     fetchExpenses();
-  }, [dateFilter, dateFrom, dateTo, fetchTrigger]);
+  }, [dateFilter, dateFrom, dateTo]);
 
   // ─── Mutations ─────────────────────────────────────────────────
   const handlePaymentChange = useCallback(async (expenseId: string, newPayment: string) => {
@@ -655,15 +659,18 @@ function ExpensesPageInner() {
 
   // ─── Pagination ───────────────────────────────────────────────
   const [currentPage, setCurrentPage] = useState(1);
+  const [previousFilteredExpenses, setPreviousFilteredExpenses] = useState(filteredExpenses);
   const [pageSize, setPageSize] = useState(25);
+  if (filteredExpenses !== previousFilteredExpenses) {
+    setPreviousFilteredExpenses(filteredExpenses);
+    setCurrentPage(1);
+  }
   const totalPages = Math.max(1, Math.ceil(filteredExpenses.length / pageSize));
 
   const paginatedExpenses = useMemo(
     () => filteredExpenses.slice((currentPage - 1) * pageSize, currentPage * pageSize),
     [filteredExpenses, currentPage, pageSize],
   );
-
-  useEffect(() => { setCurrentPage(1); }, [filteredExpenses]);
 
   // ─── Columns ────────────────────────────────────────────────────
   const columns = useMemo<ColumnDef<Expense>[]>(
@@ -769,7 +776,7 @@ function ExpensesPageInner() {
         ),
       },
     ],
-    [handlePaymentChange, handleEditExpense],
+    [guard, handlePaymentChange, handleEditExpense],
   );
 
   // ─── Mobile Card Render ────────────────────────────────────────
@@ -890,47 +897,30 @@ function ExpensesPageInner() {
               }}
               date={{
                 value: dateFilter,
-                onChange: (v) => v && setDateFilter(v),
+                onChange: (v) => {
+                  if (v === "custom") setDatePickerOpen(true);
+                  else if (v) setDateFilter(v);
+                },
                 options: dateFilterOptions,
-                isCustomMode: dateFilter === "custom",
-                onCalendarClick: () => setDateFilter(dateFilter === "custom" ? "this_month" : "custom"),
+                onCalendarClick: () => setDatePickerOpen(true),
               }}
               activeFilterCount={activeFilterCount}
               onClearFilters={handleClearFilters}
             />
 
-            {dateFilter === "custom" && (
-              <div className="flex items-center gap-2">
-                <div className="flex items-center gap-1.5">
-                  <span className="text-sm font-medium text-muted-foreground uppercase tracking-wider">From</span>
-                  <input
-                    type="date"
-                    value={dateFrom}
-                    onChange={(e) => setDateFrom(e.target.value)}
-                    className="h-9 w-[140px] rounded-xl border border-input bg-background px-3 text-sm font-medium text-foreground shadow-xs outline-none transition-colors focus:border-ring focus:ring-[3px] focus:ring-ring/50 [color-scheme:light] dark:[color-scheme:dark]"
-                    aria-label="From date"
-                  />
-                </div>
-                <span className="text-sm text-muted-foreground">—</span>
-                <div className="flex items-center gap-1.5">
-                  <span className="text-sm font-medium text-muted-foreground uppercase tracking-wider">To</span>
-                  <input
-                    type="date"
-                    value={dateTo}
-                    onChange={(e) => setDateTo(e.target.value)}
-                    className="h-9 w-[140px] rounded-xl border border-input bg-background px-3 text-sm font-medium text-foreground shadow-xs outline-none transition-colors focus:border-ring focus:ring-[3px] focus:ring-ring/50 [color-scheme:light] dark:[color-scheme:dark]"
-                    aria-label="To date"
-                  />
-                </div>
-                <Dropdown
-                  value={dateFilter}
-                  onChange={(v) => v && setDateFilter(v)}
-                  options={dateFilterOptions.map((o) => ({ value: o.value, label: o.label }))}
-                  size="sm"
-                  className="min-w-[36px]"
-                />
-              </div>
-            )}
+            {/* Custom date range picker modal */}
+            <DateRangePickerModal
+              open={datePickerOpen}
+              onOpenChange={setDatePickerOpen}
+              from={dateFrom}
+              to={dateTo}
+              onApply={(f, t) => {
+                setDateFrom(f);
+                setDateTo(t);
+                setDateFilter("custom");
+                setDatePickerOpen(false);
+              }}
+            />
           </motion.div>
         </>
       )}
@@ -938,7 +928,7 @@ function ExpensesPageInner() {
       {/* ─── Expense Form / Data Table ────────────────────────── */}
       <motion.div variants={itemVariants}>
         {showForm ? (
-          <div className="flex flex-col rounded-2xl glass-card">
+          <div className="flex flex-col rounded-xl glass-card">
             {/* Form Header */}
             <div className="flex items-start justify-between px-8 pt-7 pb-5">
               <div>

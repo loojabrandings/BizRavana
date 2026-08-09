@@ -112,7 +112,7 @@ function MobileBottomNav({
                   aria-label="Open navigation menu"
                 >
                   <Icon className="size-[21px] shrink-0 text-muted-foreground/55 group-hover:text-muted-foreground/75" />
-                  <span className="max-w-full truncate text-[10px] font-medium leading-tight text-muted-foreground/60">
+                  <span className="max-w-full truncate text-xs font-medium leading-tight text-muted-foreground">
                     More
                   </span>
                 </button>
@@ -145,7 +145,7 @@ function MobileBottomNav({
                 />
                 <span
                   className={cn(
-                    "max-w-full truncate text-[10px] font-medium leading-tight",
+                    "max-w-full truncate text-xs font-medium leading-tight",
                     isActive ? "text-primary font-semibold" : "text-muted-foreground/60",
                   )}
                 >
@@ -194,7 +194,7 @@ function MobileNavDrawer({
         {/* Header */}
         <div className="flex h-16 items-center justify-between border-b border-border/20 px-4">
           <div className="flex items-center gap-3">
-            <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary/10">
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-[10px] bg-primary/10">
               <Shield className="size-5 text-primary" />
             </div>
             <div className="min-w-0">
@@ -205,7 +205,7 @@ function MobileNavDrawer({
           <button
             type="button"
             onClick={onClose}
-            className="flex size-8 items-center justify-center rounded-xl text-muted-foreground/60 hover:text-foreground hover:bg-muted/60 transition-all"
+            className="flex size-11 items-center justify-center rounded-[10px] text-muted-foreground hover:bg-muted hover:text-foreground outline-none transition-all duration-200 active:scale-[0.97] focus-visible:ring-3 focus-visible:ring-ring/45 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             aria-label="Close menu"
           >
             <X className="size-4" />
@@ -228,7 +228,7 @@ function MobileNavDrawer({
                 type="button"
                 onClick={() => handleNav(item.href)}
                 className={cn(
-                  "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-150",
+                  "flex min-h-11 w-full items-center gap-3 rounded-[10px] px-3 py-2.5 text-sm font-medium outline-none transition-all duration-200 active:scale-[0.97] focus-visible:ring-3 focus-visible:ring-ring/45 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
                   active
                     ? "bg-primary/10 text-primary shadow-sm"
                     : "text-muted-foreground/80 hover:bg-muted/50 hover:text-foreground",
@@ -278,7 +278,7 @@ function DesktopSidebar({
     >
       {/* Header */}
       <div className="flex h-16 items-center gap-3 border-b border-border/20 px-4">
-        <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary/10">
+        <div className="flex size-9 shrink-0 items-center justify-center rounded-[10px] bg-primary/10">
           <Shield className="size-5 text-primary" />
         </div>
         {!collapsed && (
@@ -304,7 +304,7 @@ function DesktopSidebar({
               key={item.href}
               href={item.href}
               className={cn(
-                "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-150",
+                "flex min-h-10 items-center gap-3 rounded-[10px] px-3 py-2.5 text-sm font-medium outline-none transition-all duration-200 active:scale-[0.97] focus-visible:ring-3 focus-visible:ring-ring/45 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
                 active
                   ? "bg-primary/10 text-primary shadow-sm"
                   : "text-muted-foreground/80 hover:bg-muted/50 hover:text-foreground",
@@ -475,7 +475,7 @@ export default function AdminLayout({
             <button
               type="button"
               onClick={() => setMobileDrawerOpen(true)}
-              className="flex lg:hidden size-9 shrink-0 items-center justify-center rounded-xl text-muted-foreground/70 hover:text-foreground hover:bg-muted/50 transition-all"
+              className="flex lg:hidden size-11 shrink-0 items-center justify-center rounded-[10px] text-muted-foreground hover:bg-muted hover:text-foreground outline-none transition-all duration-200 active:scale-[0.97] focus-visible:ring-3 focus-visible:ring-ring/45 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               aria-label="Open navigation menu"
             >
               <Menu className="size-5" />
@@ -539,7 +539,7 @@ export default function AdminLayout({
                         <p className="truncate text-base font-semibold leading-5 text-foreground">
                           {adminIdentity.name}
                         </p>
-                        <span className="inline-flex shrink-0 items-center rounded-full border border-primary/20 bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary">
+                        <span className="inline-flex shrink-0 items-center rounded-full border border-primary/20 bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
                           Super Admin
                         </span>
                       </div>

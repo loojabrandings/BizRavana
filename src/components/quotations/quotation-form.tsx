@@ -126,16 +126,7 @@ export function QuotationForm({ onSubmit, onCancel, initialData, isEditing }: Qu
       }
     };
     fetchData();
-  }, []);
-
-  // Re-initialize form when initialData changes
-  useEffect(() => {
-    if (initialData) {
-      setForm(initialData);
-      setErrors({});
-      setIsDirty(false);
-    }
-  }, [initialData]);
+  }, [isEditing]);
 
   // ─── Form helpers ─────────────────────────────────────────────
   const updateForm = useCallback(<K extends keyof QuotationFormData>(
@@ -166,14 +157,11 @@ export function QuotationForm({ onSubmit, onCancel, initialData, isEditing }: Qu
     form.delivery_charge,
   ]);
 
-  // Sync auto-calculated fields
-  useEffect(() => {
-    setForm((prev) => ({
-      ...prev,
-      subtotal: calculations.subtotal,
-      grand_total: calculations.grandTotal,
-    }));
-  }, [calculations]);
+  const formForSubmit = useMemo<QuotationFormData>(() => ({
+    ...form,
+    subtotal: calculations.subtotal,
+    grand_total: calculations.grandTotal,
+  }), [calculations, form]);
 
   // ─── Items ────────────────────────────────────────────────────
   const handleAddItem = useCallback(() => {
@@ -299,7 +287,7 @@ export function QuotationForm({ onSubmit, onCancel, initialData, isEditing }: Qu
       }
       setSaving(true);
       try {
-        await onSubmit?.(form, preview);
+        await onSubmit?.(formForSubmit, preview);
         setIsDirty(false);
       } catch (err) {
         console.error("Submit error:", err);
@@ -308,7 +296,7 @@ export function QuotationForm({ onSubmit, onCancel, initialData, isEditing }: Qu
         setSaving(false);
       }
     },
-    [form, onSubmit, validate],
+    [formForSubmit, onSubmit, validate],
   );
 
   // ─── Mobile detection ──────────────────────────────────────
@@ -373,7 +361,7 @@ export function QuotationForm({ onSubmit, onCancel, initialData, isEditing }: Qu
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, ease: "easeOut" }}
-      className="flex flex-col rounded-2xl glass-card"
+      className="flex flex-col rounded-xl glass-card"
     >
       {/* ═══════ Header ════════════════════════════════════════════ */}
       <div className="flex items-start justify-between px-8 pt-7 pb-5">

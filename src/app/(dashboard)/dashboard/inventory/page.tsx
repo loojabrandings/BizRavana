@@ -25,8 +25,8 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Dropdown } from "@/components/ui/dropdown";
 import { FilterBar } from "@/components/shared/filter-bar";
+import { DateRangePickerModal } from "@/components/shared/lazy-date-range-picker-modal";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { DataTable, type ColumnDef } from "@/components/shared/data-table";
@@ -43,7 +43,6 @@ import {
 import {
   getStockStatus,
   getStockStatusLabel,
-  getStockValue,
   formatCurrency,
   formatDate,
   computeStockValues,
@@ -83,21 +82,27 @@ function InventoryPageInner() {
   const [dateFilter, setDateFilter] = useState<string>("this_month");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [activeSort, setActiveSort] = useState<{ key: string; direction: "asc" | "desc" } | null>({
     key: "name",
     direction: "asc",
   });
   const [activeStatusTab, setActiveStatusTab] = useState("all");
+  const [activeCategoryTab, setActiveCategoryTab] = useState("all");
+  const [searchQuery, setSearchQuery] = useState("");
 
   // ─── Apply query params as initial filters ──────────────────
   useEffect(() => {
-    const status = searchParams.get("status");
-    if (status && stockStatusTabs.some((t) => t.value === status)) {
-      setActiveStatusTab(status);
-    }
+    const taskId = window.setTimeout(() => {
+      const status = searchParams.get("status");
+      if (status && stockStatusTabs.some((t) => t.value === status)) {
+        setActiveStatusTab(status);
+      }
+      const search = searchParams.get("search");
+      if (search) setSearchQuery(search);
+    }, 0);
+    return () => window.clearTimeout(taskId);
   }, [searchParams]);
-  const [activeCategoryTab, setActiveCategoryTab] = useState("all");
-  const [searchQuery, setSearchQuery] = useState("");
 
   // ─── Business ID & Categories ───────────────────────────────────
   const [businessId, setBusinessId] = useState<string | null>(null);
@@ -105,8 +110,6 @@ function InventoryPageInner() {
   const [catRefreshTrigger, setCatRefreshTrigger] = useState(0);
 
   // ─── Refetch trigger ──────────────────────────────────────────
-  const [fetchTrigger, setFetchTrigger] = useState(0);
-
   // ─── Data Fetching ─────────────────────────────────────────────
   useEffect(() => {
     const fetchItems = async () => {
@@ -156,7 +159,7 @@ function InventoryPageInner() {
       } finally { setLoading(false); }
     };
     fetchItems();
-  }, [dateFilter, dateFrom, dateTo, fetchTrigger]);
+  }, [dateFilter, dateFrom, dateTo]);
 
   // ─── Fetch Categories ──────────────────────────────────────────
   useEffect(() => {
@@ -576,7 +579,12 @@ function InventoryPageInner() {
 
   // ─── Pagination ───────────────────────────────────────────────
   const [currentPage, setCurrentPage] = useState(1);
+  const [previousFilteredItems, setPreviousFilteredItems] = useState(filteredItems);
   const [pageSize, setPageSize] = useState(25);
+  if (filteredItems !== previousFilteredItems) {
+    setPreviousFilteredItems(filteredItems);
+    setCurrentPage(1);
+  }
   const totalPages = Math.max(1, Math.ceil(filteredItems.length / pageSize));
 
   const paginatedItems = useMemo(
@@ -592,8 +600,6 @@ function InventoryPageInner() {
     });
     return map;
   }, [paginatedItems, currentPage, pageSize]);
-
-  useEffect(() => { setCurrentPage(1); }, [filteredItems]);
 
   // ─── Stock Status Dot ──────────────────────────────────────────
   const StatusDot = ({ status }: { status: string }) => (
@@ -785,7 +791,7 @@ function InventoryPageInner() {
         ),
       },
     ],
-    [rowNumbers],
+    [guard, handleEditItem, rowNumbers],
   );
 
   // ─── Mobile Card Render ────────────────────────────────────────
@@ -895,7 +901,7 @@ function InventoryPageInner() {
         </motion.div>
       );
     },
-    [handleEditItem],
+    [guard, handleEditItem],
   );
 
   // ─── Empty State ────────────────────────────────────────────────
@@ -920,7 +926,7 @@ function InventoryPageInner() {
         </Button>
       ),
     };
-  }, [items.length, activeStatusTab]);
+  }, [items.length, activeStatusTab, guard]);
 
   // ─── Render ────────────────────────────────────────────────────
   return (
@@ -982,35 +988,30 @@ function InventoryPageInner() {
             }}
             date={{
               value: dateFilter,
-              onChange: (v) => v && setDateFilter(v),
+              onChange: (v) => {
+                if (v === "custom") setDatePickerOpen(true);
+                else if (v) setDateFilter(v);
+              },
               options: dateFilterOptions,
-              isCustomMode: dateFilter === "custom",
-              onCalendarClick: () => setDateFilter(dateFilter === "custom" ? "this_month" : "custom"),
+              onCalendarClick: () => setDatePickerOpen(true),
             }}
             activeFilterCount={activeFilterCount}
             onClearFilters={handleClearFilters}
           />
 
-          {dateFilter === "custom" && (
-            <div className="flex items-center gap-2">
-              <div className="flex items-center gap-1.5">
-                <span className="text-sm font-medium text-muted-foreground uppercase tracking-wider">From</span>
-                <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)}
-                  className="h-9 w-[140px] rounded-xl border border-input bg-background px-3 text-sm font-medium text-foreground shadow-xs outline-none transition-colors focus:border-ring focus:ring-[3px] focus:ring-ring/50 [color-scheme:light] dark:[color-scheme:dark]"
-                  aria-label="From date" />
-              </div>
-              <span className="text-sm text-muted-foreground">—</span>
-              <div className="flex items-center gap-1.5">
-                <span className="text-sm font-medium text-muted-foreground uppercase tracking-wider">To</span>
-                <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)}
-                  className="h-9 w-[140px] rounded-xl border border-input bg-background px-3 text-sm font-medium text-foreground shadow-xs outline-none transition-colors focus:border-ring focus:ring-[3px] focus:ring-ring/50 [color-scheme:light] dark:[color-scheme:dark]"
-                  aria-label="To date" />
-              </div>
-              <Dropdown value={dateFilter} onChange={(v) => v && setDateFilter(v)}
-                options={dateFilterOptions.map((o) => ({ value: o.value, label: o.label }))}
-                size="sm" className="min-w-[36px]" />
-            </div>
-          )}
+          {/* Custom date range picker modal */}
+          <DateRangePickerModal
+            open={datePickerOpen}
+            onOpenChange={setDatePickerOpen}
+            from={dateFrom}
+            to={dateTo}
+            onApply={(f, t) => {
+              setDateFrom(f);
+              setDateTo(t);
+              setDateFilter("custom");
+              setDatePickerOpen(false);
+            }}
+          />
         </motion.div>
       )}
 

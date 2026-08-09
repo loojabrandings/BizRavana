@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import {
   ChevronDown,
   Eye,
@@ -24,8 +25,8 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Dropdown } from "@/components/ui/dropdown";
 import { FilterBar } from "@/components/shared/filter-bar";
+import { DateRangePickerModal } from "@/components/shared/lazy-date-range-picker-modal";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { DataTable, type ColumnDef } from "@/components/shared/data-table";
@@ -37,6 +38,7 @@ import { toast } from "sonner";
 import { dateFilterOptions, getDateRange } from "@/lib/date-utils";
 import { HoverPopover } from "@/components/shared/hover-popover";
 import { generateOrderNumber, initializeOrderSequence } from "@/components/orders/utils";
+import type { Database } from "@/types/database";
 
 // ─── Animations ────────────────────────────────────────────────────
 const containerVariants = {
@@ -83,6 +85,12 @@ interface Quotation {
   items: QuotationItem[];
 }
 
+type QuotationItemDatabaseRow = Database["public"]["Tables"]["quotation_items"]["Row"];
+type QuotationFormItemRow = Pick<
+  QuotationItemDatabaseRow,
+  "product_name" | "category" | "quantity" | "unit_price" | "notes"
+>;
+
 // ─── Constants ─────────────────────────────────────────────────────
 
 const quotationStatusValues = [
@@ -123,8 +131,9 @@ import { formatDate } from "@/lib/formatters";
 
 // ─── Main Page ─────────────────────────────────────────────────────
 
-export default function QuotationsPage() {
+function QuotationsPageInner() {
   const { guard } = useReadOnlyMode();
+  const searchParams = useSearchParams();
 
   // Data
   const [quotations, setQuotations] = useState<Quotation[]>([]);
@@ -135,9 +144,19 @@ export default function QuotationsPage() {
   const [dateFilter, setDateFilter] = useState<string>("this_month");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [activeSort, setActiveSort] = useState<{ key: string; direction: "asc" | "desc" } | null>({ key: "quotation_number", direction: "asc" });
   const [activeStatusTab, setActiveStatusTab] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
+
+  // ─── Apply query params as initial filters ──────────────────
+  useEffect(() => {
+    const taskId = window.setTimeout(() => {
+      const search = searchParams.get("search");
+      if (search) setSearchQuery(search);
+    }, 0);
+    return () => window.clearTimeout(taskId);
+  }, [searchParams]);
 
   // ─── Refetch trigger ──────────────────────────────────────────
   const [fetchTrigger, setFetchTrigger] = useState(0);
@@ -260,8 +279,9 @@ export default function QuotationsPage() {
       const orderId = String(newOrder.id);
 
       if (items && items.length > 0) {
+        const quotationItems = items as QuotationFormItemRow[];
         const { error: itemsError } = await supabase.from("order_items").insert(
-          items.map((item: Record<string, any>) => ({
+          quotationItems.map((item) => ({
             order_id: orderId,
             business_id: businessId,
             product_name: String(item.product_name || ""),
@@ -325,6 +345,8 @@ export default function QuotationsPage() {
         .select("product_name, category, quantity, unit_price, notes")
         .eq("quotation_id", quotationId);
 
+      const quotationItems = (items || []) as QuotationFormItemRow[];
+
       const formData: QuotationFormData = {
         quotation_number: String(quotation.quotation_number),
         created_date: quotation.created_at?.slice(0, 10) || "",
@@ -336,7 +358,7 @@ export default function QuotationsPage() {
         phone: String(quotation.customer_phone || ""),
         email: String(quotation.customer_email || ""),
         remarks: String(quotation.remarks || ""),
-        items: (items || []).map((item: Record<string, any>, i: number) => ({
+        items: quotationItems.map((item, i) => ({
           id: `preview_item_${i}`,
           product_name: String(item.product_name || ""),
           category: String(item.category || ""),
@@ -644,7 +666,7 @@ export default function QuotationsPage() {
         setEditQuotationId(quotation.id);
       }
     });
-  }, [fetchQuotationForForm]);
+  }, [fetchQuotationForForm, guard]);
 
   // ─── Bulk Handlers ─────────────────────────────────────────────
   const handleBulkStatusChange = useCallback(async (newStatus: string) => {
@@ -823,7 +845,12 @@ export default function QuotationsPage() {
 
   // ─── Pagination ───────────────────────────────────────────────
   const [currentPage, setCurrentPage] = useState(1);
+  const [previousFilteredQuotations, setPreviousFilteredQuotations] = useState(filteredQuotations);
   const [pageSize, setPageSize] = useState(25);
+  if (filteredQuotations !== previousFilteredQuotations) {
+    setPreviousFilteredQuotations(filteredQuotations);
+    setCurrentPage(1);
+  }
   const totalPages = Math.max(1, Math.ceil(filteredQuotations.length / pageSize));
 
   const paginatedQuotations = useMemo(
@@ -839,8 +866,6 @@ export default function QuotationsPage() {
     });
     return map;
   }, [paginatedQuotations, currentPage, pageSize]);
-
-  useEffect(() => { setCurrentPage(1); }, [filteredQuotations]);
 
   // ─── Columns ────────────────────────────────────────────────────
   const columns = useMemo<ColumnDef<Quotation>[]>(
@@ -1054,7 +1079,7 @@ export default function QuotationsPage() {
         ),
       },
     ],
-    [handleStatusChange, handleEditQuotation, handleConvertToOrder, rowNumbers, hoveredAction],
+    [guard, handleStatusChange, handleViewQuotation, handleEditQuotation, handleConvertToOrder, rowNumbers, hoveredAction],
   );
 
   // ─── Mobile Card Render ────────────────────────────────────────
@@ -1184,6 +1209,7 @@ export default function QuotationsPage() {
       handleViewQuotation,
       handleEditQuotation,
       handleConvertToOrder,
+      guard,
       setDeleteTargetId,
     ],
   );
@@ -1242,47 +1268,30 @@ export default function QuotationsPage() {
               }}
               date={{
                 value: dateFilter,
-                onChange: (v) => v && setDateFilter(v),
+                onChange: (v) => {
+                  if (v === "custom") setDatePickerOpen(true);
+                  else if (v) setDateFilter(v);
+                },
                 options: dateFilterOptions,
-                isCustomMode: dateFilter === "custom",
-                onCalendarClick: () => setDateFilter(dateFilter === "custom" ? "this_month" : "custom"),
+                onCalendarClick: () => setDatePickerOpen(true),
               }}
               activeFilterCount={activeFilterCount}
               onClearFilters={handleClearFilters}
             />
 
-            {dateFilter === "custom" && (
-              <div className="flex items-center gap-2">
-                <div className="flex items-center gap-1.5">
-                  <span className="text-sm font-medium text-muted-foreground uppercase tracking-wider">From</span>
-                  <input
-                    type="date"
-                    value={dateFrom}
-                    onChange={(e) => setDateFrom(e.target.value)}
-                    className="h-9 w-[140px] rounded-xl border border-input bg-background px-3 text-sm font-medium text-foreground shadow-xs outline-none transition-colors focus:border-ring focus:ring-[3px] focus:ring-ring/50 [color-scheme:light] dark:[color-scheme:dark]"
-                    aria-label="From date"
-                  />
-                </div>
-                <span className="text-sm text-muted-foreground">—</span>
-                <div className="flex items-center gap-1.5">
-                  <span className="text-sm font-medium text-muted-foreground uppercase tracking-wider">To</span>
-                  <input
-                    type="date"
-                    value={dateTo}
-                    onChange={(e) => setDateTo(e.target.value)}
-                    className="h-9 w-[140px] rounded-xl border border-input bg-background px-3 text-sm font-medium text-foreground shadow-xs outline-none transition-colors focus:border-ring focus:ring-[3px] focus:ring-ring/50 [color-scheme:light] dark:[color-scheme:dark]"
-                    aria-label="To date"
-                  />
-                </div>
-                <Dropdown
-                  value={dateFilter}
-                  onChange={(v) => v && setDateFilter(v)}
-                  options={dateFilterOptions.map((o) => ({ value: o.value, label: o.label }))}
-                  size="sm"
-                  className="min-w-[36px]"
-                />
-              </div>
-            )}
+            {/* Custom date range picker modal */}
+            <DateRangePickerModal
+              open={datePickerOpen}
+              onOpenChange={setDatePickerOpen}
+              from={dateFrom}
+              to={dateTo}
+              onApply={(f, t) => {
+                setDateFrom(f);
+                setDateTo(t);
+                setDateFilter("custom");
+                setDatePickerOpen(false);
+              }}
+            />
           </motion.div>
         </>
       )}
@@ -1399,5 +1408,23 @@ export default function QuotationsPage() {
         onConfirm={confirmBulkDelete}
       />
     </motion.div>
+  );
+}
+
+// ─── Exported Page (wrapped in Suspense for useSearchParams) ───────
+export default function QuotationsPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-[50vh] items-center justify-center">
+          <div className="flex flex-col items-center gap-2 text-muted-foreground">
+            <FileText className="size-6 animate-pulse" />
+            <p className="text-sm font-medium">Loading quotations…</p>
+          </div>
+        </div>
+      }
+    >
+      <QuotationsPageInner />
+    </Suspense>
   );
 }

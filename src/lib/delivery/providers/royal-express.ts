@@ -10,6 +10,8 @@ import type {
   CourierLocations,
   CourierState,
   CourierCity,
+  OrderFinanceInfo,
+  TrackingEvent,
 } from "@/lib/delivery/types";
 
 // ─── Settings Keys ───────────────────────────────────────────────────
@@ -25,6 +27,47 @@ const SETTINGS_KEYS = {
 // ─── API Base URL ────────────────────────────────────────────────────
 
 const API_BASE = "https://v1.api.curfox.com/api/public/merchant";
+
+type ApiRecord = Record<string, unknown>;
+
+function isApiRecord(value: unknown): value is ApiRecord {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function apiRecord(value: unknown): ApiRecord {
+  return isApiRecord(value) ? value : {};
+}
+
+function dataArray(payload: unknown): unknown[] {
+  const data = apiRecord(payload).data;
+  return Array.isArray(data) ? data : [];
+}
+
+function dataRecord(payload: unknown): ApiRecord {
+  return apiRecord(apiRecord(payload).data);
+}
+
+function stringField(record: ApiRecord, key: string, fallback = ""): string {
+  const value = record[key];
+  return value === null || value === undefined || value === "" ? fallback : String(value);
+}
+
+function nullableStringField(record: ApiRecord, key: string): string | null {
+  const value = record[key];
+  return value === null || value === undefined || value === "" ? null : String(value);
+}
+
+function errorMessage(payload: unknown, fallback: string): string {
+  const record = apiRecord(payload);
+  const message = nullableStringField(record, "message");
+  if (message) return message;
+
+  const errors = apiRecord(record.errors);
+  const fieldErrors = Object.values(errors).flatMap((value) =>
+    Array.isArray(value) ? value.map(String) : [],
+  );
+  return fieldErrors.length > 0 ? fieldErrors.join("; ") : fallback;
+}
 
 // ─── Helpers ─────────────────────────────────────────────────────────
 
@@ -43,12 +86,14 @@ async function getToken(credentials: Record<string, string>): Promise<string> {
   });
 
   if (!loginRes.ok) {
-    const errData = await loginRes.json().catch(() => ({}));
-    throw new Error(errData.message || "Failed to authenticate with courier");
+    const errorPayload: unknown = await loginRes.json().catch(() => ({}));
+    throw new Error(errorMessage(errorPayload, "Failed to authenticate with courier"));
   }
 
-  const loginData = await loginRes.json();
-  return loginData.token;
+  const loginData = apiRecord((await loginRes.json()) as unknown);
+  const token = nullableStringField(loginData, "token");
+  if (!token) throw new Error("Courier authentication response did not include a token");
+  return token;
 }
 
 function authHeaders(token: string, tenant: string): Record<string, string> {
@@ -82,6 +127,8 @@ function royalExpressMapStatus(apiStatus: string): string | null {
   if (exact[s]) return exact[s];
 
   // Partial matches for known patterns
+  // Royal Express treats a partially delivered order as delivered.
+  if (s.includes("partially delivered")) return "delivered";
   if (s.includes("failed to deliver")) return "returned";
   if (s.includes("failed")) return "returned";
   if (s.includes("return")) return "returned";
@@ -139,7 +186,8 @@ const STATUS_DISPLAY: StatusDisplayEntry[] = [
   {
     id: "delivered",
     label: "Delivered",
-    matchPatterns: ["delivered", "completed"],
+    // Partially delivered orders are counted as delivered.
+    matchPatterns: ["delivered", "completed", "partially delivered"],
     category: "completed",
   },
 ];
@@ -196,8 +244,8 @@ export const royalExpressProvider: CourierProvider = {
       }),
     });
 
-    const data = await res.json();
-    return res.ok && !!data.token;
+    const data = apiRecord((await res.json()) as unknown);
+    return res.ok && nullableStringField(data, "token") !== null;
   },
 
   async ship(order, credentials): Promise<{ waybill: string }> {
@@ -213,20 +261,23 @@ export const royalExpressProvider: CourierProvider = {
     });
 
     if (!bizRes.ok) {
-      const errData = await bizRes.json().catch(() => ({}));
-      throw new Error(errData.message || "Failed to fetch merchant businesses");
+      const errorPayload: unknown = await bizRes.json().catch(() => ({}));
+      throw new Error(errorMessage(errorPayload, "Failed to fetch merchant businesses"));
     }
 
-    const bizData = await bizRes.json();
-    const businesses = bizData.data || [];
+    const bizData: unknown = await bizRes.json();
+    const businesses = dataArray(bizData).filter(isApiRecord);
     const defaultBusiness =
-      businesses.find((b: any) => b.is_default) || businesses[0];
+      businesses.find((business) => Boolean(business.is_default)) || businesses[0];
     if (!defaultBusiness) {
       throw new Error(
         "No business found in your Royal Express account. Please set up a business in the Royal Express merchant portal first.",
       );
     }
-    const merchantBusinessId = String(defaultBusiness.id);
+    const merchantBusinessId = stringField(defaultBusiness, "id");
+    if (!merchantBusinessId) {
+      throw new Error("Royal Express business response did not include an ID");
+    }
 
     const requestBody = {
       general_data: {
@@ -261,29 +312,23 @@ export const royalExpressProvider: CourierProvider = {
       let errorMsg = "Failed to create shipment with courier";
       try {
         const responseText = await shipRes.text();
-        const errData = JSON.parse(responseText);
-        if (errData.errors && typeof errData.errors === "object") {
-          const fieldErrors: string[] = [];
-          for (const [, messages] of Object.entries(errData.errors)) {
-            if (Array.isArray(messages)) fieldErrors.push(...messages);
-          }
-          if (fieldErrors.length > 0) errorMsg = fieldErrors.join("; ");
-        } else if (errData.message) {
-          errorMsg = errData.message;
-        }
+        const errorPayload = JSON.parse(responseText) as unknown;
+        errorMsg = errorMessage(errorPayload, errorMsg);
       } catch {
         /* ignore */
       }
       throw new Error(errorMsg);
     }
 
-    const shipData = await shipRes.json();
-    const waybill = shipData.data?.[0];
-    if (!waybill) throw new Error("No waybill returned from courier");
-    return { waybill };
+    const shipData: unknown = await shipRes.json();
+    const waybillValue = dataArray(shipData)[0];
+    if (waybillValue === null || waybillValue === undefined || waybillValue === "") {
+      throw new Error("No waybill returned from courier");
+    }
+    return { waybill: String(waybillValue) };
   },
 
-  async track(waybillNumber, credentials): Promise<any[]> {
+  async track(waybillNumber, credentials): Promise<TrackingEvent[]> {
     const token = await getToken(credentials);
 
     const res = await fetch(
@@ -297,28 +342,31 @@ export const royalExpressProvider: CourierProvider = {
     if (!res.ok) {
       let errorMsg = "Failed to fetch tracking info";
       try {
-        const errData = await res.json();
-        if (errData.message) errorMsg = errData.message;
+        const errorPayload: unknown = await res.json();
+        errorMsg = errorMessage(errorPayload, errorMsg);
       } catch {
         /* ignore */
       }
       throw new Error(errorMsg);
     }
 
-    const data = await res.json();
-    const events: any[] = data.data || [];
+    const data: unknown = await res.json();
+    const events = dataArray(data);
 
-    return events.map((e: any) => ({
-      status: e.status?.name || "Unknown",
-      dateTime: e.date_time || "",
-      dateTimeAgo: e.date_time_ago || "",
-      user: e.user
-        ? `${e.user.first_name || ""} ${e.user.last_name || ""}`.trim()
-        : "",
-    }));
+    return events.map((event) => {
+      const record = apiRecord(event);
+      const status = apiRecord(record.status);
+      const user = apiRecord(record.user);
+      return {
+        status: stringField(status, "name", "Unknown"),
+        dateTime: stringField(record, "date_time"),
+        dateTimeAgo: stringField(record, "date_time_ago"),
+        user: `${stringField(user, "first_name")} ${stringField(user, "last_name")}`.trim(),
+      };
+    });
   },
 
-  async fetchFinance(waybillNumber, credentials): Promise<any> {
+  async fetchFinance(waybillNumber, credentials): Promise<OrderFinanceInfo> {
     const token = await getToken(credentials);
 
     const res = await fetch(
@@ -332,21 +380,21 @@ export const royalExpressProvider: CourierProvider = {
     if (!res.ok) {
       let errorMsg = "Failed to fetch finance info";
       try {
-        const errData = await res.json();
-        if (errData.message) errorMsg = errData.message;
+        const errorPayload: unknown = await res.json();
+        errorMsg = errorMessage(errorPayload, errorMsg);
       } catch {
         /* ignore */
       }
       throw new Error(errorMsg);
     }
 
-    const data = await res.json();
-    const d = data.data || {};
+    const data: unknown = await res.json();
+    const finance = dataRecord(data);
 
     return {
-      financeStatus: d.finance_status || "Unknown",
-      invoiceRefNo: d.invoice_ref_no || null,
-      invoiceNo: d.invoice_no || null,
+      financeStatus: stringField(finance, "finance_status", "Unknown"),
+      invoiceRefNo: nullableStringField(finance, "invoice_ref_no"),
+      invoiceNo: nullableStringField(finance, "invoice_no"),
     };
   },
 
@@ -361,17 +409,15 @@ export const royalExpressProvider: CourierProvider = {
       headers: authHeaders(token, credentials.tenant),
     });
 
-    const statuses: { key: string; name: string; is_merchant_status: number }[] =
-      statusRes.ok
-        ? (await statusRes.json()).data || []
-        : [];
+    const statusPayload: unknown = statusRes.ok ? await statusRes.json() : null;
+    const statuses = dataArray(statusPayload).filter(isApiRecord);
 
     // Map merchant-visible Curfox statuses to dashboard breakdown
     const statusBreakdown = statuses
-      .filter((s) => s.is_merchant_status === 1)
-      .map((s) => ({
-        id: s.key,
-        label: s.name,
+      .filter((status) => Number(status.is_merchant_status) === 1)
+      .map((status) => ({
+        id: stringField(status, "key"),
+        label: stringField(status, "name"),
         count: 0,
         deliveryCharge: 0,
       }));
@@ -398,15 +444,18 @@ export const royalExpressProvider: CourierProvider = {
     });
 
     if (!statesRes.ok) {
-      const errData = await statesRes.json().catch(() => ({}));
-      throw new Error(errData.message || "Failed to fetch states from courier");
+      const errorPayload: unknown = await statesRes.json().catch(() => ({}));
+      throw new Error(errorMessage(errorPayload, "Failed to fetch states from courier"));
     }
 
-    const statesData = await statesRes.json();
-    const states: CourierState[] = (statesData.data || []).map((s: any) => ({
-      id: s.id,
-      name: s.name,
-    }));
+    const statesData: unknown = await statesRes.json();
+    const states: CourierState[] = dataArray(statesData).map((state) => {
+      const record = apiRecord(state);
+      return {
+        id: Number(record.id),
+        name: stringField(record, "name"),
+      };
+    });
 
     const citiesRes = await fetch(`${API_BASE}/city?noPagination=1`, {
       method: "GET",
@@ -414,16 +463,19 @@ export const royalExpressProvider: CourierProvider = {
     });
 
     if (!citiesRes.ok) {
-      const errData = await citiesRes.json().catch(() => ({}));
-      throw new Error(errData.message || "Failed to fetch cities from courier");
+      const errorPayload: unknown = await citiesRes.json().catch(() => ({}));
+      throw new Error(errorMessage(errorPayload, "Failed to fetch cities from courier"));
     }
 
-    const citiesData = await citiesRes.json();
-    const cities: CourierCity[] = (citiesData.data || []).map((c: any) => ({
-      id: c.id,
-      name: c.name,
-      state_id: c.state_id,
-    }));
+    const citiesData: unknown = await citiesRes.json();
+    const cities: CourierCity[] = dataArray(citiesData).map((city) => {
+      const record = apiRecord(city);
+      return {
+        id: Number(record.id),
+        name: stringField(record, "name"),
+        state_id: Number(record.state_id),
+      };
+    });
 
     const supabase = createClient();
     const now = new Date().toISOString();

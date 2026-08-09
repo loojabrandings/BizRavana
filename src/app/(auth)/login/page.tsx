@@ -22,8 +22,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { createClient } from "@/lib/supabase/client";
-import { getAuthorizedRedirect } from "@/lib/auth-routing";
 
 const highlights = [
   {
@@ -50,7 +48,7 @@ function getLoginErrorMessage(error: { code?: string; message: string }) {
     error.code === "email_not_confirmed" ||
     message.includes("email not confirmed")
   ) {
-    return "This account still needs email confirmation. If you disabled Confirm email after creating this user, delete the old user in Supabase Authentication > Users, then sign up again.";
+    return "This account still needs email confirmation. Check your inbox for the confirmation message, or contact support if you can no longer access it.";
   }
 
   if (
@@ -68,7 +66,7 @@ function getLoginErrorMessage(error: { code?: string; message: string }) {
   }
 
   if (message.includes("fetch failed")) {
-    return "The app could not reach Supabase. Please check your internet connection and Supabase project URL/key, then try again.";
+    return "The sign-in service is temporarily unavailable. Check your internet connection and try again.";
   }
 
   return error.message;
@@ -229,13 +227,20 @@ function LoginForm() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const callbackErrorMessages: Record<string, string> = {
+    account_setup:
+      "We could not finish setting up your account. Please try again.",
+    invalid_credentials: "The email or password is not correct.",
+    rate_limited: "Too many sign-in attempts. Please wait and try again.",
+    service_unavailable:
+      "Sign-in is temporarily unavailable. Please try again shortly.",
+  };
   const visibleError =
     error ||
-    (callbackError === "account_setup"
-      ? "We could not finish setting up your account. Please try again."
-      : callbackError
-        ? "Your sign-in session could not be completed. Please sign in again."
-        : null);
+    (callbackError
+      ? callbackErrorMessages[callbackError] ??
+        "Your sign-in session could not be completed. Please sign in again."
+      : null);
 
   const handleLogin = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -243,52 +248,26 @@ function LoginForm() {
     setError(null);
 
     try {
-      const supabase = createClient();
-      const { data: authData, error: authError } =
-        await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
+      const response = await fetch("/api/login", {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email, password, redirect: requestedRedirect }),
+      });
+      const result = (await response.json()) as {
+        redirectTo?: string;
+        error?: string;
+      };
 
-      if (authError) {
-        setError(getLoginErrorMessage(authError));
+      if (!response.ok || !result.redirectTo) {
+        setError(result.error || "Sign-in failed. Please try again.");
         setLoading(false);
         return;
       }
 
-      if (!authData.session) {
-        const {
-          data: { session },
-          error: sessionError,
-        } = await supabase.auth.getSession();
-
-        if (sessionError || !session) {
-          setError(
-            sessionError
-              ? getLoginErrorMessage(sessionError)
-              : "Sign-in succeeded, but the session was not saved. Please try again.",
-          );
-          setLoading(false);
-          return;
-        }
-      }
-
-      const {
-        data: { user },
-        error: userError,
-      } = await supabase.auth.getUser();
-
-      if (userError || !user) {
-        setError(
-          userError
-            ? getLoginErrorMessage(userError)
-            : "Sign-in succeeded, but the user session could not be verified. Please try again.",
-        );
-        setLoading(false);
-        return;
-      }
-
-      window.location.replace(getAuthorizedRedirect(requestedRedirect, user));
+      window.location.replace(result.redirectTo);
     } catch (caughtError) {
       const message =
         caughtError instanceof Error
@@ -349,6 +328,7 @@ function LoginForm() {
           onSubmit={handleLogin}
           className="space-y-5"
         >
+          <input type="hidden" name="redirect" value={requestedRedirect ?? ""} />
           <div className="space-y-2">
             <Label
               htmlFor="email"
@@ -403,7 +383,7 @@ function LoginForm() {
               <button
                 type="button"
                 onClick={() => setShowPassword((visible) => !visible)}
-                className="absolute right-4 top-1/2 -translate-y-1/2 rounded-md text-muted-foreground transition-colors hover:text-foreground"
+                className="absolute right-1 top-1/2 inline-flex size-11 -translate-y-1/2 touch-manipulation items-center justify-center rounded-[10px] text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/45"
                 aria-label={showPassword ? "Hide password" : "Show password"}
               >
                 {showPassword ? (
@@ -417,8 +397,9 @@ function LoginForm() {
 
           <Button
             type="submit"
+            size="lg"
             disabled={loading}
-            className="group btn-gradient btn-gradient-shadow h-12 w-full rounded-xl text-sm font-semibold text-primary-foreground transition-all hover:-translate-y-0.5 hover:btn-gradient-hover hover:shadow-xl disabled:translate-y-0"
+            className="w-full"
           >
             {loading ? (
               <>

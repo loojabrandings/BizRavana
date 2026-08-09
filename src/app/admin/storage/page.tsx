@@ -22,7 +22,6 @@ import { toast } from "sonner";
 
 // ══ Responsive Admin Components ══════════════════════════════════
 import { AdminPageHeader } from "@/components/admin/page-header";
-import { AdminSearchBar } from "@/components/admin/search-bar";
 import {
   AdminResponsiveTable,
   AdminMobileRecordCard,
@@ -89,7 +88,7 @@ function StatusBadge({ status }: { status: string }) {
     pending_payment: "bg-warning/10 text-warning border-warning/20",
     suspended: "bg-destructive/10 text-destructive border-destructive/20",
   };
-  return <span className={cn("inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold capitalize", styles[status] || "bg-muted text-muted-foreground")}>{status.replace("_", " ")}</span>;
+  return <span className={cn("inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold", styles[status] || "bg-muted text-muted-foreground")}>{status.replace("_", " ")}</span>;
 }
 
 function StatsCard({ label, value, sublabel, icon: Icon, accent }: {
@@ -105,7 +104,7 @@ function StatsCard({ label, value, sublabel, icon: Icon, accent }: {
   return (
     <div className="flex items-center gap-3 rounded-xl border border-border/20 bg-card p-4">
       <div className={cn("flex size-10 items-center justify-center rounded-lg", accentStyles[accent])}><Icon className="size-5" /></div>
-      <div><p className="text-2xl font-bold tracking-tight text-foreground tabular-nums">{typeof value === "number" ? value.toLocaleString() : value}</p><p className="text-xs text-muted-foreground/70">{label}</p>{sublabel && <p className="text-[10px] text-muted-foreground/50">{sublabel}</p>}</div>
+      <div><p className="text-2xl font-bold tracking-tight text-foreground tabular-nums">{typeof value === "number" ? value.toLocaleString() : value}</p><p className="text-xs text-muted-foreground">{label}</p>{sublabel && <p className="text-xs text-muted-foreground">{sublabel}</p>}</div>
     </div>
   );
 }
@@ -121,7 +120,7 @@ function BucketCard({ bucket, loading }: { bucket: BucketInfo; loading: boolean 
         <div><div className="flex items-center justify-between mb-1"><span className="text-xs text-muted-foreground/60">Usage</span><span className="text-xs text-muted-foreground/70 tabular-nums">{formatMb(bucket.totalSizeMb)} / 500 MB</span></div>
           <Progress value={percentage} className={cn("h-1.5", percentage >= 90 && "[&>div]:bg-destructive", percentage >= 70 && percentage < 90 && "[&>div]:bg-warning")} /></div>
         <div className="flex items-center justify-between text-xs text-muted-foreground/70"><span>Businesses with files</span><span className="font-medium tabular-nums">{bucket.businessCount}</span></div>
-        <p className="text-[10px] text-muted-foreground/50 font-mono">{bucket.pathPattern}</p>
+        <p className="font-mono text-xs text-muted-foreground">{bucket.pathPattern}</p>
       </>)}
   </div>);
 }
@@ -180,7 +179,12 @@ export default function AdminStoragePage() {
     finally { setLoading(false); }
   }, [supabase]);
 
-  useEffect(() => { fetchStorageData(); }, [fetchStorageData]);
+  useEffect(() => {
+    const taskId = window.setTimeout(() => {
+      void fetchStorageData();
+    }, 0);
+    return () => window.clearTimeout(taskId);
+  }, [fetchStorageData]);
 
   // ── Stats ──────────────────────────────────────────────────────
   const stats = useMemo(() => {
@@ -240,7 +244,7 @@ export default function AdminStoragePage() {
       ]}
       actions={
         <button type="button" onClick={() => window.open(`/admin/businesses/${biz.id}`, "_self")}
-          className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-input bg-background px-3 py-2 text-xs font-medium min-h-11 hover:bg-accent transition-colors">
+          className="inline-flex min-h-11 items-center justify-center gap-2 rounded-[10px] border border-border bg-transparent px-4 text-sm font-medium text-foreground shadow-xs transition-all hover:-translate-y-0.5 hover:border-primary/30 hover:bg-muted hover:shadow-sm">
           <ExternalLink className="size-3.5" /> View
         </button>
       }

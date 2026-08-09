@@ -35,10 +35,8 @@ export function Dropdown({
   placeholder = "Select...",
   disabled = false,
   className,
-  size = "default",
   label,
   align = "start",
-  fullWidth = false,
 }: DropdownProps) {
   const selectedOption = options.find((opt) => opt.value === value);
 

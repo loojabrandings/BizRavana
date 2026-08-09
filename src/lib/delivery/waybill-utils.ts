@@ -35,6 +35,31 @@ export interface AddWaybillResult {
   errors: string[];
 }
 
+interface ManualWaybillRow {
+  id: string;
+  business_id: string;
+  waybill_id: string;
+  provider_id: string | null;
+  status: WaybillStatus;
+  assigned_order_id: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+  used_at: string | null;
+  deleted_at: string | null;
+}
+
+interface ManualWaybillQueryRow extends ManualWaybillRow {
+  assigned_order_number?: { order_number: string | null } | null;
+}
+
+interface ManualWaybillUpdate {
+  status: WaybillStatus;
+  updated_at: string;
+  used_at?: string | null;
+  assigned_order_id?: null;
+}
+
 // ─── Constants ─────────────────────────────────────────────────────
 
 const SETTINGS_KEY_WAYBILL_METHOD = "waybill_method";
@@ -63,7 +88,6 @@ export async function getWaybillMethod(
 export async function setWaybillMethod(
   businessId: string,
   method: "manual" | "auto",
-  userId?: string | null,
 ): Promise<void> {
   const supabase = createClient();
   await supabase.from("business_settings").upsert(
@@ -133,7 +157,7 @@ export async function fetchManualWaybills(
     return { waybills: [], total: 0 };
   }
 
-  const waybills: ManualWaybill[] = (data || []).map((row: any) => ({
+  const waybills: ManualWaybill[] = (data || []).map((row: ManualWaybillQueryRow) => ({
     id: row.id,
     business_id: row.business_id,
     waybill_id: row.waybill_id,
@@ -180,10 +204,11 @@ export async function getWaybillSummary(
   }
 
   const total = data?.length || 0;
-  const available = data?.filter((w: any) => w.status === "available").length || 0;
-  const assigned = data?.filter((w: any) => w.status === "assigned").length || 0;
-  const used = data?.filter((w: any) => w.status === "used").length || 0;
-  const invalid = data?.filter((w: any) => w.status === "invalid").length || 0;
+  const rows = (data || []) as Pick<ManualWaybillRow, "status">[];
+  const available = rows.filter((waybill) => waybill.status === "available").length;
+  const assigned = rows.filter((waybill) => waybill.status === "assigned").length;
+  const used = rows.filter((waybill) => waybill.status === "used").length;
+  const invalid = rows.filter((waybill) => waybill.status === "invalid").length;
 
   return { total, available, assigned, used, invalid };
 }
@@ -377,7 +402,7 @@ export async function updateWaybillStatus(
 ): Promise<{ success: boolean; error?: string }> {
   const supabase = createClient();
 
-  const updateData: Record<string, any> = {
+  const updateData: ManualWaybillUpdate = {
     status: newStatus,
     updated_at: new Date().toISOString(),
   };
@@ -643,7 +668,7 @@ export async function bulkUpdateWaybillStatus(
   const supabase = createClient();
   const now = new Date().toISOString();
 
-  const updateData: Record<string, any> = {
+  const updateData: ManualWaybillUpdate = {
     status: newStatus,
     updated_at: now,
   };
@@ -731,7 +756,7 @@ export async function getAvailableWaybills(
     return [];
   }
 
-  return (data || []).map((row: any) => ({
+  return (data || []).map((row: ManualWaybillRow) => ({
     id: row.id,
     business_id: row.business_id,
     waybill_id: row.waybill_id,

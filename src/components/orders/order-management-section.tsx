@@ -50,7 +50,6 @@ export function OrderManagementSection({
   updateForm,
   businessId,
 }: OrderManagementSectionProps) {
-  const [waybillSuggestions, setWaybillSuggestions] = useState<ManualWaybill[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [fetchedWaybills, setFetchedWaybills] = useState<ManualWaybill[]>([]);
   const [waybillMethod, setWaybillMethod] = useState<"manual" | "auto" | null>(null);
@@ -271,5 +270,4 @@ export function OrderManagementSection({
     </>
   );
 }
-
 

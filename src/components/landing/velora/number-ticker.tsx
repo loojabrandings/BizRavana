@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import {
   useInView,
   useMotionValue,
@@ -38,11 +38,12 @@ export function NumberTicker({
   const isInView = useInView(ref, { once: true, margin: "0px 0px -10% 0px" });
   const reducedMotion = useReducedMotion();
 
-  const format = (n: number) =>
+  const format = useCallback((n: number) =>
     `${prefix}${Intl.NumberFormat("en-US", {
       minimumFractionDigits: decimalPlaces,
       maximumFractionDigits: decimalPlaces,
-    }).format(n)}${suffix}`;
+    }).format(n)}${suffix}`,
+  [decimalPlaces, prefix, suffix]);
 
   useEffect(() => {
     if (!isInView) return;
@@ -59,7 +60,7 @@ export function NumberTicker({
       springValue.on("change", (latest) => {
         if (ref.current) ref.current.textContent = format(latest);
       }),
-    [springValue, prefix, suffix, decimalPlaces]
+    [springValue, format]
   );
 
   return (

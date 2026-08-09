@@ -1,27 +1,27 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAdminClient } from "@/lib/supabase/admin";
-import { createClient } from "@/lib/supabase/client";
+import { z } from "zod";
+import { createClient } from "@/lib/supabase/server";
 
-/**
- * POST /api/invitations/accept
- * Accept a pending invitation using the invitation token.
- * Body: { token }
- */
+const acceptSchema = z.object({
+  token: z.string().trim().min(32).max(256),
+});
+
+/** Accept a pending invitation as the verified current user. */
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { token } = body;
-
-    if (!token) {
+    const parsed = acceptSchema.safeParse(await request.json().catch(() => null));
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: "token is required" },
+        { error: "A valid invitation token is required" },
         { status: 400 },
       );
     }
 
-    // Get the current user
-    const supabase = createClient();
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    const supabase = await createClient();
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
 
     if (userError || !user) {
       return NextResponse.json(
@@ -30,18 +30,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Call the RPC function to accept the invitation
-    const adminClient = getAdminClient();
-    const { data: businessId, error } = await adminClient.rpc(
+    const { data: businessId, error } = await supabase.rpc(
       "accept_invitation",
       {
-        invitation_token: token,
+        invitation_token: parsed.data.token,
         accepting_user_id: user.id,
       },
     );
 
     if (error) {
-      // Map the RPC error messages to user-friendly responses
       const message = error.message;
       if (message.includes("Invalid or expired")) {
         return NextResponse.json(
@@ -49,16 +46,34 @@ export async function POST(request: NextRequest) {
           { status: 400 },
         );
       }
-      return NextResponse.json({ error: message }, { status: 500 });
+      if (message.includes("email does not match")) {
+        return NextResponse.json(
+          { error: "This invitation belongs to a different email address." },
+          { status: 403 },
+        );
+      }
+      if (message.includes("already belongs")) {
+        return NextResponse.json(
+          { error: "This account already belongs to another business." },
+          { status: 409 },
+        );
+      }
+
+      console.error("Invitation acceptance failed:", error);
+      return NextResponse.json(
+        { error: "Invitation could not be accepted" },
+        { status: 500 },
+      );
     }
 
     return NextResponse.json({
       data: { business_id: businessId },
       message: "Invitation accepted successfully!",
     });
-  } catch (err) {
+  } catch (error) {
+    console.error("Invitation acceptance failed:", error);
     return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Internal server error" },
+      { error: "Internal server error" },
       { status: 500 },
     );
   }

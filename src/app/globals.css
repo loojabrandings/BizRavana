@@ -7,9 +7,9 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
---font-sans: var(--font-poppins, "Poppins", sans-serif);
---font-heading: var(--font-poppins, "Poppins", sans-serif);
---font-mono: var(--font-poppins, "Poppins", sans-serif);
+  --font-sans: var(--font-poppins, "Poppins", sans-serif);
+  --font-heading: var(--font-poppins, "Poppins", sans-serif);
+  --font-mono: var(--font-poppins, "Poppins", sans-serif);
   --text-body-lg: 0.9375rem;
   --text-hero-lg: 2.875rem;
   --tracking-tightest: -0.04em;
@@ -17,9 +17,10 @@
   --tracking-widest-alt: 0.16em;
   --leading-tighter: 1.1;
   --color-sidebar-ring: var(--sidebar-ring);
-  --text-xxs: 0.625rem;
-  --text-micro: 0.5rem;
-  --text-nano: 0.5625rem;
+  /* Legacy compact labels now resolve to the accessible 12px minimum. */
+  --text-xxs: 0.75rem;
+  --text-micro: 0.75rem;
+  --text-nano: 0.75rem;
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-accent: var(--sidebar-accent);
@@ -253,6 +254,7 @@
   --brand-accent: oklch(0.627 0.194 149.214);
   --brand-accent-foreground: oklch(0.205 0 0);
 }
+
 .dark[data-accent="green"] {
   --primary: oklch(0.627 0.194 149.214);
   --primary-foreground: oklch(0.205 0 0);
@@ -281,6 +283,7 @@
   --brand-accent: oklch(0.627 0.265 303.9);
   --brand-accent-foreground: oklch(0.205 0 0);
 }
+
 .dark[data-accent="purple"] {
   --primary: oklch(0.715 0.143 311.379);
   --primary-foreground: oklch(0.205 0 0);
@@ -309,6 +312,7 @@
   --brand-accent: oklch(0.645 0.246 16.439);
   --brand-accent-foreground: oklch(0.205 0 0);
 }
+
 .dark[data-accent="rose"] {
   --primary: oklch(0.715 0.143 16.439);
   --primary-foreground: oklch(0.205 0 0);
@@ -337,6 +341,7 @@
   --brand-accent: oklch(0.769 0.188 70.08);
   --brand-accent-foreground: oklch(0.205 0 0);
 }
+
 .dark[data-accent="amber"] {
   --primary: oklch(0.828 0.167 70.08);
   --primary-foreground: oklch(0.205 0 0);
@@ -356,6 +361,7 @@
 :root {
   --destructive-foreground: oklch(0.985 0 0);
 }
+
 .dark {
   --destructive-foreground: oklch(0.985 0 0);
 }
@@ -369,12 +375,14 @@ html[data-font-family="poppins"] {
   --font-mono: var(--font-poppins);
   font-family: var(--font-poppins), sans-serif;
 }
+
 html[data-font-family="lora"] {
   --font-sans: var(--font-lora);
   --font-heading: var(--font-lora);
   --font-mono: var(--font-lora);
   font-family: var(--font-lora), serif;
 }
+
 html[data-font-family="caveat"] {
   --font-sans: var(--font-caveat);
   --font-heading: var(--font-caveat);
@@ -388,9 +396,11 @@ html[data-font-family="caveat"] {
 html[data-font-size="small"] {
   font-size: 14px;
 }
+
 html[data-font-size="medium"] {
   font-size: 16px;
 }
+
 html[data-font-size="large"] {
   font-size: 18px;
 }
@@ -402,20 +412,49 @@ html[data-font-size="large"] {
   * {
     @apply border-border outline-ring/50;
   }
+
   body {
     @apply bg-background text-foreground;
   }
+
   html {
     @apply font-sans scroll-smooth;
   }
+
   h1 {
     @apply text-2xl font-semibold tracking-tightest;
   }
+
   h2 {
     @apply text-xl font-semibold;
   }
+
   h3 {
     @apply text-lg font-semibold;
+  }
+
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]) {
+    cursor: pointer;
+  }
+
+  button[aria-label]:not([data-slot="button"]) {
+    min-width: 2.25rem;
+    min-height: 2.25rem;
+    touch-action: manipulation;
+  }
+
+  button:not([data-slot="button"]):focus-visible,
+  [role="button"]:focus-visible {
+    outline: 3px solid color-mix(in oklch, var(--ring) 45%, transparent);
+    outline-offset: 2px;
+  }
+
+  @media (max-width: 640px) {
+    button[aria-label]:not([data-slot="button"]) {
+      min-width: 2.75rem;
+      min-height: 2.75rem;
+    }
   }
 }
 
@@ -441,6 +480,31 @@ html[data-font-size="large"] {
   -webkit-backdrop-filter: blur(12px);
   border: 1px solid var(--glass-border);
   box-shadow: var(--glass-shadow);
+}
+
+/* Canonical application surface hierarchy. */
+@utility glass-inset {
+  background: color-mix(in oklch, var(--muted) 30%, transparent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid color-mix(in oklch, var(--border) 30%, transparent);
+  box-shadow: none;
+}
+
+@utility glass-base {
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+}
+
+@utility glass-elevated {
+  background: color-mix(in oklch, var(--popover) 75%, transparent);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--shadow-xl);
 }
 
 @utility glass-panel {
@@ -472,23 +536,13 @@ html[data-font-size="large"] {
   border-right: 1px solid var(--glass-border);
 }
 
-@utility sidebar-active-bar {
-  position: absolute;
-  left: 0;
-  inset-block: 0;
-  width: 3px;
-  border-radius: 0 4px 4px 0;
-  background: var(--sidebar-primary);
-  box-shadow: 0 0 8px 1px color-mix(in oklch, var(--sidebar-primary) 40%, transparent);
-}
-
 @utility sidebar-section-label {
   font-size: 0.6875rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.12em;
   color: var(--sidebar-foreground);
-  opacity: 0.35;
+  opacity: 0.55;
   padding: 0 0.75rem;
 }
 
@@ -501,30 +555,75 @@ html[data-font-size="large"] {
 /* ============================
    Shimmer Loading Utility
    ============================ */
+@utility button-shimmer {
+  background: linear-gradient(110deg,
+      transparent 30%,
+      color-mix(in oklch, var(--primary) 35%, transparent) 50%,
+      transparent 70%);
+  background-size: 250% 100%;
+}
+
+.dark .button-shimmer {
+  background: linear-gradient(110deg,
+      transparent 30%,
+      color-mix(in oklch, currentColor 35%, transparent) 50%,
+      transparent 70%);
+  background-size: 250% 100%;
+}
+
 @utility shimmer {
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    oklch(0.9 0 0 / 50%) 50%,
-    transparent 100%
-  );
+  background: linear-gradient(90deg,
+      transparent 0%,
+      oklch(0.9 0 0 / 50%) 50%,
+      transparent 100%);
   background-size: 200% 100%;
   animation: shimmer 1.5s ease-in-out infinite;
 }
 
 .dark .shimmer {
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    oklch(0.3 0 0 / 50%) 50%,
-    transparent 100%
-  );
+  background: linear-gradient(90deg,
+      transparent 0%,
+      oklch(0.3 0 0 / 50%) 50%,
+      transparent 100%);
   background-size: 200% 100%;
 }
 
 @keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
+  0% {
+    background-position: -200% 0;
+  }
+
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+/* ============================
+   Hero Display Shimmer
+   Continuous crisp left-to-right sweep for the hero display words.
+   Uses a tighter highlight band and a 200% background so the band
+   stays on-screen for most of the cycle instead of lagging off-page.
+   ============================ */
+@utility shimmer-text {
+  background-image: linear-gradient(110deg,
+      var(--primary) 40%,
+      white 50%,
+      var(--primary) 60%);
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: shimmer-text 5s linear infinite;
+}
+
+@keyframes shimmer-text {
+  0% {
+    background-position: 150% 0;
+  }
+
+  100% {
+    background-position: -50% 0;
+  }
 }
 
 /* ============================
@@ -635,48 +734,87 @@ body:has([data-slot="dialog-overlay"][data-closed]) [data-main-content] {
    ============================ */
 
 @keyframes marquee {
-  from { transform: translateX(0); }
-  to { transform: translateX(calc(-100% - var(--gap))); }
+  from {
+    transform: translateX(0);
+  }
+
+  to {
+    transform: translateX(calc(-100% - var(--gap)));
+  }
 }
 
 @keyframes marquee-vertical {
-  from { transform: translateY(0); }
-  to { transform: translateY(calc(-100% - var(--gap))); }
+  from {
+    transform: translateY(0);
+  }
+
+  to {
+    transform: translateY(calc(-100% - var(--gap)));
+  }
 }
 
 @keyframes gradient {
-  0%, 100% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
+
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+
+  50% {
+    background-position: 100% 50%;
+  }
 }
 
 @keyframes orbit {
   0% {
-    transform: rotate(calc(var(--angle) * 1deg))
-      translateY(calc(var(--radius) * -1px)) rotate(calc(var(--angle) * -1deg));
+    transform: rotate(calc(var(--angle) * 1deg)) translateY(calc(var(--radius) * -1px)) rotate(calc(var(--angle) * -1deg));
   }
+
   100% {
-    transform: rotate(calc(var(--angle) * 1deg + 360deg))
-      translateY(calc(var(--radius) * -1px))
-      rotate(calc((var(--angle) * 1deg + 360deg) * -1));
+    transform: rotate(calc(var(--angle) * 1deg + 360deg)) translateY(calc(var(--radius) * -1px)) rotate(calc((var(--angle) * 1deg + 360deg) * -1));
   }
 }
 
 @keyframes aurora-1 {
-  0% { transform: translate(-10%, -12%) scale(1); }
-  50% { transform: translate(12%, 8%) scale(1.25); }
-  100% { transform: translate(-6%, 14%) scale(0.95); }
+  0% {
+    transform: translate(-10%, -12%) scale(1);
+  }
+
+  50% {
+    transform: translate(12%, 8%) scale(1.25);
+  }
+
+  100% {
+    transform: translate(-6%, 14%) scale(0.95);
+  }
 }
 
 @keyframes aurora-2 {
-  0% { transform: translate(12%, 10%) scale(1.1); }
-  50% { transform: translate(-14%, -6%) scale(0.9); }
-  100% { transform: translate(8%, -12%) scale(1.2); }
+  0% {
+    transform: translate(12%, 10%) scale(1.1);
+  }
+
+  50% {
+    transform: translate(-14%, -6%) scale(0.9);
+  }
+
+  100% {
+    transform: translate(8%, -12%) scale(1.2);
+  }
 }
 
 @keyframes aurora-3 {
-  0% { transform: translate(0%, 16%) scale(0.95); }
-  50% { transform: translate(10%, -10%) scale(1.15); }
-  100% { transform: translate(-12%, 4%) scale(1); }
+  0% {
+    transform: translate(0%, 16%) scale(0.95);
+  }
+
+  50% {
+    transform: translate(10%, -10%) scale(1.15);
+  }
+
+  100% {
+    transform: translate(-12%, 4%) scale(1);
+  }
 }
 
 @keyframes meteor {
@@ -684,7 +822,11 @@ body:has([data-slot="dialog-overlay"][data-closed]) [data-main-content] {
     transform: rotate(var(--meteor-angle, 215deg)) translateX(0);
     opacity: 1;
   }
-  70% { opacity: 1; }
+
+  70% {
+    opacity: 1;
+  }
+
   100% {
     transform: rotate(var(--meteor-angle, 215deg)) translateX(-600px);
     opacity: 0;
@@ -692,16 +834,23 @@ body:has([data-slot="dialog-overlay"][data-closed]) [data-main-content] {
 }
 
 @keyframes retro-grid {
-  from { transform: translateY(-50%); }
-  to { transform: translateY(0); }
+  from {
+    transform: translateY(-50%);
+  }
+
+  to {
+    transform: translateY(0);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
+
   .animate-meteor,
   .animate-retro-grid,
   .animate-marquee,
   .animate-marquee-vertical,
   .animate-shimmer,
+  .shimmer-text,
   .animate-gradient,
   .animate-orbit,
   .animate-aurora-1,
@@ -721,7 +870,10 @@ body:has([data-slot="dialog-overlay"][data-closed]) [data-main-content] {
   .shimmer {
     animation: none;
   }
-  *, *::before, *::after {
+
+  *,
+  *::before,
+  *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
@@ -792,15 +944,19 @@ body:has([data-slot="dialog-overlay"][data-closed]) [data-main-content] {
 .sonner-toast--success::before {
   background: var(--toast-accent-success);
 }
+
 .sonner-toast--error::before {
   background: var(--toast-accent-error);
 }
+
 .sonner-toast--warning::before {
   background: var(--toast-accent-warning);
 }
+
 .sonner-toast--info::before {
   background: var(--toast-accent-info);
 }
+
 .sonner-toast--loading::before {
   background: var(--toast-accent-loading);
 }
@@ -859,15 +1015,19 @@ body:has([data-slot="dialog-overlay"][data-closed]) [data-main-content] {
 .toast-icon-success {
   color: var(--toast-accent-success);
 }
+
 .toast-icon-error {
   color: var(--toast-accent-error);
 }
+
 .toast-icon-warning {
   color: var(--toast-accent-warning);
 }
+
 .toast-icon-info {
   color: var(--toast-accent-info);
 }
+
 .toast-icon-loading {
   color: var(--toast-accent-loading);
 }
@@ -1031,5 +1191,3 @@ body:has([data-slot="dialog-overlay"][data-closed]) [data-main-content] {
 .dark {
   --bottom-nav-bg: color-mix(in srgb, var(--card) 85%, transparent);
 }
-
-

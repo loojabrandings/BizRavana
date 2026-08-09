@@ -302,7 +302,10 @@ export default function AdminSettingsPage() {
   }, [supabase]);
 
   useEffect(() => {
-    loadSettings();
+    const taskId = window.setTimeout(() => {
+      void loadSettings();
+    }, 0);
+    return () => window.clearTimeout(taskId);
   }, [loadSettings]);
 
   // ── Save Section ──────────────────────────────────────────────

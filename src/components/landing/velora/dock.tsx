@@ -4,7 +4,6 @@ import {
   createContext,
   useContext,
   useRef,
-  createElement,
   type ReactNode,
 } from "react";
 import {
@@ -23,6 +22,7 @@ interface DockContextType {
   baseSize: number;
   magnification: number;
   distance: number;
+  spring: SpringOptions;
 }
 
 const DockContext = createContext<DockContextType | null>(null);
@@ -49,7 +49,7 @@ export function Dock({
 
   return (
     <DockContext.Provider
-      value={{ mouseX, baseSize, magnification, distance }}
+      value={{ mouseX, baseSize, magnification, distance, spring }}
     >
       <motion.div
         onMouseMove={(e) => {
@@ -77,17 +77,16 @@ export function DockIcon({ children, label, className }: DockIconProps) {
   const context = useContext(DockContext);
   const ref = useRef<HTMLDivElement>(null);
   const reducedMotion = useReducedMotion();
-
-  if (!context) {
-    return (
-      <div className={cn("flex aspect-square items-center justify-center rounded-xl hover:bg-muted", className)}>
-        {children}
-        {label && <span className="sr-only">{label}</span>}
-      </div>
-    );
-  }
-
-  const { mouseX, baseSize, magnification, distance } = context;
+  const fallbackMouseX = useMotionValue(Infinity);
+  const mouseX = context?.mouseX ?? fallbackMouseX;
+  const baseSize = context?.baseSize ?? 40;
+  const magnification = context?.magnification ?? 64;
+  const distance = context?.distance ?? 140;
+  const spring = context?.spring ?? {
+    mass: 0.1,
+    stiffness: 150,
+    damping: 12,
+  };
 
   const sizeTarget = useTransform(
     mouseX,
@@ -101,11 +100,16 @@ export function DockIcon({ children, label, className }: DockIconProps) {
     }
   );
 
-  const size = useSpring(sizeTarget, {
-    mass: 0.1,
-    stiffness: 150,
-    damping: 12,
-  });
+  const size = useSpring(sizeTarget, spring);
+
+  if (!context) {
+    return (
+      <div className={cn("flex aspect-square items-center justify-center rounded-xl hover:bg-muted", className)}>
+        {children}
+        {label && <span className="sr-only">{label}</span>}
+      </div>
+    );
+  }
 
   return (
     <motion.div

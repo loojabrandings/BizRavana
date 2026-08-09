@@ -1,11 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { RotateCcw, X } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
+import { uploadFile } from "@/lib/uploads";
 import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import type { OrderFormData, OrderFormLineItem, OrderFormCalculations } from "./types";
@@ -82,6 +83,19 @@ function createDefaultForm(): OrderFormData {
   };
 }
 
+function applyAutomaticPaymentStatus(form: OrderFormData): OrderFormData {
+  if (form.payment_method === "bank_transfer") {
+    return { ...form, payment_status: "paid" };
+  }
+  if (form.advance_paid > 0) {
+    return { ...form, payment_status: "advanced" };
+  }
+  if (form.payment_method === "cod") {
+    return { ...form, payment_status: "pending" };
+  }
+  return form;
+}
+
 // ─── Main Component ───────────────────────────────────────────────
 
 export function OrderForm({ onSubmit, onCancel, initialData, isEditing }: OrderFormProps) {
@@ -97,13 +111,13 @@ export function OrderForm({ onSubmit, onCancel, initialData, isEditing }: OrderF
         }
         return item;
       });
-      return { ...initialData, items: updatedItems };
+      return applyAutomaticPaymentStatus({ ...initialData, items: updatedItems });
     }
     const defaults = createDefaultForm();
-    defaults.delivery_charge = ordersSettings.courierCharge;
+    defaults.delivery_charge = ordersSettings.defaultDeliveryCharge;
     defaults.discount_type = ordersSettings.defaultDiscountMode;
     defaults.payment_method = ordersSettings.defaultPaymentMethod as "cod" | "bank_transfer" | "cash" | "other";
-    return defaults;
+    return applyAutomaticPaymentStatus(defaults);
   });
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -159,32 +173,19 @@ export function OrderForm({ onSubmit, onCancel, initialData, isEditing }: OrderF
       }
     };
     fetchData();
-  }, []);
-
-  // Re-initialize form when initialData changes (e.g., editing a different order)
-  useEffect(() => {
-    if (initialData) {
-      // Map existing image URLs from itemImagesMap to each item's preview
-      const itemImagesMap = initialData.itemImagesMap || {};
-      const updatedItems = initialData.items.map((item) => {
-        const urls = itemImagesMap[item.id];
-        if (urls && urls.length > 0 && !item.imagePreviewUrl) {
-          return { ...item, imagePreviewUrl: urls[0] };
-        }
-        return item;
-      });
-      setForm({ ...initialData, items: updatedItems });
-      setErrors({});
-      setIsDirty(false);
-    }
-  }, [initialData]);
+  }, [isEditing]);
 
   // ─── Form helpers ─────────────────────────────────────────────
   const updateForm = useCallback(<K extends keyof OrderFormData>(
     key: K,
     value: OrderFormData[K],
   ) => {
-    setForm((prev) => ({ ...prev, [key]: value }));
+    setForm((previous) => {
+      const next = { ...previous, [key]: value };
+      return key === "payment_method" || key === "advance_paid"
+        ? applyAutomaticPaymentStatus(next)
+        : next;
+    });
     setIsDirty(true);
   }, []);
 
@@ -210,35 +211,12 @@ export function OrderForm({ onSubmit, onCancel, initialData, isEditing }: OrderF
     form.advance_paid,
   ]);
 
-  // Sync auto-calculated fields
-  useEffect(() => {
-    setForm((prev) => ({
-      ...prev,
-      subtotal: calculations.subtotal,
-      total: calculations.total,
-      balance_remaining: calculations.balanceRemaining,
-    }));
-  }, [calculations]);
-
-  // Auto-set payment status based on payment method and advance payment
-  useEffect(() => {
-    if (form.payment_method === "bank_transfer") {
-      setForm((prev) => {
-        if (prev.payment_status === "paid") return prev;
-        return { ...prev, payment_status: "paid" };
-      });
-    } else if (form.advance_paid > 0) {
-      setForm((prev) => {
-        if (prev.payment_status === "advanced") return prev;
-        return { ...prev, payment_status: "advanced" };
-      });
-    } else if (form.payment_method === "cod") {
-      setForm((prev) => {
-        if (prev.payment_status === "pending") return prev;
-        return { ...prev, payment_status: "pending" };
-      });
-    }
-  }, [form.payment_method, form.advance_paid]);
+  const formForSubmit = useMemo<OrderFormData>(() => ({
+    ...form,
+    subtotal: calculations.subtotal,
+    total: calculations.total,
+    balance_remaining: calculations.balanceRemaining,
+  }), [calculations, form]);
 
   // ─── Items ────────────────────────────────────────────────────
   const handleAddItem = useCallback(() => {
@@ -376,35 +354,18 @@ export function OrderForm({ onSubmit, onCancel, initialData, isEditing }: OrderF
       }
       setSaving(true);
       try {
-        let updatedForm = { ...form };
+        const updatedForm = { ...formForSubmit };
         const uploadedUrls: string[] = [...(form.images || []).filter(Boolean)];
         // Build per-item image mapping
         const itemImagesMap: Record<string, string[]> = {};
 
         // Upload per-item images — use index-based keys so the map survives DB round-trip
         if (businessId) {
-          const supabase = createClient();
           for (const [index, item] of form.items.entries()) {
             if (item.imageFile) {
               try {
                 const compressed = await compressImage(item.imageFile);
-                const fileName = `${Date.now()}_${Math.random().toString(36).slice(2, 10)}.jpg`;
-                const filePath = `orders/${businessId}/${fileName}`;
-
-                const { error: uploadError } = await supabase.storage
-                  .from("order-images")
-                  .upload(filePath, compressed, {
-                    contentType: "image/jpeg",
-                    upsert: false,
-                  });
-
-                if (uploadError) {
-                  throw new Error(uploadError.message);
-                }
-
-                const { data: { publicUrl } } = supabase.storage
-                  .from("order-images")
-                  .getPublicUrl(filePath);
+                const { publicUrl } = await uploadFile("order-image", compressed);
 
                 uploadedUrls.push(publicUrl);
                 // Track which item this image belongs to (use index for stable key across DB round-trip)
@@ -426,13 +387,13 @@ export function OrderForm({ onSubmit, onCancel, initialData, isEditing }: OrderF
 
         await onSubmit?.(updatedForm, preview);
         setIsDirty(false);
-      } catch (err) {
+      } catch {
         toast.error("Failed to save order");
       } finally {
         setSaving(false);
       }
     },
-    [form, onSubmit, validate, businessId],
+    [businessId, form, formForSubmit, onSubmit, validate],
   );
 
   // ─── Mobile detection ──────────────────────────────────────
@@ -505,7 +466,7 @@ export function OrderForm({ onSubmit, onCancel, initialData, isEditing }: OrderF
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, ease: "easeOut" }}
-      className="flex flex-col rounded-2xl glass-card"
+      className="flex flex-col rounded-xl glass-card"
     >
       {/* ═══════ Header ════════════════════════════════════════════ */}
       <div className="flex items-start justify-between px-8 pt-7 pb-5">

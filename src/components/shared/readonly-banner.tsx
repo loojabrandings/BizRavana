@@ -28,8 +28,6 @@ export function ReadOnlyBanner() {
   if (!isReadOnly) return null;
 
   const isTrialExpired = accountStatus === "trial_expired";
-  const isSubExpired = accountStatus === "expired";
-
   const icon = isTrialExpired ? Hourglass : XCircle;
   const Icon = icon;
 

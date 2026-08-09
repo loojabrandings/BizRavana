@@ -118,11 +118,11 @@ function ExtendTrialDialog({ open, onOpenChange, business, onExtend, loading }: 
 }) {
   const [days, setDays] = useState(3);
   const [customDays, setCustomDays] = useState(false);
-  useEffect(() => { if (open) { setDays(3); setCustomDays(false); } }, [open]);
+  const [referenceTime] = useState(Date.now);
   if (!business) return null;
   const presets = [3, 7, 14, 30];
   const currentEnd = business.trial_ends_at ? new Date(business.trial_ends_at).toLocaleDateString() : "—";
-  const newEnd = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toLocaleDateString();
+  const newEnd = new Date(referenceTime + days * 24 * 60 * 60 * 1000).toLocaleDateString();
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent size="sm">
@@ -226,7 +226,12 @@ export default function AdminTrialsPage() {
     finally { setLoading(false); }
   }, [supabase]);
 
-  useEffect(() => { fetchTrials(); }, [fetchTrials]);
+  useEffect(() => {
+    const taskId = window.setTimeout(() => {
+      void fetchTrials();
+    }, 0);
+    return () => window.clearTimeout(taskId);
+  }, [fetchTrials]);
 
   // ── Stats ─────────────────────────────────────────────────────
   const stats = useMemo(() => {
@@ -311,7 +316,7 @@ export default function AdminTrialsPage() {
         </div>
         <div className="min-w-0">
           <p className="text-sm font-medium text-foreground truncate max-w-[180px]">{biz.name}</p>
-          {biz.owner_name && <p className="text-[10px] text-muted-foreground/60 truncate max-w-[180px]">{biz.owner_name}{biz.owner_email ? ` · ${biz.owner_email}` : ""}</p>}
+          {biz.owner_name && <p className="max-w-[180px] truncate text-xs text-muted-foreground">{biz.owner_name}{biz.owner_email ? ` · ${biz.owner_email}` : ""}</p>}
         </div>
       </div>
     )},
@@ -356,11 +361,11 @@ export default function AdminTrialsPage() {
         actions={
           <>
             <button type="button" onClick={() => window.open(`/admin/businesses/${biz.id}`, "_self")}
-              className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-input bg-background px-3 py-2 text-xs font-medium min-h-11 hover:bg-accent transition-colors">
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-[10px] border border-border bg-transparent px-4 text-sm font-medium text-foreground shadow-xs transition-all hover:-translate-y-0.5 hover:border-primary/30 hover:bg-muted hover:shadow-sm">
               <ExternalLink className="size-3.5" /> View
             </button>
             <button type="button" onClick={() => handleOpenActionSheet(biz)}
-              className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-primary text-primary-foreground px-3 py-2 text-xs font-medium min-h-11 hover:bg-primary/90 transition-colors">
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-[10px] bg-primary px-4 text-sm font-medium text-white shadow-sm shadow-primary/20 transition-all hover:-translate-y-0.5 hover:bg-primary/90 hover:shadow-md">
               More
             </button>
           </>
@@ -424,7 +429,9 @@ export default function AdminTrialsPage() {
           title={actionSheetTarget.name} description="Trial actions" actions={actionSheetActions} />
       )}
 
-      <ExtendTrialDialog open={extendTarget !== null} onOpenChange={(o) => { if (!o) setExtendTarget(null); }} business={extendTarget} onExtend={handleExtend} loading={extending} />
+      {extendTarget && (
+        <ExtendTrialDialog open onOpenChange={(o) => { if (!o) setExtendTarget(null); }} business={extendTarget} onExtend={handleExtend} loading={extending} />
+      )}
 
       <ConfirmDialog open={lockTarget !== null} onOpenChange={() => setLockTarget(null)} onConfirm={handleLock}
         title="Lock Account" description={`Suspend "${lockTarget?.name}"? They will lose dashboard access.`}

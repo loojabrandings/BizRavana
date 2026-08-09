@@ -20,7 +20,7 @@ export function StatsCard({ label, value, icon: Icon, trend, isLoading, iconColo
   if (isLoading) {
     return (
       <div className={cn(
-        "group relative overflow-hidden rounded-2xl glass-card",
+        "group relative overflow-hidden rounded-xl glass-card",
         compact ? "p-3" : "p-5",
       )}>
         <div className={compact ? "flex items-center gap-3" : "space-y-4"}>
@@ -36,7 +36,7 @@ export function StatsCard({ label, value, icon: Icon, trend, isLoading, iconColo
 
   if (compact) {
     return (
-      <div className="group relative overflow-hidden rounded-2xl glass-card p-3.5 transition-all duration-200 hover:shadow-md hover:border-primary/15">
+      <div className="group relative overflow-hidden rounded-xl glass-card p-3.5 transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-lg">
         <div className="relative flex items-center gap-3">
           <div
             className={cn(
@@ -60,9 +60,9 @@ export function StatsCard({ label, value, icon: Icon, trend, isLoading, iconColo
   }
 
   return (
-    <div className="group relative overflow-hidden rounded-2xl glass-card p-5 transition-all duration-200 hover:shadow-md hover:border-primary/20 hover:-translate-y-0.5">
+    <div className="group relative overflow-hidden rounded-xl glass-card p-5 transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-lg">
       {/* Subtle hover gradient overlay */}
-      <div className="pointer-events-none absolute inset-0 rounded-2xl opacity-0 transition-opacity duration-200 group-hover:opacity-100 bg-gradient-to-br from-primary/[0.02] to-transparent" />
+      <div className="pointer-events-none absolute inset-0 rounded-xl opacity-0 transition-opacity duration-200 group-hover:opacity-100 bg-gradient-to-br from-primary/[0.02] to-transparent" />
 
       <div className="relative">
         <div className="flex items-start justify-between">

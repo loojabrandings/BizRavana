@@ -153,7 +153,7 @@ export function NotificationBell() {
           <Bell className="size-[18px]" aria-hidden />
         )}
         {displayCount > 0 && (
-          <span className="absolute -top-0.5 -right-0.5 flex min-w-[16px] h-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold leading-none text-primary-foreground shadow-sm">
+          <span className="absolute -right-1 -top-1 flex min-h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1 text-xs font-bold leading-none text-primary-foreground shadow-sm">
             {displayCount > 9 ? "9+" : displayCount}
           </span>
         )}
@@ -274,16 +274,16 @@ export function NotificationBell() {
 
                             {/* Footer */}
                             <div className="mt-1.5 flex items-center gap-2">
-                              <span className="text-[10px] text-muted-foreground/40 tabular-nums">
+                              <span className="text-xs tabular-nums text-muted-foreground">
                                 {timeAgo(notif.created_at)}
                               </span>
                               {notif.source === "admin" && (
-                                <span className="rounded-full bg-primary/5 px-1.5 py-0.5 text-[9px] font-medium text-primary">
+                                <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
                                   Admin
                                 </span>
                               )}
                               {notif.action_label && (
-                                <span className="text-[10px] text-primary/60 group-hover:text-primary transition-colors inline-flex items-center gap-0.5">
+                                <span className="inline-flex items-center gap-0.5 text-xs text-primary transition-colors">
                                   {notif.action_label}
                                   <ChevronRight className="size-2.5" />
                                 </span>

@@ -9,14 +9,9 @@ import {
   ExternalLink,
   Loader2,
   MoreHorizontal,
-  Search,
-  Trash2,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -152,7 +147,10 @@ export default function AdminBusinessesPage() {
   }, []);
 
   useEffect(() => {
-    fetchBusinesses();
+    const taskId = window.setTimeout(() => {
+      void fetchBusinesses();
+    }, 0);
+    return () => window.clearTimeout(taskId);
   }, [fetchBusinesses]);
 
   const filtered = useMemo(() => {
@@ -190,7 +188,7 @@ export default function AdminBusinessesPage() {
           return;
       }
       fetchBusinesses();
-    } catch (err) {
+    } catch {
       toast.error(`Failed to ${action} business`);
     }
   }, [fetchBusinesses]);
@@ -350,7 +348,7 @@ export default function AdminBusinessesPage() {
           <button
             type="button"
             onClick={() => router.push(`/admin/businesses/${business.id}`)}
-            className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-input bg-background px-3 py-2 text-xs font-medium min-h-11 hover:bg-accent transition-colors"
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-[10px] border border-border bg-transparent px-4 text-sm font-medium text-foreground shadow-xs transition-all hover:-translate-y-0.5 hover:border-primary/30 hover:bg-muted hover:shadow-sm"
           >
             <ExternalLink className="size-3.5" />
             View
@@ -358,7 +356,7 @@ export default function AdminBusinessesPage() {
           <button
             type="button"
             onClick={() => handleOpenActionSheet(business)}
-            className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-primary text-primary-foreground px-3 py-2 text-xs font-medium min-h-11 hover:bg-primary/90 transition-colors"
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-[10px] bg-primary px-4 text-sm font-medium text-white shadow-sm shadow-primary/20 transition-all hover:-translate-y-0.5 hover:bg-primary/90 hover:shadow-md"
           >
             More
           </button>

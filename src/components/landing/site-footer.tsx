@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { SparklesIcon } from "lucide-react";
+import Image from "next/image";
 
 const groups = [
   {
@@ -43,9 +43,12 @@ export function SiteFooter() {
           {/* Brand */}
           <div>
             <Link href="/" className="flex items-center gap-2 font-semibold">
-              <img
+              <Image
                 src="/darkmode-logo.png"
                 alt="BizRavana"
+                width={28}
+                height={28}
+                style={{ width: "auto" }}
                 className="h-7 w-auto object-contain"
               />
               BizRavana

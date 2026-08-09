@@ -296,7 +296,8 @@ export default function ContactPage() {
 
                   <Button
                     type="submit"
-                    className="group relative h-11 w-full overflow-hidden text-white"
+                  size="lg"
+                  className="group relative w-full text-white"
                   >
                     {sent ? (
                       <>

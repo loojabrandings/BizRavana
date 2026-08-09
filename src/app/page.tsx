@@ -74,9 +74,12 @@ export default function HomePage() {
     }
 
     // No auth params — show the landing page
-    setHandlingAuth(false);
+    const taskId = window.setTimeout(() => {
+      setHandlingAuth(false);
+    }, 0);
 
     return () => {
+      window.clearTimeout(taskId);
       if (fallbackTimer.current) {
         clearTimeout(fallbackTimer.current);
         fallbackTimer.current = null;

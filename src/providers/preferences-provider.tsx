@@ -20,6 +20,18 @@ function luminance(r: number, g: number, b: number) {
   return a[0]! * 0.2126 + a[1]! * 0.7152 + a[2]! * 0.0722;
 }
 
+const CUSTOM_ACCENT_VARS = [
+  "--primary",
+  "--primary-foreground",
+  "--ring",
+  "--sidebar-primary",
+  "--chart-1",
+  "--sidebar-primary-foreground",
+  "--hero-accent",
+  "--brand-accent",
+  "--brand-accent-foreground",
+] as const;
+
 // ─── Provider ─────────────────────────────────────────────────────
 
 export function PreferencesProvider({ children }: { children: React.ReactNode }) {
@@ -43,18 +55,6 @@ export function PreferencesProvider({ children }: { children: React.ReactNode })
     document.documentElement.style.setProperty("--brand-accent-foreground", fg);
 
   }, []);
-
-  const CUSTOM_ACCENT_VARS = [
-    "--primary",
-    "--primary-foreground",
-    "--ring",
-    "--sidebar-primary",
-    "--chart-1",
-    "--sidebar-primary-foreground",
-    "--hero-accent",
-    "--brand-accent",
-    "--brand-accent-foreground",
-  ] as const;
 
   useEffect(() => {
     document.documentElement.setAttribute("data-accent", accent);

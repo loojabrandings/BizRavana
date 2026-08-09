@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { createClient } from "@/lib/supabase/client";
+import { deleteUploadedFiles } from "@/lib/uploads";
 import { cn } from "@/lib/utils";
 import {
   DropdownMenu,
@@ -31,8 +32,8 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Dropdown } from "@/components/ui/dropdown";
 import { FilterBar } from "@/components/shared/filter-bar";
+import { DateRangePickerModal } from "@/components/shared/lazy-date-range-picker-modal";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { DataTable, type ColumnDef } from "@/components/shared/data-table";
@@ -47,7 +48,6 @@ import { DispatchDialog, type DispatchMode } from "@/components/orders/dispatch-
 import { BulkDispatchDialog } from "@/components/orders/bulk-dispatch-dialog";
 import { TrackShipmentDialog } from "@/components/orders/track-shipment-dialog";
 import { EnterWaybillDialog } from "@/components/orders/enter-waybill-dialog";
-import { useOrdersSettings } from "@/stores/orders-settings-store";
 import { loadCourierConfig, shipWithCourier, type CourierConfig } from "@/lib/delivery/courier-utils";
 import { ContextMenu, type ContextMenuSection, type ContextMenuItem } from "@/components/shared/context-menu";
 import { HoverPopover } from "@/components/shared/hover-popover";
@@ -65,6 +65,7 @@ import {
   type BusinessProfile,
 } from "@/components/orders/invoice-template";
 import { fetchManualWaybills, getWaybillMethod, assignWaybillToOrder, markWaybillAsUsed, type ManualWaybill } from "@/lib/delivery/waybill-utils";
+import type { Database } from "@/types/database";
 
 // ─── Storage helpers ──────────────────────────────────────────────
 
@@ -130,8 +131,7 @@ function parseImageMap(raw: unknown): Record<string, string[]> {
 async function deleteStorageImages(imageUrls: string[]): Promise<void> {
   const paths = imageUrls.map(imageUrlToPath).filter(Boolean) as string[];
   if (paths.length === 0) return;
-  const supabase = createClient();
-  await supabase.storage.from("order-images").remove(paths);
+  await deleteUploadedFiles("order-image", paths);
 }
 
 
@@ -185,6 +185,40 @@ interface Order {
   images: string[];
 }
 
+type OrderDatabaseRow = Database["public"]["Tables"]["orders"]["Row"] & {
+  order_source: string | null;
+};
+type OrderItemDatabaseRow = Database["public"]["Tables"]["order_items"]["Row"];
+type OrderListRow = Pick<
+  OrderDatabaseRow,
+  | "id"
+  | "order_number"
+  | "customer_name"
+  | "customer_phone"
+  | "customer_address"
+  | "customer_district"
+  | "customer_city"
+  | "customer_whatsapp"
+  | "customer_email"
+  | "advance_paid"
+  | "total"
+  | "delivery_charge"
+  | "subtotal"
+  | "discount"
+  | "waybill_id"
+  | "status"
+  | "payment_status"
+  | "payment_method"
+  | "expected_delivery_date"
+  | "dispatched_date"
+  | "created_at"
+  | "images"
+>;
+type OrderItemPreviewRow = Pick<
+  OrderItemDatabaseRow,
+  "product_id" | "product_name" | "category" | "quantity" | "unit_price" | "notes"
+>;
+
 // ─── Constants ─────────────────────────────────────────────────────
 
 
@@ -233,6 +267,10 @@ const deliveryStatusTabs: { value: string; label: string }[] = [
 ];
 
 const ACTION_COLORS = ["#0ea5e9", "#f59e0b", "#ef4444"] as const;
+
+function includesValue<T extends string>(values: readonly T[], value: string): value is T {
+  return values.some((candidate) => candidate === value);
+}
 
 // ─── Color Maps ────────────────────────────────────────────────────
 
@@ -308,12 +346,22 @@ function OrdersPageInner() {
   const [dateFilter, setDateFilter] = useState<string>("all_time");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [activeSort, setActiveSort] = useState<{ key: string; direction: "asc" | "desc" } | null>({ key: "order_number", direction: "desc" });
   const [activeStatusTab, setActiveStatusTab] = useState("all");
   const [paymentStatusTab, setPaymentStatusTab] = useState("all");
   const [multiPaymentFilter, setMultiPaymentFilter] = useState<string[] | null>(null);
   const [activeDeliveryTab, setActiveDeliveryTab] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
+
+  // In-page form state
+  const [showForm, setShowForm] = useState(false);
+  const [showBulkImport, setShowBulkImport] = useState(false);
+  const [previewData, setPreviewData] = useState<OrderFormData | null>(null);
+  const [editData, setEditData] = useState<OrderFormData | null>(null);
+  const [editKey, setEditKey] = useState(0);
+  const [editOrderId, setEditOrderId] = useState<string | null>(null);
+  const [savedOrderId, setSavedOrderId] = useState<string | null>(null);
 
   // ─── Derived state: whether there are any scheduled deliveries ───
   const hasScheduledDeliveries = useMemo(() => {
@@ -328,36 +376,39 @@ function OrdersPageInner() {
 
   // ─── Apply query params as initial filters ──────────────────
   useEffect(() => {
-    const status = searchParams.get("status");
-    const payment = searchParams.get("payment_status");
-    const delivery = searchParams.get("delivery_status");
-    const action = searchParams.get("action");
-    const search = searchParams.get("search");
+    const taskId = window.setTimeout(() => {
+      const status = searchParams.get("status");
+      const payment = searchParams.get("payment_status");
+      const delivery = searchParams.get("delivery_status");
+      const action = searchParams.get("action");
+      const search = searchParams.get("search");
 
-    if (action === "new") {
-      if (!guard("creating orders")) {
-        setShowForm(true);
+      if (action === "new") {
+        if (!guard("creating orders")) {
+          setShowForm(true);
+        }
       }
-    }
-    if (status && orderStatusValues.includes(status as any)) {
-      setActiveStatusTab(status);
-    }
-    if (payment) {
-      const values = payment.split(",").filter((v) =>
-        paymentStatusValues.includes(v as any),
-      );
-      if (values.length > 0) {
-        setMultiPaymentFilter(values);
-        setPaymentStatusTab(values[0]);
+      if (status && includesValue(orderStatusValues, status)) {
+        setActiveStatusTab(status);
       }
-    }
-    if (delivery && deliveryStatusValues.includes(delivery as any)) {
-      setActiveDeliveryTab(delivery);
-    }
-    if (search) {
-      setSearchQuery(search);
-    }
-  }, [searchParams]);
+      if (payment) {
+        const values = payment.split(",").filter((v) =>
+          includesValue(paymentStatusValues, v),
+        );
+        if (values.length > 0) {
+          setMultiPaymentFilter(values);
+          setPaymentStatusTab(values[0]);
+        }
+      }
+      if (delivery && includesValue(deliveryStatusValues, delivery)) {
+        setActiveDeliveryTab(delivery);
+      }
+      if (search) {
+        setSearchQuery(search);
+      }
+    }, 0);
+    return () => window.clearTimeout(taskId);
+  }, [searchParams, guard]);
 
   // ─── Refetch trigger ──────────────────────────────────────────
   const [fetchTrigger, setFetchTrigger] = useState(0);
@@ -394,8 +445,9 @@ function OrdersPageInner() {
           itemsByOrder[oid].push({ product_name: String(item.product_name), category: item.category ? String(item.category) : null, quantity: Number(item.quantity || 0), unit_price: Number(item.unit_price || 0) });
         }
 
-        setOrders((ordersRes.data || []).map((o) => {
-          const parsedImages = parseImagesField((o as any).images);
+        setOrders((ordersRes.data || []).map((rawOrder: unknown) => {
+          const o = rawOrder as OrderListRow;
+          const parsedImages = parseImagesField(o.images);
 
           return {
             id: String(o.id), order_number: String(o.order_number), customer_name: String(o.customer_name || "Walk-in customer"),
@@ -432,7 +484,6 @@ function OrdersPageInner() {
   const [waybillDialogOpen, setWaybillDialogOpen] = useState(false);
   const [pendingWaybillOrderId, setPendingWaybillOrderId] = useState<string | null>(null);
   const [pendingWaybillNewStatus, setPendingWaybillNewStatus] = useState<string | null>(null);
-  const ordersSettings = useOrdersSettings();
   const [trackingWaybill, setTrackingWaybill] = useState<string | null>(null);
   const [trackingDialogOpen, setTrackingDialogOpen] = useState(false);
 
@@ -491,6 +542,31 @@ function OrdersPageInner() {
 
 
   // ─── Mutations ─────────────────────────────────────────────────
+  const applyStatusChange = useCallback(async (orderId: string, newStatus: string) => {
+    // Optimistic update
+    setOrders((prev) => prev.map((o) => (o.id === orderId ? { ...o, status: newStatus } : o)));
+
+    try {
+      const { error: e } = await createClient().from("orders").update({ status: newStatus, updated_at: new Date().toISOString() }).eq("id", orderId);
+      if (e) {
+        // Revert on error
+        const { data: r } = await createClient().from("orders").select("status").eq("id", orderId).single();
+        if (r) setOrders((prev) => prev.map((o) => (o.id === orderId ? { ...o, status: String(r.status) } : o)));
+        return;
+      }
+
+      // When an order with a waybill reaches "dispatched", mark the manual waybill as used
+      if (newStatus === "dispatched") {
+        const updatedOrder = orders.find((o) => o.id === orderId);
+        if (updatedOrder?.waybill_id) {
+          markWaybillAsUsed(updatedOrder.waybill_id).catch((err) =>
+            console.warn("Failed to mark waybill as used:", err),
+          );
+        }
+      }
+    } catch (err) { console.error("Status update error:", err); }
+  }, [orders]);
+
 const handleStatusChange = useCallback(async (orderId: string, newStatus: string) => {
   // Check waybill method from business_settings
   let effectiveMethod = waybillMethod;
@@ -523,32 +599,7 @@ const handleStatusChange = useCallback(async (orderId: string, newStatus: string
   }
 
   await applyStatusChange(orderId, newStatus);
-}, [orders, waybillMethod, businessId]);
-
-  const applyStatusChange = useCallback(async (orderId: string, newStatus: string) => {
-    // Optimistic update
-    setOrders((prev) => prev.map((o) => (o.id === orderId ? { ...o, status: newStatus } : o)));
-
-    try {
-      const { error: e } = await createClient().from("orders").update({ status: newStatus, updated_at: new Date().toISOString() }).eq("id", orderId);
-      if (e) {
-        // Revert on error
-        const { data: r } = await createClient().from("orders").select("status").eq("id", orderId).single();
-        if (r) setOrders((prev) => prev.map((o) => (o.id === orderId ? { ...o, status: String(r.status) } : o)));
-        return;
-      }
-
-      // When an order with a waybill reaches "dispatched", mark the manual waybill as used
-      if (newStatus === "dispatched") {
-        const updatedOrder = orders.find((o) => o.id === orderId);
-        if (updatedOrder?.waybill_id) {
-          markWaybillAsUsed(updatedOrder.waybill_id).catch((err) =>
-            console.warn("Failed to mark waybill as used:", err),
-          );
-        }
-      }
-    } catch (err) { console.error("Status update error:", err); }
-  }, [orders]);
+}, [applyStatusChange, businessId, guard, orders, waybillMethod]);
 
   // ─── Dispatch Handler ────────────────────────────────────────
   const handleDispatch = useCallback(async (mode: DispatchMode): Promise<boolean> => {
@@ -645,7 +696,7 @@ const handleStatusChange = useCallback(async (orderId: string, newStatus: string
       toast.error("Dispatch failed", { description: msg });
       return false;
     }
-  }, [pendingDispatchOrderId, pendingDispatchNewStatus, courierConfig, orders, applyStatusChange]);
+  }, [pendingDispatchOrderId, pendingDispatchNewStatus, courierConfig, orders, applyStatusChange, guard]);
 
   // ─── Waybill Entry Handler (manual mode) ──────────────────
   const handleWaybillConfirm = useCallback(async (waybillId: string): Promise<boolean> => {
@@ -692,7 +743,7 @@ const handleStatusChange = useCallback(async (orderId: string, newStatus: string
       toast.error("Failed to update order", { description: msg });
       return false;
     }
-  }, [pendingWaybillOrderId, pendingWaybillNewStatus, waybillMethod, courierConfig?.provider]);
+  }, [pendingWaybillOrderId, pendingWaybillNewStatus, waybillMethod, courierConfig, guard]);
 
   const handlePaymentChange = useCallback(async (orderId: string, newPayment: string) => {
     if (guard("changing payment status")) return;
@@ -704,45 +755,39 @@ const handleStatusChange = useCallback(async (orderId: string, newStatus: string
         if (r) setOrders((prev) => prev.map((o) => (o.id === orderId ? { ...o, payment_status: String(r.payment_status) } : o)));
       }
     } catch (err) { console.error("Payment update error:", err); }
-  }, []);
+  }, [guard]);
 
   // ─── In-Page Form State ─────────────────────────────────────
-  const [showForm, setShowForm] = useState(false);
-  const [showBulkImport, setShowBulkImport] = useState(false);
-  const [previewData, setPreviewData] = useState<OrderFormData | null>(null);
-  const [editData, setEditData] = useState<OrderFormData | null>(null);
-  const [editKey, setEditKey] = useState(0);
-  const [editOrderId, setEditOrderId] = useState<string | null>(null);
-  const [savedOrderId, setSavedOrderId] = useState<string | null>(null);
-
   // ─── Fetch full order from DB for preview/edit ────────────
   const fetchOrderForPreview = useCallback(async (orderId: string): Promise<OrderFormData | null> => {
     try {
       const supabase = createClient();
-      const { data: order, error } = await supabase
+      const { data: rawOrder, error } = await supabase
         .from("orders")
         .select("*, order_items(*) ")
         .eq("id", orderId)
         .single();
 
-      if (error || !order) {
+      if (error || !rawOrder) {
         console.error("Failed to fetch order for preview:", error);
         return null;
       }
+      const order = rawOrder as OrderDatabaseRow;
 
       // Fetch order items separately since Supabase may return them nested
-      const { data: items } = await supabase
+      const { data: rawItems } = await supabase
         .from("order_items")
         .select("product_id, product_name, category, quantity, unit_price, notes")
         .eq("order_id", orderId)
         .order("sort_order");
 
-      const rawImages = (order as any).images;
+      const rawImages = order.images;
       const parsedImages = parseImagesField(rawImages);
       const parsedMap = parseImageMap(rawImages);
 
       // Build item list with stable IDs
-      const orderItems = (items || []).map((item: Record<string, any>, i: number) => ({
+      const items = (rawItems || []) as OrderItemPreviewRow[];
+      const orderItems = items.map((item, i) => ({
         id: `preview_item_${i}`,
         product_id: item.product_id ? String(item.product_id) : null,
         product_name: String(item.product_name || ""),
@@ -754,7 +799,7 @@ const handleStatusChange = useCallback(async (orderId: string, newStatus: string
 
       // Build itemImagesMap — stored map uses index-based keys ("item_0", "item_1"),
       // so remap to the preview item IDs
-      let itemImagesMap: Record<string, string[]> = {};
+      const itemImagesMap: Record<string, string[]> = {};
       if (Object.keys(parsedMap).length > 0) {
         orderItems.forEach((item: { id: string }, i: number) => {
           const storedKey = `item_${i}`;
@@ -867,8 +912,9 @@ const handleStatusChange = useCallback(async (orderId: string, newStatus: string
 
     if (ordersToDelete) {
       const allImageUrls: string[] = [];
-      for (const o of ordersToDelete) {
-        const urls = parseImagesField((o as any).images);
+      for (const rawOrder of ordersToDelete) {
+        const order = rawOrder as Pick<OrderDatabaseRow, "images">;
+        const urls = parseImagesField(order.images);
         allImageUrls.push(...urls);
       }
       // Delete images from storage (fire-and-forget, best effort)
@@ -955,7 +1001,7 @@ const handleStatusChange = useCallback(async (orderId: string, newStatus: string
           description: err instanceof Error ? err.message : "An unexpected error occurred.",
         });
       });
-  }, [selectedIds, deleteOrdersFromDb, addDeletingIds, removeDeletingIds]);
+  }, [selectedIds, deleteOrdersFromDb, addDeletingIds, removeDeletingIds, guard]);
 
   // ─── In-Page Form Submit ─────────────────────────────────────
   const handleOrderSubmit = useCallback(
@@ -1165,7 +1211,7 @@ const handleStatusChange = useCallback(async (orderId: string, newStatus: string
         setFetchTrigger((n) => n + 1);
       }
     },
-    [editOrderId],
+    [editOrderId, guard, orders],
   );
 
   // ─── Bulk Dispatch Handler ─────────────────────────────────
@@ -1204,7 +1250,7 @@ const handleStatusChange = useCallback(async (orderId: string, newStatus: string
     );
 
     return { waybill };
-  }, [courierConfig, orders]);
+  }, [courierConfig, orders, guard]);
 
   const handleBulkDispatchUpdate = useCallback(async (orderId: string, waybill: string) => {
     const supabase = createClient();
@@ -1231,7 +1277,7 @@ const handleStatusChange = useCallback(async (orderId: string, newStatus: string
     markWaybillAsUsed(waybill).catch((err) =>
       console.warn("Failed to mark waybill as used:", err),
     );
-  }, []);
+  }, [courierConfig?.provider]);
 
   // ─── Bulk Handlers ─────────────────────────────────────────────
   const handleBulkStatusChange = useCallback(
@@ -1379,7 +1425,7 @@ const handleStatusChange = useCallback(async (orderId: string, newStatus: string
       return (
         <motion.div
           variants={itemVariants}
-          className="rounded-2xl glass-card p-4"
+          className="rounded-xl glass-card p-4"
         >
           {/* ── Section 1: Header ──────────────────────────────── */}
           <div className="flex items-start justify-between gap-4">
@@ -1395,7 +1441,7 @@ const handleStatusChange = useCallback(async (orderId: string, newStatus: string
                     title={`${order.images.length} image${order.images.length > 1 ? "s" : ""}`}
                   >
                     <Paperclip className="size-3" />
-                    <span className="text-[10px] font-medium">{order.images.length}</span>
+                    <span className="text-xs font-medium">{order.images.length}</span>
                   </span>
                 )}
               </div>
@@ -1560,6 +1606,8 @@ const handleStatusChange = useCallback(async (orderId: string, newStatus: string
       setTrackingWaybill,
       setTrackingDialogOpen,
       setDeleteTargetId,
+      guard,
+      repeatCustomerCounts,
     ],
   );
 
@@ -1814,7 +1862,7 @@ const handleStatusChange = useCallback(async (orderId: string, newStatus: string
         </Button>
       </>
     ),
-    [handleSelectByStatus, handleSelectByPayment, handleBulkStatusChange, handleBulkPaymentChange, handleExportXlsx, courierConfig],
+    [handleSelectByStatus, handleSelectByPayment, handleBulkStatusChange, handleBulkPaymentChange, handleExportXlsx, courierConfig, guard],
   );
 
   const activeFilterCount =
@@ -1837,18 +1885,18 @@ const handleStatusChange = useCallback(async (orderId: string, newStatus: string
 
   // ─── Pagination ───────────────────────────────────────────────
   const [currentPage, setCurrentPage] = useState(1);
+  const [previousFilteredOrders, setPreviousFilteredOrders] = useState(filteredOrders);
   const [pageSize, setPageSize] = useState(25);
+  if (filteredOrders !== previousFilteredOrders) {
+    setPreviousFilteredOrders(filteredOrders);
+    setCurrentPage(1);
+  }
   const totalPages = Math.max(1, Math.ceil(filteredOrders.length / pageSize));
 
   const paginatedOrders = useMemo(
     () => filteredOrders.slice((currentPage - 1) * pageSize, currentPage * pageSize),
     [filteredOrders, currentPage, pageSize],
   );
-
-  // Reset to page 1 when filters change
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [filteredOrders]);
 
   // ─── Quick action hover colors (compound key: "orderId-0", "orderId-wa", etc.) ─
   const [hoveredAction, setHoveredAction] = useState<string | null>(null);
@@ -1868,7 +1916,7 @@ const handleStatusChange = useCallback(async (orderId: string, newStatus: string
               {order.images && order.images.length > 0 && (
                 <span className="inline-flex items-center gap-0.5 text-muted-foreground/50" title={`${order.images.length} image${order.images.length > 1 ? "s" : ""}`}>
                   <Paperclip className="size-3" />
-                  <span className="text-[10px] font-medium">{order.images.length}</span>
+                  <span className="text-xs font-medium">{order.images.length}</span>
                 </span>
               )}
             </div>
@@ -2168,7 +2216,7 @@ const handleStatusChange = useCallback(async (orderId: string, newStatus: string
         ),
       },
     ],
-    [handleStatusChange, handlePaymentChange, repeatCustomerCounts, hoveredAction, handleWhatsAppClick, handleInvoiceFromTable],
+    [handleStatusChange, handlePaymentChange, repeatCustomerCounts, hoveredAction, handleWhatsAppClick, handleInvoiceFromTable, fetchOrderForPreview, guard],
   );
 
 
@@ -2199,7 +2247,7 @@ const handleStatusChange = useCallback(async (orderId: string, newStatus: string
         </Button>
       ),
     };
-  }, [orders.length, activeStatusTab, activeDeliveryTab]);
+  }, [orders.length, activeStatusTab, activeDeliveryTab, guard]);
 
   // ─── Context Menu Sections Builder ───────────────────────────────
   const buildContextMenuSections = useCallback(
@@ -2468,11 +2516,12 @@ const handleStatusChange = useCallback(async (orderId: string, newStatus: string
             }}
             date={{
               value: dateFilter,
-              onChange: (v) => v && setDateFilter(v),
+              onChange: (v) => {
+                if (v === "custom") setDatePickerOpen(true);
+                else if (v) setDateFilter(v);
+              },
               options: dateFilterOptions,
-              isCustomMode: dateFilter === "custom",
-              onCalendarClick: () =>
-                setDateFilter(dateFilter === "custom" ? "all_time" : "custom"),
+              onCalendarClick: () => setDatePickerOpen(true),
             }}
             activeFilterCount={activeFilterCount}
             onClearFilters={handleClearFilters}
@@ -2499,39 +2548,19 @@ const handleStatusChange = useCallback(async (orderId: string, newStatus: string
           </div>
           )}
 
-          {/* Custom date inputs row */}
-          {dateFilter === "custom" && (
-            <div className="flex items-center gap-2">
-              <div className="flex items-center gap-1.5">
-                <span className="text-sm font-medium text-muted-foreground uppercase tracking-wider">From</span>
-                <input
-                  type="date"
-                  value={dateFrom}
-                  onChange={(e) => setDateFrom(e.target.value)}
-                  className="h-9 w-[140px] rounded-xl border border-input bg-background px-3 text-sm font-medium text-foreground shadow-xs outline-none transition-colors focus:border-ring focus:ring-[3px] focus:ring-ring/50 [color-scheme:light] dark:[color-scheme:dark]"
-                  aria-label="From date"
-                />
-              </div>
-              <span className="text-sm text-muted-foreground">—</span>
-              <div className="flex items-center gap-1.5">
-                <span className="text-sm font-medium text-muted-foreground uppercase tracking-wider">To</span>
-                <input
-                  type="date"
-                  value={dateTo}
-                  onChange={(e) => setDateTo(e.target.value)}
-                  className="h-9 w-[140px] rounded-xl border border-input bg-background px-3 text-sm font-medium text-foreground shadow-xs outline-none transition-colors focus:border-ring focus:ring-[3px] focus:ring-ring/50 [color-scheme:light] dark:[color-scheme:dark]"
-                  aria-label="To date"
-                />
-              </div>
-              <Dropdown
-                value={dateFilter}
-                onChange={(v) => v && setDateFilter(v)}
-                options={dateFilterOptions.map((o) => ({ value: o.value, label: o.label }))}
-                size="sm"
-                className="min-w-[36px]"
-              />
-            </div>
-          )}
+          {/* Custom date range picker modal */}
+          <DateRangePickerModal
+            open={datePickerOpen}
+            onOpenChange={setDatePickerOpen}
+            from={dateFrom}
+            to={dateTo}
+            onApply={(f, t) => {
+              setDateFrom(f);
+              setDateTo(t);
+              setDateFilter("custom");
+              setDatePickerOpen(false);
+            }}
+          />
         </motion.div>
       )}
 
@@ -2640,37 +2669,41 @@ const handleStatusChange = useCallback(async (orderId: string, newStatus: string
       </motion.div>
 
       {/* ─── Dispatch Dialog ────────────────────────────────── */}
-      <DispatchDialog
-        open={dispatchDialogOpen}
-        onOpenChange={(open) => {
-          if (!open) {
-            setDispatchDialogOpen(false);
-            setPendingDispatchOrderId(null);
-            setPendingDispatchNewStatus(null);
-          }
-        }}
-        courierName={courierConfig?.providerLabel || null}
-        onDispatch={handleDispatch}
-      />
+      {dispatchDialogOpen && (
+        <DispatchDialog
+          open={dispatchDialogOpen}
+          onOpenChange={(open) => {
+            if (!open) {
+              setDispatchDialogOpen(false);
+              setPendingDispatchOrderId(null);
+              setPendingDispatchNewStatus(null);
+            }
+          }}
+          courierName={courierConfig?.providerLabel || null}
+          onDispatch={handleDispatch}
+        />
+      )}
 
       {/* ─── Bulk Dispatch Dialog ──────────────────────────────── */}
-      <BulkDispatchDialog
-        open={bulkDispatchDialogOpen}
-        onOpenChange={setBulkDispatchDialogOpen}
-        orders={[...selectedIds].filter((id): id is string => typeof id === "string").map((id) => {
-          const o = orders.find((ord) => ord.id === id);
-          return {
-            id,
-            order_number: o?.order_number || "",
-            customer_name: o?.customer_name || "",
-            status: o?.status || "",
-          };
-        })}
-        courierConfig={courierConfig}
-        courierName={courierConfig?.providerLabel || null}
-        onDispatchOrder={handleBulkDispatchToCourier}
-        onUpdateOrder={handleBulkDispatchUpdate}
-      />
+      {bulkDispatchDialogOpen && (
+        <BulkDispatchDialog
+          open={bulkDispatchDialogOpen}
+          onOpenChange={setBulkDispatchDialogOpen}
+          orders={[...selectedIds].filter((id): id is string => typeof id === "string").map((id) => {
+            const o = orders.find((ord) => ord.id === id);
+            return {
+              id,
+              order_number: o?.order_number || "",
+              customer_name: o?.customer_name || "",
+              status: o?.status || "",
+            };
+          })}
+          courierConfig={courierConfig}
+          courierName={courierConfig?.providerLabel || null}
+          onDispatchOrder={handleBulkDispatchToCourier}
+          onUpdateOrder={handleBulkDispatchUpdate}
+        />
+      )}
 
       {/* ─── Track Shipment Dialog ──────────────────────────────── */}
       <TrackShipmentDialog

@@ -149,7 +149,7 @@ function ProgressIndicator({
                 {/* Step circle */}
                 <span
                   className={cn(
-                    "flex size-6 shrink-0 items-center justify-center rounded-full border text-[11px] font-bold leading-none transition-colors",
+                    "flex size-6 shrink-0 items-center justify-center rounded-full border text-xs font-bold leading-none transition-colors",
                     isActive && "border-primary bg-primary/10",
                     isCompleted && "border-primary bg-primary text-primary-foreground",
                     isFuture && "border-muted-foreground/20",
@@ -164,7 +164,7 @@ function ProgressIndicator({
                 {/* Label */}
                 <span
                   className={cn(
-                    "text-[11px] font-medium truncate hidden sm:inline",
+                    "hidden truncate text-xs font-medium sm:inline",
                     isActive && "text-foreground",
                     isCompleted && "text-primary",
                     isFuture && "text-muted-foreground/40",
@@ -434,7 +434,7 @@ export function QuotationFormWizard({
 
   return (
     <>
-      <div className="flex min-h-dvh flex-col glass-card rounded-2xl border-0" ref={topRef}>
+      <div className="flex min-h-dvh flex-col glass-card rounded-xl border-0" ref={topRef}>
         {/* ═══════ Header ════════════════════════════════════════ */}
         <div className="flex items-start justify-between px-4 pt-4 pb-2">
           <div className="min-w-0 flex-1">
@@ -515,7 +515,7 @@ export function QuotationFormWizard({
                 size="lg"
                 onClick={handleBack}
                 disabled={saving}
-                className="flex-1 gap-1.5 text-sm font-medium h-11"
+                className="flex-1"
               >
                 <ArrowLeft className="size-4" />
                 Back
@@ -532,7 +532,7 @@ export function QuotationFormWizard({
                 size="lg"
                 onClick={handleNext}
                 disabled={saving}
-                className="flex-1 text-sm font-medium h-11"
+                className="flex-1"
               >
                 Next
               </Button>
@@ -542,7 +542,7 @@ export function QuotationFormWizard({
                 size="lg"
                 onClick={() => handleSave(false)}
                 disabled={saving}
-                className="flex-1 text-sm font-medium h-11"
+                className="flex-1"
               >
                 {saving
                   ? isEditing

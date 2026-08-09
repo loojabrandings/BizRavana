@@ -59,7 +59,7 @@ export function AdminMobileTabs({
           {tab.count !== undefined && (
             <span
               className={cn(
-                "inline-flex items-center justify-center min-w-[18px] h-[18px] rounded-full px-1 text-[10px] font-semibold",
+                "inline-flex min-h-5 min-w-5 items-center justify-center rounded-full px-1 text-xs font-semibold",
                 activeTab === tab.key
                   ? "bg-primary/10 text-primary"
                   : "bg-muted/50 text-muted-foreground/60",

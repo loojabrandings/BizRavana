@@ -16,8 +16,8 @@ import {
   ZapIcon,
 } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 import { motion } from "framer-motion";
-import { Button } from "@/components/ui/button";
 import {
   Accordion,
   AccordionContent,
@@ -26,10 +26,8 @@ import {
 } from "@/components/ui/accordion";
 import { SiteHeader } from "@/components/landing/site-header";
 import { SiteFooter } from "@/components/landing/site-footer";
-import { HeroMockup } from "@/components/landing/velora/hero-mockup";
 import { IntegrationsBeam } from "@/components/landing/velora/integrations-beam";
 import { ActivityList } from "@/components/landing/velora/activity-list";
-import { AnimatedGradientText } from "@/components/landing/velora/animated-gradient-text";
 import { AvatarCircles } from "@/components/landing/velora/avatar-circles";
 import { BentoCard, BentoGrid } from "@/components/landing/velora/bento-grid";
 import { BlurFade } from "@/components/landing/velora/blur-fade";
@@ -39,25 +37,18 @@ import { Marquee } from "@/components/landing/velora/marquee";
 import { NumberTicker } from "@/components/landing/velora/number-ticker";
 import { OrbitingCircles } from "@/components/landing/velora/orbiting-circles";
 
+import { FeaturesShowcase } from "@/components/landing/velora/features-showcase";
 import { RetroGrid } from "@/components/landing/velora/retro-grid";
 import { ShimmerButton } from "@/components/landing/velora/shimmer-button";
 import { SpotlightCard } from "@/components/landing/velora/spotlight-card";
 import { TextReveal } from "@/components/landing/velora/text-reveal";
 import { TiltCard } from "@/components/landing/velora/tilt-card";
-import { Typewriter } from "@/components/landing/velora/typewriter";
 import { ScrollProgress } from "@/components/landing/velora/scroll-progress";
 import { ScrollToTop } from "@/components/landing/velora/scroll-to-top";
 import { cn } from "@/lib/utils";
 
 const logos = [
   "Art of Frames", "Cafe Vibe", "Looja Branding", "Tharu Graphicz",
-];
-
-const stats = [
-  { value: 50, suffix: "+", prefix: "", label: "Business features" },
-  { value: 100, suffix: "", prefix: "", label: "Lighthouse performance" },
-  { value: 0, suffix: "", prefix: "$", label: "Free. Forever." },
-  { value: 5, suffix: " min", prefix: "", label: "To your first order" },
 ];
 
 const testimonials = [
@@ -205,28 +196,47 @@ export default function LandingPage() {
       <SiteHeader />
 
       {/* ═══ Hero ═══ */}
-      <section className="relative overflow-hidden pt-40 pb-24 lg:pt-48 lg:pb-28">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,color-mix(in_oklch,var(--primary)_15%,transparent),transparent_60%)]" />
-        <DotPattern className="[mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,black,transparent)] stroke-border/20 fill-transparent" />
-        <div className="relative mx-auto max-w-6xl px-4 text-center lg:px-8">
+      <section className="relative flex min-h-screen flex-col justify-center overflow-hidden pt-24 pb-16 lg:pt-32 lg:pb-20">
+        <Image
+          src="/images/landing/hero-bg.png"
+          alt=""
+          aria-hidden
+          fill
+          priority
+          sizes="100vw"
+          className="object-cover"
+        />
+        <div className="relative mx-auto w-full max-w-6xl px-4 text-left lg:px-8">
           <BlurFade delay={0} direction="down">
             <span className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-card/60 px-4 py-1.5 text-sm backdrop-blur">
               <SparklesIcon className="size-3.5 text-primary" />
               <span className="font-medium">
-                Built for Sri Lankan Businesses &#127470;&#127473;
+                Built for Sri Lankan Businesses &#127473;&#127472;
               </span>
             </span>
           </BlurFade>
 
-          <h1 className="mx-auto mt-8 max-w-4xl text-5xl font-semibold tracking-tight text-balance lg:text-7xl">
-            <TextReveal text="Run Your Entire Business" />{" "}
-            <AnimatedGradientText>
-              <Typewriter words={["From One Platform.", "Smarter.", "Simpler."]} />
-            </AnimatedGradientText>
+          <h1 className="mt-8 max-w-4xl text-5xl font-semibold tracking-tight text-balance lg:text-7xl">
+            <span className="block">
+              <TextReveal text="Work" />
+            </span>
+            <span className="block text-[1.4em] sm:text-[1.75em] lg:text-[1.95em] [font-family:var(--font-mohave)]">
+              <span className="shimmer-text">
+                SMARTER,
+              </span>
+            </span>
+            <span className="block">
+              <TextReveal text="Grow" />
+            </span>
+            <span className="block text-[1.4em] sm:text-[1.75em] lg:text-[1.95em] [font-family:var(--font-mohave)]">
+              <span className="shimmer-text">
+                FASTER
+              </span>
+            </span>
           </h1>
 
           <BlurFade delay={0.35}>
-            <p className="mx-auto mt-6 max-w-2xl text-lg text-muted-foreground text-pretty">
+            <p className="mt-6 max-w-2xl text-lg text-muted-foreground text-pretty">
               Manage orders, customers, inventory, expenses, quotations,
               deliveries and reports — all from one powerful platform built
               for Sri Lankan businesses.
@@ -234,7 +244,7 @@ export default function LandingPage() {
           </BlurFade>
 
           <BlurFade delay={0.5}>
-            <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
+            <div className="mt-10 flex flex-wrap items-center justify-start gap-4">
               <ShimmerButton>
                 <RocketIcon className="size-4" />
                 Start 3-Day Free Trial
@@ -252,30 +262,6 @@ export default function LandingPage() {
             </div>
           </BlurFade>
 
-          {/* Product mockup */}
-          <BlurFade delay={0.75} offset={32}>
-            <HeroMockup className="mt-20" />
-          </BlurFade>
-
-          {/* Stats */}
-          <div className="mx-auto mt-20 grid max-w-4xl grid-cols-2 gap-8 lg:grid-cols-4">
-            {stats.map((stat, i) => (
-              <BlurFade key={stat.label} delay={i * 0.1}>
-                <div className="flex flex-col items-center gap-1">
-                  <span className="text-4xl font-semibold tracking-tight">
-                    <NumberTicker
-                      value={stat.value}
-                      prefix={stat.prefix}
-                      suffix={stat.suffix}
-                    />
-                  </span>
-                  <span className="text-sm text-muted-foreground">
-                    {stat.label}
-                  </span>
-                </div>
-              </BlurFade>
-            ))}
-          </div>
         </div>
       </section>
 
@@ -295,6 +281,26 @@ export default function LandingPage() {
               </span>
             ))}
           </Marquee>
+        </div>
+      </section>
+
+      {/* ═══ Interactive features showcase ═══ */}
+      <section className="relative py-24 lg:py-32">
+        <div className="mx-auto max-w-6xl px-4 lg:px-8">
+          <BlurFade>
+            <h2 className="mx-auto max-w-2xl text-center text-3xl font-semibold tracking-tight text-balance lg:text-5xl">
+              Explore the platform{" "}
+              <span className="text-primary">feature by feature</span>
+            </h2>
+            <p className="mx-auto mt-4 max-w-xl text-center text-muted-foreground">
+              Tap a module to see how it works — orders, customers, courier,
+              profit, inventory and reports in one connected workspace.
+            </p>
+          </BlurFade>
+
+          <BlurFade delay={0.15} className="mt-14">
+            <FeaturesShowcase />
+          </BlurFade>
         </div>
       </section>
 

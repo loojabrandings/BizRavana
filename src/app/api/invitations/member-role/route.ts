@@ -1,141 +1,176 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { getAdminClient } from "@/lib/supabase/admin";
+import { requireTeamManager } from "@/lib/team-authorization";
 
-/**
- * PATCH /api/invitations/member-role
- * Update a team member's role (promote/demote). Owner/admin only.
- * Body: { profile_id, business_id, new_role }
- */
+const changeRoleSchema = z.object({
+  profile_id: z.string().uuid(),
+  business_id: z.string().uuid().optional(),
+  new_role: z.enum(["admin", "member"]),
+});
+
+function authorizationResponse(
+  result: Extract<Awaited<ReturnType<typeof requireTeamManager>>, { ok: false }>,
+) {
+  return NextResponse.json({ error: result.error }, { status: result.status });
+}
+
+/** Promote or demote a member in the authenticated actor's business. */
 export async function PATCH(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { profile_id, business_id, new_role } = body;
+    const authorization = await requireTeamManager();
+    if (!authorization.ok) return authorizationResponse(authorization);
 
-    if (!profile_id || !business_id || !new_role) {
+    const parsed = changeRoleSchema.safeParse(
+      await request.json().catch(() => null),
+    );
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: "profile_id, business_id, and new_role are required" },
+        { error: "Valid profile and role values are required" },
         { status: 400 },
       );
     }
 
-    if (!["admin", "member"].includes(new_role)) {
-      return NextResponse.json(
-        { error: "new_role must be 'admin' or 'member'" },
-        { status: 400 },
-      );
+    if (
+      parsed.data.business_id &&
+      parsed.data.business_id !== authorization.actor.businessId
+    ) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const adminClient = getAdminClient();
-
-    // Fetch the target profile to ensure it belongs to the business
-    const { data: targetProfile } = await adminClient
+    const admin = getAdminClient();
+    const { data: targetProfile } = await admin
       .from("profiles")
       .select("id, role, user_id, business_id")
-      .eq("id", profile_id)
-      .eq("business_id", business_id)
-      .single();
+      .eq("id", parsed.data.profile_id)
+      .eq("business_id", authorization.actor.businessId)
+      .maybeSingle();
 
     if (!targetProfile) {
       return NextResponse.json(
-        { error: "Profile not found in this business" },
+        { error: "Team member not found" },
         { status: 404 },
       );
     }
-
-    // Cannot change owner's role
     if (targetProfile.role === "owner") {
       return NextResponse.json(
-        { error: "Cannot change the owner's role" },
+        { error: "The business owner's role cannot be changed" },
+        { status: 403 },
+      );
+    }
+    if (targetProfile.user_id === authorization.actor.userId) {
+      return NextResponse.json(
+        { error: "You cannot change your own role" },
         { status: 403 },
       );
     }
 
-    const { data, error } = await adminClient
+    const { data, error } = await admin
       .from("profiles")
-      .update({ role: new_role, updated_at: new Date().toISOString() })
-      .eq("id", profile_id)
+      .update({
+        role: parsed.data.new_role,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", targetProfile.id)
+      .eq("business_id", authorization.actor.businessId)
       .select("id, user_id, full_name, role")
       .single();
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json(
+        { error: "Team member role could not be updated" },
+        { status: 500 },
+      );
     }
 
-    const action = new_role === "admin" ? "promoted to Admin" : "demoted to Member";
     return NextResponse.json({
       data,
-      message: `Team member ${action} successfully.`,
+      message:
+        parsed.data.new_role === "admin"
+          ? "Team member promoted to Business Manager successfully."
+          : "Team member demoted to Member successfully.",
     });
-  } catch (err) {
+  } catch (error) {
+    console.error("Team role update failed:", error);
     return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Internal server error" },
+      { error: "Internal server error" },
       { status: 500 },
     );
   }
 }
 
-/**
- * DELETE /api/invitations/member-role
- * Remove a team member from the business (owner/admin only).
- * Query params: profile_id, business_id
- */
+/** Remove a member from the authenticated actor's business. */
 export async function DELETE(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
-    const profileId = searchParams.get("profile_id");
-    const businessId = searchParams.get("business_id");
+    const authorization = await requireTeamManager();
+    if (!authorization.ok) return authorizationResponse(authorization);
 
-    if (!profileId || !businessId) {
+    const profileId = request.nextUrl.searchParams.get("profile_id");
+    const requestedBusinessId = request.nextUrl.searchParams.get("business_id");
+    if (!profileId || !z.string().uuid().safeParse(profileId).success) {
       return NextResponse.json(
-        { error: "profile_id and business_id are required" },
+        { error: "A valid profile id is required" },
         { status: 400 },
       );
     }
+    if (
+      requestedBusinessId &&
+      requestedBusinessId !== authorization.actor.businessId
+    ) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
 
-    const adminClient = getAdminClient();
-
-    // Fetch the target profile
-    const { data: targetProfile } = await adminClient
+    const admin = getAdminClient();
+    const { data: targetProfile } = await admin
       .from("profiles")
-      .select("id, role, business_id")
+      .select("id, role, user_id, business_id")
       .eq("id", profileId)
-      .eq("business_id", businessId)
-      .single();
+      .eq("business_id", authorization.actor.businessId)
+      .maybeSingle();
 
     if (!targetProfile) {
       return NextResponse.json(
-        { error: "Profile not found in this business" },
+        { error: "Team member not found" },
         { status: 404 },
       );
     }
-
     if (targetProfile.role === "owner") {
       return NextResponse.json(
-        { error: "Cannot remove the business owner" },
+        { error: "The business owner cannot be removed" },
+        { status: 403 },
+      );
+    }
+    if (targetProfile.user_id === authorization.actor.userId) {
+      return NextResponse.json(
+        { error: "You cannot remove yourself from the team" },
         { status: 403 },
       );
     }
 
-    // Remove the profile's business association
-    const { error } = await adminClient
+    const { error } = await admin
       .from("profiles")
       .update({
         business_id: null,
-        role: "member", // Reset role since they no longer belong to any business
+        role: "member",
         updated_at: new Date().toISOString(),
       })
-      .eq("id", profileId);
+      .eq("id", targetProfile.id)
+      .eq("business_id", authorization.actor.businessId);
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json(
+        { error: "Team member could not be removed" },
+        { status: 500 },
+      );
     }
 
     return NextResponse.json({
       message: "Team member removed successfully.",
     });
-  } catch (err) {
+  } catch (error) {
+    console.error("Team member removal failed:", error);
     return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Internal server error" },
+      { error: "Internal server error" },
       { status: 500 },
     );
   }

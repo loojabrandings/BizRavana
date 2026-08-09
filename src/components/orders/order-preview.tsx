@@ -25,10 +25,8 @@ import { cn, formatEnumLabel } from "@/lib/utils";
 import { formatPhoneNumber } from "@/lib/formatters";
 import type { OrderFormData } from "./types";
 import { formatCurrency } from "./utils";
-import { toast } from "sonner";
 import { ShipmentStatusPanel } from "./shipment-status-panel";
 import { useIsMobile } from "@/hooks/use-media-query";
-import { useReadOnlyMode } from "@/providers/readonly-mode-provider";
 import {
   Dialog,
   DialogTrigger,
@@ -132,19 +130,19 @@ function OrderPreviewHeader({
         <div className="mt-4 flex items-center gap-2">
           <Button
             variant="outline"
-            size="sm"
+            size="md"
             onClick={onWhatsApp}
             disabled={!(data.whatsapp || data.phone)}
-            className="flex-1 gap-1.5 text-sm font-medium h-9"
+            className="flex-1"
           >
             <MessageCircle className="size-3.5" />
             WhatsApp
           </Button>
           <Button
             variant="outline"
-            size="sm"
+            size="md"
             onClick={onViewInvoice}
-            className="flex-1 gap-1.5 text-sm font-medium h-9"
+            className="flex-1"
           >
             <FileText className="size-3.5" />
             Invoice
@@ -152,9 +150,9 @@ function OrderPreviewHeader({
           {onEdit && (
             <Button
               variant="outline"
-              size="sm"
+              size="md"
               onClick={onEdit}
-              className="flex-1 gap-1.5 text-sm font-medium h-9"
+              className="flex-1"
             >
               <Pencil className="size-3.5" />
               Edit
@@ -545,7 +543,7 @@ function OrderItemsMobileCard({ items, itemImagesMap }: { items: OrderFormData["
         return (
           <div
             key={item.id}
-            className="rounded-2xl glass-card p-4"
+            className="rounded-xl glass-card p-4"
           >
             <div className="flex items-start gap-3">
               {/* Thumbnail */}
@@ -618,7 +616,7 @@ function OrderItemsTable({ items, itemImagesMap }: { items: OrderFormData["items
       <table className="w-full"><thead>
             <tr className="border-b border-border/40 bg-muted/20">
               <th className="w-14 px-2 py-3 text-center text-xs font-semibold uppercase tracking-wider text-muted-foreground/70">
-                Attch.
+                Attachment
               </th>
               <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground/70">
                 Description
@@ -810,7 +808,6 @@ export function OrderPreview({
 }: OrderPreviewProps) {
   const isMobile = useIsMobile();
   const { handleAction, renderDialogs } = useWhatsAppAction();
-  const { guard } = useReadOnlyMode();
   const [invoiceOpen, setInvoiceOpen] = useState(false);
   const [business, setBusiness] = useState<BusinessProfile | null>(null);
 

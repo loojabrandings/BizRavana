@@ -102,7 +102,7 @@ function SortableHead<T>({
   return (
     <TableHead
       className={cn(
-        "select-none text-sm font-semibold uppercase tracking-wider text-muted-foreground",
+        "select-none text-xs font-semibold uppercase tracking-wider text-muted-foreground",
         column.sortable && "cursor-pointer transition-colors hover:text-foreground",
         column.className,
         column.hideOnMobile && "hidden md:table-cell",
@@ -137,7 +137,7 @@ function DesktopSkeleton({
   showCheckbox?: boolean;
 }) {
   return (
-    <div className="rounded-2xl glass-card overflow-hidden">
+    <div className="glass-base overflow-hidden rounded-xl">
       <Table>
         <TableHeader>
           <TableRow className="bg-muted/30">
@@ -150,7 +150,7 @@ function DesktopSkeleton({
               <TableHead
                 key={col.id}
                 className={cn(
-                  "text-sm font-semibold uppercase tracking-wider text-muted-foreground",
+                  "text-xs font-semibold uppercase tracking-wider text-muted-foreground",
                   col.className,
                   col.hideOnMobile && "hidden md:table-cell",
                 )}
@@ -199,7 +199,7 @@ function MobileSkeleton({ rows = 4 }: { rows?: number }) {
       {Array.from({ length: rows }).map((_, i) => (
         <div
           key={i}
-          className="animate-pulse rounded-2xl border border-border/80 bg-card p-5"
+          className="glass-base animate-pulse rounded-xl p-5"
         >
           <div className="mb-3 flex items-start justify-between gap-3">
             <div className="h-4 w-32 rounded bg-muted/60" />
@@ -225,7 +225,7 @@ function MobileSkeleton({ rows = 4 }: { rows?: number }) {
 
 function ErrorState({ message }: { message: string }) {
   return (
-    <div className="rounded-2xl border border-border bg-card">
+    <div className="glass-base rounded-xl">
       <div className="flex flex-col items-center justify-center py-20 text-center">
         <div className="mb-5 flex size-14 items-center justify-center rounded-2xl bg-status-danger-bg">
           <Layers3 className="size-6 text-destructive" />
@@ -343,7 +343,12 @@ function BulkActionsToolbar({
 
 // ─── Main Component ───────────────────────────────────────────────
 
-export function DataTable<T extends Record<string, any>>({
+function readColumnValue<T extends object>(row: T, columnId: string): unknown {
+  if (!(columnId in row)) return undefined;
+  return (row as Record<string, unknown>)[columnId];
+}
+
+export function DataTable<T extends object>({
   columns,
   data,
   keyExtractor,
@@ -520,7 +525,7 @@ export function DataTable<T extends Record<string, any>>({
               return (
                 <div
                   key={rowId}
-                  className="rounded-2xl border border-border/80 bg-card p-5 shadow-sm"
+                  className="glass-base rounded-xl p-5"
                 >
                   <DeletingRow />
                 </div>
@@ -536,7 +541,7 @@ export function DataTable<T extends Record<string, any>>({
                 onTouchMove={handleTouchMove}
                 className={cn(
                   "relative cursor-default transition-all",
-                  selectionMode && "cursor-pointer rounded-2xl",
+                  selectionMode && "cursor-pointer rounded-xl",
                   selectionMode && selected && "ring-2 ring-primary",
                 )}
               >
@@ -612,7 +617,7 @@ export function DataTable<T extends Record<string, any>>({
         />
       )}
 
-      <div className="rounded-2xl border border-border/50 bg-[var(--glass-bg)] backdrop-blur-xl overflow-hidden">
+      <div className="glass-base overflow-hidden rounded-xl">
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/30">
@@ -671,7 +676,7 @@ export function DataTable<T extends Record<string, any>>({
                   <TableHead
                     key={col.id}
                     className={cn(
-                      "text-sm font-semibold uppercase tracking-wider text-muted-foreground",
+                      "text-xs font-semibold uppercase tracking-wider text-muted-foreground",
                       col.className,
                       col.hideOnMobile && "hidden md:table-cell",
                     )}
@@ -752,7 +757,7 @@ export function DataTable<T extends Record<string, any>>({
                     >
                       {col.renderCell
                         ? col.renderCell(row)
-                        : <span>{String(row[col.id] ?? "—")}</span>}
+                        : <span>{String(readColumnValue(row, col.id) ?? "—")}</span>}
                     </TableCell>
                   ))}
                 </TableRow>

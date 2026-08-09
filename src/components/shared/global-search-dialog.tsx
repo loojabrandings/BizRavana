@@ -17,7 +17,6 @@ import {
   Boxes,
   ReceiptText,
   FileText,
-  Truck,
   Search,
   Clock,
   X,
@@ -25,7 +24,6 @@ import {
   Loader2,
   Users,
 } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
 import { createClient } from "@/lib/supabase/client";
 import { cn, formatEnumLabel } from "@/lib/utils";
 import {
@@ -106,6 +104,8 @@ type SearchCategory =
   | "expenses"
   | "quotations";
 
+type SearchResultItem = SearchIndex[SearchCategory][number];
+
 interface CategoryMeta {
   key: SearchCategory;
   label: string;
@@ -149,6 +149,51 @@ function highlightText(text: string, query: string): React.ReactNode {
   );
 }
 
+function getResultValue(item: SearchResultItem): string {
+  if ("name" in item) return item.name;
+  if ("order_number" in item) return item.order_number;
+  if ("quotation_number" in item) return item.quotation_number;
+  return item.item_name;
+}
+
+/** Return the searchable identifier of a selected result (used to filter the target page). */
+function getResultSearchTerm(category: SearchCategory, item: SearchResultItem): string {
+  switch (category) {
+    case "orders":
+      return (item as OrderResult).order_number;
+    case "customers":
+      return (item as CustomerResult).name;
+    case "products":
+      return (item as ProductResult).name;
+    case "inventory":
+      return (item as InventoryResult).name;
+    case "expenses":
+      return (item as ExpenseResult).item_name;
+    case "quotations":
+      return (item as QuotationResult).quotation_number;
+  }
+}
+
+/** Build the target route for a category, filtered by the given search term. */
+function getResultRoute(category: SearchCategory, term: string): string {
+  const q = encodeURIComponent(term);
+  switch (category) {
+    case "orders":
+    case "customers":
+      return `/dashboard/orders?search=${q}`;
+    case "products":
+      return `/dashboard/products?search=${q}`;
+    case "inventory":
+      return `/dashboard/inventory?search=${q}`;
+    case "expenses":
+      return `/dashboard/expenses?search=${q}`;
+    case "quotations":
+      return `/dashboard/quotations?search=${q}`;
+    default:
+      return "/dashboard";
+  }
+}
+
 import { formatCurrency } from "@/lib/formatters";
 
 // ─── Grouped results ───────────────────────────────────────────
@@ -169,7 +214,6 @@ export function GlobalSearchDialog() {
   // ─── Data Fetching & Indexing ──────────────────────────────
   const [index, setIndex] = useState<SearchIndex | null>(null);
   const [loading, setLoading] = useState(false);
-  const [businessId, setBusinessId] = useState<string | null>(null);
   const dataFetched = useRef(false);
 
   // Fetch all entities on mount
@@ -191,7 +235,6 @@ export function GlobalSearchDialog() {
           .single();
         const bizId = (profile as { business_id: string | null } | null)?.business_id;
         if (!bizId) return;
-        setBusinessId(bizId);
 
         // Fetch up to 500 of each entity
         const limit = 500;
@@ -341,10 +384,12 @@ export function GlobalSearchDialog() {
 
   // Reset query when dialog opens
   useEffect(() => {
-    if (isOpen) {
+    if (!isOpen) return;
+    const taskId = window.setTimeout(() => {
       setQuery("");
       setDebouncedQuery("");
-    }
+    }, 0);
+    return () => window.clearTimeout(taskId);
   }, [isOpen]);
 
   // ─── Search Logic ──────────────────────────────────────────
@@ -360,11 +405,11 @@ export function GlobalSearchDialog() {
 
       const all = fuse.search(q);
       const items = all.slice(0, MAX_PER_CATEGORY).map((result) => {
-        const item = result.item as any;
+        const item = result.item as SearchResultItem;
         return {
           id: `${cat.key}-${item.id}`,
           node: <ResultItem category={cat.key} item={item} query={q} />,
-          value: item.name || item.order_number || item.quotation_number || item.item_name || "",
+          value: getResultValue(item),
         };
       });
 
@@ -384,7 +429,9 @@ export function GlobalSearchDialog() {
   const handleSelect = useCallback(
     (value: string) => {
       // value is "category-itemId"
-      const [catKey, id] = value.split("-");
+      const dashIdx = value.indexOf("-");
+      const catKey = value.slice(0, dashIdx) as SearchCategory;
+      const itemId = value.slice(dashIdx + 1);
 
       if (query.trim()) {
         addRecentSearch(query.trim());
@@ -392,30 +439,15 @@ export function GlobalSearchDialog() {
 
       setIsOpen(false);
 
-      switch (catKey) {
-        case "orders":
-          router.push(`/dashboard/orders`);
-          break;
-        case "customers":
-          router.push(`/dashboard/orders?search=${encodeURIComponent(query)}`);
-          break;
-        case "products":
-          router.push(`/dashboard/products`);
-          break;
-        case "inventory":
-          router.push(`/dashboard/inventory`);
-          break;
-        case "expenses":
-          router.push(`/dashboard/expenses`);
-          break;
-        case "quotations":
-          router.push(`/dashboard/quotations`);
-          break;
-        default:
-          break;
-      }
+      // Filter the target page down to the exact selected record when we
+      // can resolve it; otherwise fall back to the typed query.
+      const selected = index?.[catKey]?.find((i) => i.id === itemId);
+      const term = selected
+        ? getResultSearchTerm(catKey, selected)
+        : query.trim();
+      router.push(getResultRoute(catKey, term));
     },
-    [router, query, addRecentSearch, setIsOpen],
+    [router, query, addRecentSearch, setIsOpen, index],
   );
 
   // ─── Recent Searches Click ─────────────────────────────────
@@ -586,15 +618,16 @@ export function GlobalSearchDialog() {
 
 function ResultItem({
   category,
-  item,
+  item: rawItem,
   query,
 }: {
   category: SearchCategory;
-  item: any;
+  item: SearchResultItem;
   query: string;
 }) {
   switch (category) {
-    case "orders":
+    case "orders": {
+      const item = rawItem as OrderResult;
       return (
         <div className="flex w-full items-start gap-3 py-0.5">
           <div className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
@@ -605,7 +638,7 @@ function ResultItem({
               <span className="truncate text-sm font-semibold text-foreground">
                 {highlightText(item.order_number, query)}
               </span>
-              <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+              <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-xs font-semibold text-muted-foreground">
                 {formatEnumLabel(item.status)}
               </span>
             </div>
@@ -617,8 +650,10 @@ function ResultItem({
           </div>
         </div>
       );
+    }
 
-    case "customers":
+    case "customers": {
+      const item = rawItem as CustomerResult;
       return (
         <div className="flex w-full items-start gap-3 py-0.5">
           <div className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg bg-success/10 text-success">
@@ -636,8 +671,10 @@ function ResultItem({
           </div>
         </div>
       );
+    }
 
-    case "products":
+    case "products": {
+      const item = rawItem as ProductResult;
       return (
         <div className="flex w-full items-start gap-3 py-0.5">
           <div className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg bg-warning/10 text-warning">
@@ -655,8 +692,10 @@ function ResultItem({
           </div>
         </div>
       );
+    }
 
-    case "inventory":
+    case "inventory": {
+      const item = rawItem as InventoryResult;
       return (
         <div className="flex w-full items-start gap-3 py-0.5">
           <div className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg bg-info/10 text-info">
@@ -678,8 +717,10 @@ function ResultItem({
           </div>
         </div>
       );
+    }
 
-    case "expenses":
+    case "expenses": {
+      const item = rawItem as ExpenseResult;
       return (
         <div className="flex w-full items-start gap-3 py-0.5">
           <div className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg bg-destructive/10 text-destructive">
@@ -697,8 +738,10 @@ function ResultItem({
           </div>
         </div>
       );
+    }
 
-    case "quotations":
+    case "quotations": {
+      const item = rawItem as QuotationResult;
       return (
         <div className="flex w-full items-start gap-3 py-0.5">
           <div className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
@@ -709,7 +752,7 @@ function ResultItem({
               <span className="text-sm font-semibold text-foreground">
                 {highlightText(item.quotation_number, query)}
               </span>
-              <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+              <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-xs font-semibold text-muted-foreground">
                 {formatEnumLabel(item.status)}
               </span>
             </div>
@@ -721,6 +764,7 @@ function ResultItem({
           </div>
         </div>
       );
+    }
 
     default:
       return null;

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
@@ -13,6 +14,7 @@ import {
   Home,
   Package,
   Plus,
+  ReceiptText,
   Settings,
   ShoppingCart,
   Truck,
@@ -26,7 +28,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
-import { NavActiveBar, navItemVariants } from "@/components/layout/nav-item-indicator";
+import { navItemVariants } from "@/components/layout/nav-item-indicator";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 import { useSidebarStore } from "@/stores/sidebar-store";
@@ -45,18 +47,41 @@ interface NavGroup {
   items: NavItem[];
 }
 
+interface NavSection {
+  label: string;
+  items: (NavItem | NavGroup)[];
+}
+
 // ─── Navigation Data ──────────────────────────────────────────
 
-const coreNav: (NavItem | NavGroup)[] = [
-  { label: "Dashboard", href: "/dashboard", icon: Home },
-  { label: "Orders", href: "/dashboard/orders", icon: ShoppingCart },
-  { label: "Courier", href: "/dashboard/courier", icon: Truck },
-  { label: "Expenses", href: "/dashboard/expenses", icon: Package },
-  { label: "Quotations", href: "/dashboard/quotations", icon: FileText },
-  { label: "Products", href: "/dashboard/products", icon: Package },
-  { label: "Inventory", href: "/dashboard/inventory", icon: Boxes },
-  { label: "Reports", href: "/dashboard/reports", icon: BarChart3 },
-  { label: "Subscription", href: "/dashboard/subscription", icon: CreditCard },
+const navSections: NavSection[] = [
+  {
+    label: "Overview",
+    items: [{ label: "Dashboard", href: "/dashboard", icon: Home }],
+  },
+  {
+    label: "Sales",
+    items: [
+      { label: "Orders", href: "/dashboard/orders", icon: ShoppingCart },
+      { label: "Quotations", href: "/dashboard/quotations", icon: FileText },
+      { label: "Products", href: "/dashboard/products", icon: Package },
+    ],
+  },
+  {
+    label: "Operations",
+    items: [
+      { label: "Courier", href: "/dashboard/courier", icon: Truck },
+      { label: "Inventory", href: "/dashboard/inventory", icon: Boxes },
+    ],
+  },
+  {
+    label: "Finance",
+    items: [
+      { label: "Expenses", href: "/dashboard/expenses", icon: ReceiptText },
+      { label: "Reports", href: "/dashboard/reports", icon: BarChart3 },
+      { label: "Subscription", href: "/dashboard/subscription", icon: CreditCard },
+    ],
+  },
 ];
 
 const systemNav: (NavItem | NavGroup)[] = [
@@ -81,7 +106,6 @@ function useIsActive(href: string): boolean {
 
 // ─── Navigation Data helpers ──────────────────────────────
 
-const systemGroups = systemNav.filter(isGroup) as NavGroup[];
 const systemLinks = systemNav.filter((item): item is NavItem => !isGroup(item));
 
 // ═══════════════════════════════════════════════════════════════
@@ -142,16 +166,23 @@ function SidebarBrand({ collapsed, mobile }: { collapsed: boolean; mobile?: bool
   const logoEl = (
     <div className="flex shrink-0 items-center justify-center">
       {businessLogo ? (
-        <img
+        <Image
           src={businessLogo}
           alt={businessName}
-          className={cn("object-contain h-auto", collapsed ? "w-16" : "w-28")}
+          width={48}
+          height={48}
+          unoptimized
+          style={{ height: "auto" }}
+          className={cn("h-auto object-contain", collapsed ? "w-10" : "w-12")}
         />
       ) : (
-        <img
+        <Image
           src="/darkmode-logo.png"
           alt={businessName}
-          className={cn("object-contain h-auto", collapsed ? "w-16" : "w-28")}
+          width={1678}
+          height={2364}
+          style={{ height: "auto" }}
+          className={cn("h-auto object-contain", collapsed ? "w-10" : "w-12")}
         />
       )}
     </div>
@@ -160,36 +191,21 @@ function SidebarBrand({ collapsed, mobile }: { collapsed: boolean; mobile?: bool
   // ─── Mobile: compact branding ─────────────────────────────
   if (mobile) {
     return (
-      <div className="flex flex-col items-center px-4 pt-2 pb-2">
+      <div className="flex flex-col items-center px-4 py-2">
         <Link
           href="/dashboard"
-          className="flex flex-col items-center gap-1.5"
+          className="flex flex-col items-center gap-1 rounded-[10px] px-4 py-1 outline-none transition-all duration-200 hover:bg-sidebar-accent/55 active:scale-[0.97] focus-visible:ring-3 focus-visible:ring-sidebar-ring/45 focus-visible:ring-offset-2 focus-visible:ring-offset-sidebar"
           aria-label={`${businessName} — Back to Dashboard`}
         >
-          {/* Logo (smaller) */}
-          <div className="flex shrink-0 items-center justify-center">
-            {businessLogo ? (
-              <img
-                src={businessLogo}
-                alt={businessName}
-                className="object-contain h-auto w-28"
-              />
-            ) : (
-              <img
-                src="/darkmode-logo.png"
-                alt={businessName}
-                className="object-contain h-auto w-28"
-              />
-            )}
-          </div>
+          {logoEl}
 
           {/* Business Name (larger, visual focus) + Tagline */}
           <div className="flex flex-col items-center gap-0.5">
-            <p className="text-xl font-bold tracking-tight text-sidebar-foreground">
+            <p className="text-base font-bold tracking-tight text-sidebar-foreground">
               {businessName}
             </p>
             {businessTagline && (
-              <p className="text-[11px] font-medium uppercase tracking-[0.15em] text-sidebar-foreground/40 text-center">
+              <p className="text-center text-xs font-medium uppercase tracking-wider text-sidebar-foreground/70">
                 {businessTagline}
               </p>
             )}
@@ -197,7 +213,7 @@ function SidebarBrand({ collapsed, mobile }: { collapsed: boolean; mobile?: bool
         </Link>
 
         {/* Powered by (compact) */}
-        <p className="mt-1.5 text-xs tracking-wide text-sidebar-primary/70">
+        <p className="mt-1 text-xs text-sidebar-foreground/70">
           Powered by{" "}
           <span className="font-semibold text-sidebar-primary">BizRavana</span>
         </p>
@@ -207,10 +223,10 @@ function SidebarBrand({ collapsed, mobile }: { collapsed: boolean; mobile?: bool
 
   // ─── Desktop / collapsed ──────────────────────────────────
   return (
-    <div className="flex flex-col items-center px-4 pt-6 pb-5">
+    <div className="flex flex-col items-center px-4 pb-2 pt-3">
       <Link
         href="/dashboard"
-        className="flex flex-col items-center gap-2.5"
+        className="flex flex-col items-center gap-1 rounded-[10px] px-3 py-1 outline-none transition-all duration-200 hover:bg-sidebar-accent/55 active:scale-[0.97] focus-visible:ring-3 focus-visible:ring-sidebar-ring/45 focus-visible:ring-offset-2 focus-visible:ring-offset-sidebar"
         aria-label={`${businessName} — Back to Dashboard`}
       >
         {/* Logo */}
@@ -219,11 +235,11 @@ function SidebarBrand({ collapsed, mobile }: { collapsed: boolean; mobile?: bool
         {/* Business Name + Tagline (hidden when collapsed) */}
         {!collapsed && (
           <div className="flex flex-col items-center gap-0.5">
-            <p className="text-lg font-bold tracking-tight text-sidebar-foreground">
+            <p className="text-base font-bold tracking-tight text-sidebar-foreground">
               {businessName}
             </p>
             {businessTagline && (
-              <p className="text-xs font-medium uppercase tracking-[0.15em] text-sidebar-foreground/40 text-center">
+              <p className="text-center text-xs font-medium uppercase tracking-wider text-sidebar-foreground/70">
                 {businessTagline}
               </p>
             )}
@@ -233,7 +249,7 @@ function SidebarBrand({ collapsed, mobile }: { collapsed: boolean; mobile?: bool
 
       {/* Powered by (hidden when collapsed) */}
       {!collapsed && (
-        <p className="mt-2.5 text-sm tracking-wide text-sidebar-primary/70">
+        <p className="mt-1 text-xs text-sidebar-foreground/70">
           Powered by{" "}
           <span className="font-semibold text-sidebar-primary">BizRavana</span>
         </p>
@@ -263,14 +279,13 @@ function SidebarNavItem({
 
   const linkContent = (
     <>
-      {!collapsed && <NavActiveBar active={isActive} />}
       <span
         className={cn(
           "flex shrink-0 items-center justify-center transition-all duration-150",
           collapsed && isActive
-            ? "size-9 rounded-xl bg-sidebar-accent text-sidebar-primary shadow-xs"
+            ? "size-9 rounded-[10px] bg-sidebar-accent text-sidebar-primary shadow-xs"
             : collapsed
-              ? "size-9 rounded-xl text-sidebar-foreground/50"
+              ? "size-9 rounded-[10px] text-sidebar-foreground/70"
               : "",
         )}
       >
@@ -279,7 +294,7 @@ function SidebarNavItem({
             "size-[18px] shrink-0 transition-colors duration-150",
             !collapsed && (isActive
               ? "text-sidebar-primary"
-              : "text-sidebar-foreground/50 group-hover:text-sidebar-foreground/70"),
+              : "text-sidebar-foreground/65 group-hover:text-sidebar-foreground"),
           )}
         />
       </span>
@@ -298,8 +313,7 @@ function SidebarNavItem({
               href={item.href}
               onClick={onItemClick}
               className={cn(
-                "group relative flex min-h-[46px] w-full items-center justify-center gap-3 px-2 py-2.5 text-sm font-medium transition-all duration-150",
-                isActive ? "rounded-r-xl" : "rounded-xl",
+                "group relative flex min-h-11 w-full cursor-pointer items-center justify-center gap-3 rounded-[10px] px-2 py-2 text-sm font-medium outline-none transition-all duration-200 active:scale-[0.97] focus-visible:ring-3 focus-visible:ring-sidebar-ring/45 focus-visible:ring-offset-2 focus-visible:ring-offset-sidebar",
                 navItemVariants({ active: isActive }),
               )}
               aria-current={isActive ? "page" : undefined}
@@ -320,8 +334,7 @@ function SidebarNavItem({
       href={item.href}
       onClick={onItemClick}
       className={cn(
-        "group relative flex min-h-[46px] w-full items-center gap-3 px-4 py-2.5 text-sm font-medium transition-all duration-150",
-        isActive ? "rounded-r-xl" : "rounded-xl",
+        "group relative flex min-h-11 w-full cursor-pointer items-center gap-3 rounded-[10px] px-3 py-2 text-sm font-medium outline-none transition-all duration-200 active:scale-[0.97] focus-visible:ring-3 focus-visible:ring-sidebar-ring/45 focus-visible:ring-offset-2 focus-visible:ring-offset-sidebar",
         navItemVariants({ active: isActive }),
       )}
       aria-current={isActive ? "page" : undefined}
@@ -350,14 +363,13 @@ function SidebarNavGroup({
 
   const buttonContent = (
     <>
-      {!collapsed && <NavActiveBar active={isActive} />}
       <span
         className={cn(
           "flex shrink-0 items-center justify-center transition-all duration-150",
           collapsed && isActive
-            ? "size-9 rounded-xl bg-sidebar-accent text-sidebar-primary shadow-xs"
+            ? "size-9 rounded-[10px] bg-sidebar-accent text-sidebar-primary shadow-xs"
             : collapsed
-              ? "size-9 rounded-xl text-sidebar-foreground/50"
+              ? "size-9 rounded-[10px] text-sidebar-foreground/70"
               : "",
         )}
       >
@@ -366,7 +378,7 @@ function SidebarNavGroup({
             "size-[18px] shrink-0 transition-colors duration-150",
             !collapsed && (isActive
               ? "text-sidebar-primary"
-              : "text-sidebar-foreground/50"),
+              : "text-sidebar-foreground/65 group-hover:text-sidebar-foreground"),
           )}
         />
       </span>
@@ -394,8 +406,7 @@ function SidebarNavGroup({
               type="button"
               onClick={() => setOpen((v) => !v)}
               className={cn(
-                "group relative flex min-h-[46px] w-full items-center justify-center gap-3 px-2 py-2.5 transition-all duration-150",
-                isActive ? "rounded-r-xl" : "rounded-xl",
+                "group relative flex min-h-11 w-full cursor-pointer items-center justify-center gap-3 rounded-[10px] px-2 py-2 outline-none transition-all duration-200 active:scale-[0.97] focus-visible:ring-3 focus-visible:ring-sidebar-ring/45 focus-visible:ring-offset-2 focus-visible:ring-offset-sidebar",
                 navItemVariants({ active: isActive }),
                 (open && !isActive) && "bg-sidebar-accent/40",
               )}
@@ -433,8 +444,7 @@ function SidebarNavGroup({
         type="button"
         onClick={() => setOpen((v) => !v)}
         className={cn(
-          "group relative flex min-h-[46px] w-full items-center gap-3 px-4 py-2.5 text-sm font-medium transition-all duration-150",
-          isActive ? "rounded-r-xl" : "rounded-xl",
+          "group relative flex min-h-11 w-full cursor-pointer items-center gap-3 rounded-[10px] px-3 py-2 text-sm font-medium outline-none transition-all duration-200 active:scale-[0.97] focus-visible:ring-3 focus-visible:ring-sidebar-ring/45 focus-visible:ring-offset-2 focus-visible:ring-offset-sidebar",
           navItemVariants({ active: isActive }),
           (open && !isActive) && "bg-sidebar-accent/40 text-sidebar-accent-foreground",
         )}
@@ -469,25 +479,38 @@ function SidebarNavigation({
   onItemClick?: () => void;
 }) {
   return (
-    <ScrollArea className="flex-1 px-3 py-4">
-      <nav className="space-y-0.5" aria-label="Primary navigation">
-        {coreNav.map((item) =>
-          isGroup(item) ? (
-            <SidebarNavGroup
-              key={item.label}
-              group={item}
-              collapsed={collapsed}
-              onItemClick={onItemClick}
-            />
-          ) : (
-            <SidebarNavItem
-              key={item.href}
-              item={item}
-              collapsed={collapsed}
-              onItemClick={onItemClick}
-            />
-          ),
-        )}
+    <ScrollArea
+      className="min-h-0 flex-1 px-3 py-3 [scrollbar-width:thin] [scrollbar-color:var(--sidebar-border)_transparent]"
+    >
+      <nav className="space-y-4" aria-label="Primary navigation">
+        {navSections.map((section, sectionIndex) => (
+          <div key={section.label} className="space-y-1">
+            {collapsed && sectionIndex > 0 ? (
+              <div className="mx-2 h-px bg-sidebar-border/70" aria-hidden="true" />
+            ) : !collapsed ? (
+              <p className="sidebar-section-label mb-1.5">{section.label}</p>
+            ) : null}
+            <div className="space-y-1">
+              {section.items.map((item) =>
+                isGroup(item) ? (
+                  <SidebarNavGroup
+                    key={item.label}
+                    group={item}
+                    collapsed={collapsed}
+                    onItemClick={onItemClick}
+                  />
+                ) : (
+                  <SidebarNavItem
+                    key={item.href}
+                    item={item}
+                    collapsed={collapsed}
+                    onItemClick={onItemClick}
+                  />
+                ),
+              )}
+            </div>
+          </div>
+        ))}
       </nav>
     </ScrollArea>
   );
@@ -508,13 +531,15 @@ function SidebarQuickActions({
   if (mobile) return null;
   const actions = [
     {
-      label: "+ New Order",
+      label: "New order",
       href: "/dashboard/orders?action=new",
+      icon: Plus,
       collapsedClass: "bg-primary text-primary-foreground shadow-xs shadow-primary/20",
     },
     {
-      label: "+ Expense",
+      label: "Add expense",
       href: "/dashboard/expenses?action=new",
+      icon: ReceiptText,
       collapsedClass: "border border-sidebar-border bg-sidebar text-sidebar-foreground",
     },
   ];
@@ -530,14 +555,14 @@ function SidebarQuickActions({
                   href={action.href}
                   onClick={onItemClick}
                   className={cn(
-                    "group relative flex size-9 items-center justify-center rounded-xl transition-all duration-200 active:scale-[0.97]",
+                    "group relative flex size-11 cursor-pointer items-center justify-center rounded-[10px] outline-none transition-all duration-200 active:scale-[0.97] focus-visible:ring-3 focus-visible:ring-sidebar-ring/45 focus-visible:ring-offset-2 focus-visible:ring-offset-sidebar",
                     action.collapsedClass,
                   )}
                   aria-label={action.label}
                 />
               }
             >
-              <Plus className="size-4 shrink-0" />
+              <action.icon className="size-[18px] shrink-0" />
             </TooltipTrigger>
             <TooltipContent side="right" sideOffset={12} className="text-sm font-medium">
               {action.label}
@@ -549,21 +574,24 @@ function SidebarQuickActions({
   }
 
   return (
-    <div className="px-3 pb-3">
+    <div className="px-3 pb-3 pt-1">
+      <p className="sidebar-section-label mb-2">Quick actions</p>
       <div className="flex flex-col gap-2">
         <Link
           href="/dashboard/orders?action=new"
           onClick={onItemClick}
-          className="flex w-full items-center justify-center rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm shadow-primary/20 transition-all duration-200 active:scale-[0.97] hover:shadow-md hover:shadow-primary/25 hover:-translate-y-0.5"
+          className="flex min-h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-[10px] bg-primary px-4 py-2 text-sm font-semibold text-white shadow-sm shadow-primary/20 outline-none transition-all duration-200 hover:-translate-y-0.5 hover:bg-primary/90 hover:shadow-md hover:shadow-primary/25 active:scale-[0.97] focus-visible:ring-3 focus-visible:ring-sidebar-ring/45 focus-visible:ring-offset-2 focus-visible:ring-offset-sidebar"
         >
-          + New Order
+          <Plus className="size-[18px]" aria-hidden="true" />
+          New order
         </Link>
         <Link
           href="/dashboard/expenses?action=new"
           onClick={onItemClick}
-          className="flex w-full items-center justify-center rounded-xl border border-sidebar-border bg-sidebar px-4 py-2.5 text-sm font-semibold text-sidebar-foreground shadow-sm transition-all duration-200 active:scale-[0.97] hover:bg-sidebar-accent hover:text-sidebar-foreground hover:shadow-md"
+          className="flex min-h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-[10px] border border-sidebar-border bg-sidebar-accent/35 px-4 py-2 text-sm font-medium text-sidebar-foreground/80 shadow-xs outline-none transition-all duration-200 hover:-translate-y-0.5 hover:border-sidebar-primary/30 hover:bg-sidebar-accent hover:text-sidebar-foreground hover:shadow-sm active:scale-[0.97] focus-visible:ring-3 focus-visible:ring-sidebar-ring/45 focus-visible:ring-offset-2 focus-visible:ring-offset-sidebar"
         >
-          + Expense
+          <ReceiptText className="size-[17px]" aria-hidden="true" />
+          Add expense
         </Link>
       </div>
     </div>
@@ -616,8 +644,8 @@ function SidebarCollapseButton({
             title={label}
             aria-label={label}
             className={cn(
-              "absolute top-6 -right-3 z-100 flex size-6 items-center justify-center rounded-full border border-sidebar-border bg-sidebar text-sidebar-foreground/70 shadow-xs transition-all duration-200 hover:bg-sidebar-accent hover:text-sidebar-foreground hover:shadow-md hover:border-sidebar-primary/30 hover:scale-110 active:scale-95",
-              collapsed && "rotate-180",
+              "absolute top-3 z-20 flex size-10 cursor-pointer items-center justify-center rounded-[10px] border border-sidebar-border bg-sidebar text-sidebar-foreground/70 shadow-sm outline-none transition-all duration-200 hover:-translate-y-0.5 hover:border-sidebar-primary/30 hover:bg-sidebar-accent hover:text-sidebar-foreground hover:shadow-md focus-visible:ring-3 focus-visible:ring-sidebar-ring/45 focus-visible:ring-offset-2 focus-visible:ring-offset-sidebar active:scale-[0.97]",
+              collapsed ? "-right-4 rotate-180" : "right-3",
             )}
           />
         }

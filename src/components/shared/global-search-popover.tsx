@@ -86,6 +86,7 @@ interface QuotationResult {
 }
 
 type SearchCategory = "orders" | "customers" | "products" | "inventory" | "expenses" | "quotations";
+type SearchResultItem = SearchIndex[SearchCategory][number];
 
 interface CategoryMeta {
   key: SearchCategory;
@@ -106,6 +107,44 @@ const CATEGORIES: CategoryMeta[] = [
 const MAX_PER_CATEGORY = 4;
 
 // ─── Helpers ───────────────────────────────────────────────────
+
+/** Return the searchable identifier of a selected result (used to filter the target page). */
+function getResultSearchTerm(category: SearchCategory, item: SearchResultItem): string {
+  switch (category) {
+    case "orders":
+      return (item as OrderResult).order_number;
+    case "customers":
+      return (item as CustomerResult).name;
+    case "products":
+      return (item as ProductResult).name;
+    case "inventory":
+      return (item as InventoryResult).name;
+    case "expenses":
+      return (item as ExpenseResult).item_name;
+    case "quotations":
+      return (item as QuotationResult).quotation_number;
+  }
+}
+
+/** Build the target route for a category, filtered by the given search term. */
+function getResultRoute(category: SearchCategory, term: string): string {
+  const q = encodeURIComponent(term);
+  switch (category) {
+    case "orders":
+    case "customers":
+      return `/dashboard/orders?search=${q}`;
+    case "products":
+      return `/dashboard/products?search=${q}`;
+    case "inventory":
+      return `/dashboard/inventory?search=${q}`;
+    case "expenses":
+      return `/dashboard/expenses?search=${q}`;
+    case "quotations":
+      return `/dashboard/quotations?search=${q}`;
+    default:
+      return "/dashboard";
+  }
+}
 
 function highlightText(text: string, query: string): React.ReactNode {
   if (!query.trim()) return text;
@@ -244,7 +283,7 @@ export const GlobalSearchPopover = forwardRef<{ focus: () => void }>(function Gl
       if (!fuse) continue;
       const all = fuse.search(q);
       const items = all.slice(0, MAX_PER_CATEGORY).map((result) => {
-        const item = result.item as any;
+        const item = result.item as SearchResultItem;
         return { id: `${cat.key}-${item.id}`, node: <ResultItem category={cat.key} item={item} query={q} /> };
       });
       if (items.length) grouped.push({ cat, items, total: all.length });
@@ -270,17 +309,18 @@ export const GlobalSearchPopover = forwardRef<{ focus: () => void }>(function Gl
     inputRef.current?.blur();
     setQuery("");
 
-    const catKey = id.split("-")[0] as SearchCategory;
-    const routes: Record<string, string> = {
-      orders: "/dashboard/orders",
-      customers: "/dashboard/orders",
-      products: "/dashboard/products",
-      inventory: "/dashboard/inventory",
-      expenses: "/dashboard/expenses",
-      quotations: "/dashboard/quotations",
-    };
-    router.push(routes[catKey] || "/dashboard");
-  }, [router, query, addRecentSearch]);
+    const dashIdx = id.indexOf("-");
+    const catKey = id.slice(0, dashIdx) as SearchCategory;
+    const itemId = id.slice(dashIdx + 1);
+
+    // Filter the target page down to the exact selected record when we
+    // can resolve it; otherwise fall back to the typed query.
+    const selected = index?.[catKey]?.find((i) => i.id === itemId);
+    const term = selected
+      ? getResultSearchTerm(catKey, selected)
+      : query.trim();
+    router.push(getResultRoute(catKey, term));
+  }, [router, query, addRecentSearch, index]);
 
   // ─── Keyboard navigation ────────────────────────────────────
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
@@ -367,13 +407,13 @@ export const GlobalSearchPopover = forwardRef<{ focus: () => void }>(function Gl
                   <div key={group.cat.key}>
                     <div className="flex items-center gap-1.5 px-3.5 py-1.5">
                       <group.cat.icon className={cn("size-3", group.cat.color)} />
-                      <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60">
+                      <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                         {group.cat.label}
                       </span>
-                      <span className="text-[10px] text-muted-foreground/40 ml-auto">{group.total}</span>
+                      <span className="ml-auto text-xs text-muted-foreground">{group.total}</span>
                     </div>
                     <div className="space-y-0.5">
-                      {group.items.map((item, i) => {
+                      {group.items.map((item) => {
                         const flatIdx = flatItems.findIndex((f) => f.id === item.id);
                         return (
                           <button
@@ -423,10 +463,10 @@ export const GlobalSearchPopover = forwardRef<{ focus: () => void }>(function Gl
             {!query.trim() && recentSearches.length > 0 && (
               <div className="py-1">
                 <div className="flex items-center justify-between px-3.5 py-1.5">
-                  <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/50">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                     Recent
                   </span>
-                  <button type="button" onClick={clearRecentSearches} className="text-[10px] text-muted-foreground/50 hover:text-muted-foreground/70">
+                  <button type="button" onClick={clearRecentSearches} className="min-h-8 rounded-lg px-2 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/45">
                     Clear
                   </button>
                 </div>
@@ -459,16 +499,17 @@ export const GlobalSearchPopover = forwardRef<{ focus: () => void }>(function Gl
 
 // ─── ResultItem ────────────────────────────────────────────────
 
-function ResultItem({ category, item, query: q }: { category: SearchCategory; item: any; query: string }) {
+function ResultItem({ category, item: rawItem, query: q }: { category: SearchCategory; item: SearchResultItem; query: string }) {
   switch (category) {
-    case "orders":
+    case "orders": {
+      const item = rawItem as OrderResult;
       return (
         <div className="flex items-center gap-2.5 min-w-0">
           <div className="flex size-7 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary"><ShoppingCart className="size-3.5" /></div>
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1.5">
               <span className="truncate text-sm font-semibold text-foreground">{highlightText(item.order_number, q)}</span>
-              <span className="shrink-0 rounded-full bg-muted px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-muted-foreground">{formatEnumLabel(item.status)}</span>
+              <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-xs font-semibold text-muted-foreground">{formatEnumLabel(item.status)}</span>
             </div>
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground/60">
               <span className="truncate">{highlightText(item.customer_name, q)}</span>
@@ -478,7 +519,9 @@ function ResultItem({ category, item, query: q }: { category: SearchCategory; it
           </div>
         </div>
       );
-    case "customers":
+    }
+    case "customers": {
+      const item = rawItem as CustomerResult;
       return (
         <div className="flex items-center gap-2.5 min-w-0">
           <div className="flex size-7 shrink-0 items-center justify-center rounded-md bg-success/10 text-success"><User className="size-3.5" /></div>
@@ -492,7 +535,9 @@ function ResultItem({ category, item, query: q }: { category: SearchCategory; it
           </div>
         </div>
       );
-    case "products":
+    }
+    case "products": {
+      const item = rawItem as ProductResult;
       return (
         <div className="flex items-center gap-2.5 min-w-0">
           <div className="flex size-7 shrink-0 items-center justify-center rounded-md bg-warning/10 text-warning"><Package className="size-3.5" /></div>
@@ -506,7 +551,9 @@ function ResultItem({ category, item, query: q }: { category: SearchCategory; it
           </div>
         </div>
       );
-    case "inventory":
+    }
+    case "inventory": {
+      const item = rawItem as InventoryResult;
       return (
         <div className="flex items-center gap-2.5 min-w-0">
           <div className="flex size-7 shrink-0 items-center justify-center rounded-md bg-info/10 text-info"><Boxes className="size-3.5" /></div>
@@ -519,7 +566,9 @@ function ResultItem({ category, item, query: q }: { category: SearchCategory; it
           </div>
         </div>
       );
-    case "expenses":
+    }
+    case "expenses": {
+      const item = rawItem as ExpenseResult;
       return (
         <div className="flex items-center gap-2.5 min-w-0">
           <div className="flex size-7 shrink-0 items-center justify-center rounded-md bg-destructive/10 text-destructive"><ReceiptText className="size-3.5" /></div>
@@ -533,14 +582,16 @@ function ResultItem({ category, item, query: q }: { category: SearchCategory; it
           </div>
         </div>
       );
-    case "quotations":
+    }
+    case "quotations": {
+      const item = rawItem as QuotationResult;
       return (
         <div className="flex items-center gap-2.5 min-w-0">
           <div className="flex size-7 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary"><FileText className="size-3.5" /></div>
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1.5">
               <span className="text-sm font-semibold text-foreground">{highlightText(item.quotation_number, q)}</span>
-              <span className="shrink-0 rounded-full bg-muted px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-muted-foreground">{formatEnumLabel(item.status)}</span>
+              <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-xs font-semibold text-muted-foreground">{formatEnumLabel(item.status)}</span>
             </div>
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground/60">
               <span className="truncate">{highlightText(item.customer_name, q)}</span>
@@ -550,6 +601,7 @@ function ResultItem({ category, item, query: q }: { category: SearchCategory; it
           </div>
         </div>
       );
+    }
     default:
       return null;
   }

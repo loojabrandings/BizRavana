@@ -59,7 +59,7 @@ export async function initializeOrderSequence(
 ): Promise<void> {
   const settings = useOrdersSettings.getState();
   const prefix = settings.orderNumberPrefix || "";
-  const { startNum, padding: _unused } = parseStart(settings.orderNumberStart || "1");
+  const { startNum } = parseStart(settings.orderNumberStart || "1");
 
   try {
     const supabase = createClient();

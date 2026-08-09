@@ -15,8 +15,8 @@ async function acceptPendingInvitations(
   if (!email) return null;
 
   try {
-    // Use the SECURITY DEFINER RPC to bypass RLS — a non-member user
-    // cannot query team_invitations directly (RLS requires owner/admin role).
+    // This identity-bound SECURITY DEFINER RPC allows a non-member to discover
+    // only invitations matching their authenticated Supabase Auth email.
     const { data: invitations, error } = await supabase.rpc(
       "get_pending_invitations",
       { target_email: email },
@@ -26,7 +26,7 @@ async function acceptPendingInvitations(
 
     const invitation = invitations[0];
 
-    // Call the accept_invitation RPC via the API to bypass RLS
+    // The API verifies the session; the RPC then binds acceptance to auth.uid().
     const response = await fetch("/api/invitations/accept", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -134,4 +134,3 @@ export async function provisionUser(
 
   return error?.message || null;
 }
-

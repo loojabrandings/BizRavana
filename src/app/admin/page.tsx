@@ -1,20 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
-  Activity,
-  ArrowUpRight,
-  Banknote,
   Building2,
   Clock,
-  CreditCard,
   Crown,
   DollarSign,
-  HardDrive,
   Loader2,
   TrendingUp,
   TriangleAlert,
-  Users,
   Wallet,
   XCircle,
 } from "lucide-react";
@@ -150,7 +144,10 @@ export default function AdminDashboardPage() {
   }, []);
 
   useEffect(() => {
-    fetchStats();
+    const taskId = window.setTimeout(() => {
+      void fetchStats();
+    }, 0);
+    return () => window.clearTimeout(taskId);
   }, [fetchStats]);
 
   if (loading) {

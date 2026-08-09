@@ -67,7 +67,7 @@ export function HeroStatCard({
 }) {
   const style = variant === "flat"
     ? {
-        card: "flex h-full flex-col rounded-2xl border border-border/50 bg-card p-4 shadow-sm transition hover:shadow-md",
+        card: "glass-card flex h-full flex-col rounded-xl p-4 transition hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-lg",
         icon: "text-muted-foreground/60",
         label: "text-sm font-medium text-muted-foreground",
         value: "text-foreground",
@@ -168,7 +168,7 @@ export function HeroStatCard({
     return (
       <Link
         href={href}
-        className={cn("block cursor-pointer rounded-2xl outline-none ring-offset-2 focus-visible:ring-2 focus-visible:ring-ring transition-all duration-150 hover:scale-[1.02] active:scale-[0.98]", style.ringOff)}
+        className={cn("block cursor-pointer rounded-xl outline-none ring-offset-2 focus-visible:ring-3 focus-visible:ring-ring/40 transition-all duration-200 active:scale-[0.98]", style.ringOff)}
       >
         {inner}
       </Link>

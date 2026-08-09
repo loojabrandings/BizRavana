@@ -1,27 +1,31 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { getAdminClient } from "@/lib/supabase/admin";
-import { createClient } from "@/lib/supabase/server";
+import { requireSuperAdmin } from "@/lib/admin-authorization";
 
 type RouteParams = {
   params: Promise<{ id: string }>;
 };
 
 export async function GET(_request: Request, { params }: RouteParams) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user || user.app_metadata?.is_super_admin !== true) {
-    return NextResponse.json({ error: "Super admin access required." }, { status: 403 });
+  const authorization = await requireSuperAdmin();
+  if (!authorization.ok) {
+    return NextResponse.json(
+      { error: authorization.error },
+      { status: authorization.status },
+    );
   }
 
-  const { id } = await params;
+  const paymentId = z.string().uuid().safeParse((await params).id);
+  if (!paymentId.success) {
+    return NextResponse.json({ error: "Invalid payment ID." }, { status: 400 });
+  }
+
   const admin = getAdminClient();
   const { data: payment, error } = await admin
     .from("payment_proofs")
     .select("proof_image_path, proof_image_url")
-    .eq("id", id)
+    .eq("id", paymentId.data)
     .single();
 
   if (error || !payment) {

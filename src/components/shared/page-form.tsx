@@ -55,7 +55,7 @@ export function PageFormSection({
   return (
     <div
       className={cn(
-        "rounded-2xl glass-card p-6 md:p-7 space-y-5",
+        "rounded-xl glass-card p-6 md:p-7 space-y-5",
         className,
       )}
     >

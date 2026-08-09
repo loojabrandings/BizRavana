@@ -119,7 +119,7 @@ export function CourierFinanceTab() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [courierConfig, setCourierConfig] = useState<CourierConfig | null>(null);
+  const [, setCourierConfig] = useState<CourierConfig | null>(null);
   const [loadingSteps, setLoadingSteps] = useState<LoadingStep[]>(() =>
     markLoadingStep(buildFinanceLoadingSteps(), "config", "Checking your courier settings…"),
   );
@@ -226,7 +226,10 @@ export function CourierFinanceTab() {
   }, []);
 
   useEffect(() => {
-    fetchData();
+    const taskId = window.setTimeout(() => {
+      void fetchData();
+    }, 0);
+    return () => window.clearTimeout(taskId);
   }, [fetchData]);
 
   // ─── Derived stats ────────────────────────────────────────────
@@ -483,7 +486,7 @@ export function CourierFinanceTab() {
                             ) : (
                               <CheckCircle2 className="size-4 text-success" />
                             )}
-                            <span className="text-[10px] font-medium text-muted-foreground/50 uppercase tracking-wider whitespace-nowrap">
+                            <span className="whitespace-nowrap text-xs font-medium uppercase tracking-wider text-muted-foreground">
                               {formatPaymentMethod(record.paymentMethod)}
                             </span>
                           </div>
@@ -570,7 +573,7 @@ export function CourierFinanceTab() {
                             ) : (
                               <CheckCircle2 className="size-3.5 text-success" />
                             )}
-                            <span className="text-[10px] font-medium text-muted-foreground/50 uppercase tracking-wider">
+                            <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
                               {formatPaymentMethod(record.paymentMethod)}
                             </span>
                           </span>

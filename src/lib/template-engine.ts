@@ -187,25 +187,6 @@ function renderItemDetailsGrouped(items?: TemplateLineItem[]): string {
  * Legacy flat rendering (no category grouping, simpler format).
  * Kept for backward compatibility in case anyone references it directly.
  */
-function renderItemDetailsFlat(items?: TemplateLineItem[]): string {
-  if (!items || items.length === 0) return "";
-
-  return items
-    .map((item, i) => {
-      const lines: string[] = [
-        `${i + 1}. ${item.name}`,
-        `   Qty: ${item.quantity}`,
-        `   Unit Price: ${fmt(item.unit_price)}`,
-        `   Total: ${fmt(item.quantity * item.unit_price)}`,
-      ];
-      if (item.notes?.trim()) {
-        lines.push(`   Item Note: ${item.notes.trim()}`);
-      }
-      return lines.join("\n");
-    })
-    .join("\n\n");
-}
-
 // ─── Placeholder Definitions by Context ──────────────────────────
 
 export const ALL_PLACEHOLDERS: Record<string, PlaceholderGroup[]> = {

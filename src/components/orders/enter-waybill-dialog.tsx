@@ -12,10 +12,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { formatEnumLabel, cn } from "@/lib/utils";
 import { toast } from "sonner";
 import type { ManualWaybill } from "@/lib/delivery/waybill-utils";

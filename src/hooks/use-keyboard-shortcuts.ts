@@ -69,10 +69,15 @@ export function useKeyboardShortcuts(
 ) {
   const [showHelp, setShowHelp] = useState(false);
   const showHelpRef = useRef(showHelp);
-  showHelpRef.current = showHelp;
-
   const callbacksRef = useRef(callbacks);
-  callbacksRef.current = callbacks;
+
+  useEffect(() => {
+    showHelpRef.current = showHelp;
+  }, [showHelp]);
+
+  useEffect(() => {
+    callbacksRef.current = callbacks;
+  }, [callbacks]);
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {

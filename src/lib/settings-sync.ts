@@ -38,6 +38,16 @@ type QuotationState = StoreState<typeof useQuotationSettings>;
 type ExpenseState = StoreState<typeof useExpenseSettings>;
 type PreferencesState = StoreState<typeof usePreferences>;
 
+function selectHydratableState<T extends object>(
+  current: T,
+  serverData: Record<string, unknown>,
+): Partial<T> {
+  const entries = Object.entries(serverData).filter(
+    ([key]) => key in current && typeof current[key as keyof T] !== "function",
+  );
+  return Object.fromEntries(entries) as Partial<T>;
+}
+
 // ─── Load from server ─────────────────────────────────────────────
 
 async function loadSettings(supabase: SupabaseClient, businessId: string) {
@@ -75,13 +85,10 @@ export async function hydrateStoresFromServer(
   // ── Orders ──
   const ordersData = server[KEYS.ORDERS];
   if (ordersData && typeof ordersData === "object") {
-    const setPartial: Partial<OrdersState> = {};
-    const current = useOrdersSettings.getState();
-    for (const key of Object.keys(ordersData) as (keyof OrdersState)[]) {
-      if (key in current && typeof (current as any)[key] !== "function") {
-        (setPartial as any)[key] = ordersData[key];
-      }
-    }
+    const setPartial: Partial<OrdersState> = selectHydratableState(
+      useOrdersSettings.getState(),
+      ordersData,
+    );
     if (Object.keys(setPartial).length > 0) {
       useOrdersSettings.setState(setPartial);
     }
@@ -90,13 +97,10 @@ export async function hydrateStoresFromServer(
   // ── Quotations ──
   const quotationData = server[KEYS.QUOTATIONS];
   if (quotationData && typeof quotationData === "object") {
-    const setPartial: Partial<QuotationState> = {};
-    const current = useQuotationSettings.getState();
-    for (const key of Object.keys(quotationData) as (keyof QuotationState)[]) {
-      if (key in current && typeof (current as any)[key] !== "function") {
-        (setPartial as any)[key] = quotationData[key];
-      }
-    }
+    const setPartial: Partial<QuotationState> = selectHydratableState(
+      useQuotationSettings.getState(),
+      quotationData,
+    );
     if (Object.keys(setPartial).length > 0) {
       useQuotationSettings.setState(setPartial);
     }
@@ -105,13 +109,10 @@ export async function hydrateStoresFromServer(
   // ── Expenses ──
   const expenseData = server[KEYS.EXPENSES];
   if (expenseData && typeof expenseData === "object") {
-    const setPartial: Partial<ExpenseState> = {};
-    const current = useExpenseSettings.getState();
-    for (const key of Object.keys(expenseData) as (keyof ExpenseState)[]) {
-      if (key in current && typeof (current as any)[key] !== "function") {
-        (setPartial as any)[key] = expenseData[key];
-      }
-    }
+    const setPartial: Partial<ExpenseState> = selectHydratableState(
+      useExpenseSettings.getState(),
+      expenseData,
+    );
     if (Object.keys(setPartial).length > 0) {
       useExpenseSettings.setState(setPartial);
     }
@@ -120,13 +121,10 @@ export async function hydrateStoresFromServer(
   // ── Preferences ──
   const prefsData = server[KEYS.PREFERENCES];
   if (prefsData && typeof prefsData === "object") {
-    const setPartial: Partial<PreferencesState> = {};
-    const current = usePreferences.getState();
-    for (const key of Object.keys(prefsData) as (keyof PreferencesState)[]) {
-      if (key in current && typeof (current as any)[key] !== "function") {
-        (setPartial as any)[key] = prefsData[key];
-      }
-    }
+    const setPartial: Partial<PreferencesState> = selectHydratableState(
+      usePreferences.getState(),
+      prefsData,
+    );
     if (Object.keys(setPartial).length > 0) {
       usePreferences.setState(setPartial);
     }
@@ -155,7 +153,7 @@ async function saveSettings(
 /** Filter out function properties from a Zustand store state, keeping only data. */
 function stripFunctions<T extends Record<string, unknown>>(state: T): Record<string, unknown> {
   return Object.fromEntries(
-    Object.entries(state).filter(([_, v]) => typeof v !== "function"),
+    Object.entries(state).filter(([, value]) => typeof value !== "function"),
   );
 }
 

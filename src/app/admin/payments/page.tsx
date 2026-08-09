@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import Image from "next/image";
 import {
   Building2,
   CheckCircle2,
@@ -11,14 +12,12 @@ import {
   FileText,
   Loader2,
   MessageSquare,
-  Search,
   X,
   XCircle,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { fetchUserEmails } from "@/lib/admin-utils";
 import {
@@ -111,7 +110,7 @@ function PaymentStatusBadge({ status }: { status: PaymentStatus }) {
     approved: "Approved",
     rejected: "Rejected",
     success: "Successful",
-    canceled: "Canceled",
+    canceled: "Cancelled",
     failed: "Failed",
     chargedback: "Charged back",
     invalid: "Invalid",
@@ -181,8 +180,16 @@ function ReceiptPreviewDialog({
               className="h-[70vh] w-full rounded-xl bg-background shadow-lg ring-1 ring-border/10"
             />
           ) : (
-            <img src={imageUrl} alt={`Payment receipt for ${businessName}`}
-              className="max-w-full max-h-[70vh] rounded-xl object-contain shadow-lg ring-1 ring-border/10" />
+            <span className="relative block h-[70vh] w-full">
+              <Image
+                src={imageUrl}
+                alt={`Payment receipt for ${businessName}`}
+                fill
+                sizes="100vw"
+                unoptimized
+                className="rounded-xl object-contain shadow-lg ring-1 ring-border/10"
+              />
+            </span>
           )}
         </div>
       </DialogContent>
@@ -202,8 +209,6 @@ function ReviewDialog({
   onConfirm: (adminNote: string) => void; loading: boolean;
 }) {
   const [adminNote, setAdminNote] = useState("");
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-  useEffect(() => { if (open) { setAdminNote(""); setTimeout(() => textareaRef.current?.focus(), 100); } }, [open]);
   if (!payment) return null;
   const isApprove = action === "approve";
   return (
@@ -243,7 +248,7 @@ function ReviewDialog({
             <MessageSquare className="size-3.5 text-muted-foreground/60" />
             Admin Note <span className="text-xs text-muted-foreground/50 font-normal">({isApprove ? "optional" : "required"})</span>
           </label>
-          <Textarea ref={textareaRef}
+          <Textarea autoFocus
             placeholder={isApprove ? "Add a note about this approval..." : "Provide a reason for rejection..."}
             value={adminNote} onChange={(e) => setAdminNote(e.target.value)} className="min-h-[80px] resize-none" />
         </div>
@@ -422,7 +427,12 @@ export default function AdminPaymentsPage() {
     } finally { setLoading(false); }
   }, [supabase]);
 
-  useEffect(() => { fetchPayments(); }, [fetchPayments]);
+  useEffect(() => {
+    const taskId = window.setTimeout(() => {
+      void fetchPayments();
+    }, 0);
+    return () => window.clearTimeout(taskId);
+  }, [fetchPayments]);
 
   // ── Stats ───────────────────────────────────────────────────
   const stats: StatsSummary = useMemo(() => ({
@@ -527,7 +537,7 @@ export default function AdminPaymentsPage() {
         </div>
         <div className="min-w-0">
           <p className="text-sm font-medium text-foreground truncate max-w-[140px]">{p.business_name}</p>
-          <p className="text-[10px] text-muted-foreground/50 truncate max-w-[160px]">
+          <p className="max-w-[160px] truncate text-xs text-muted-foreground">
             {p.source === "payhere" ? p.order_id : p.admin_note ? `Note: ${p.admin_note}` : "Bank transfer"}
           </p>
         </div>
@@ -553,14 +563,14 @@ export default function AdminPaymentsPage() {
     ) : <span className="text-xs text-muted-foreground/50">—</span> },
     { header: "", className: "w-32", headerClassName: "hidden sm:table-cell", accessor: (p) => p.source === "bank_transfer" && p.status === "pending" ? (
       <div className="flex items-center gap-1">
-        <Button size="sm" variant="ghost" onClick={() => { setReviewPayment(p); setReviewAction("approve"); }} className="h-8 px-2 text-success hover:text-success hover:bg-success/10 text-xs">
+        <Button size="sm" variant="success" onClick={() => { setReviewPayment(p); setReviewAction("approve"); }}>
           <CheckCircle2 className="size-3.5 mr-1" /> Approve
         </Button>
-        <Button size="sm" variant="ghost" onClick={() => { setReviewPayment(p); setReviewAction("reject"); }} className="h-8 px-2 text-destructive hover:text-destructive hover:bg-destructive/10 text-xs">
+        <Button size="sm" variant="destructive" onClick={() => { setReviewPayment(p); setReviewAction("reject"); }}>
           <XCircle className="size-3.5 mr-1" /> Reject
         </Button>
       </div>
-    ) : <span className="text-xs text-muted-foreground/60">{p.source === "payhere" ? "Auto verified" : p.status === "approved" ? "Approved" : "Rejected"}{p.approved_at && <><br /><span className="text-[10px]">{new Date(p.approved_at).toLocaleDateString()}</span></>}</span> },
+    ) : <span className="text-xs text-muted-foreground">{p.source === "payhere" ? "Auto verified" : p.status === "approved" ? "Approved" : "Rejected"}{p.approved_at && <><br /><span className="text-xs">{new Date(p.approved_at).toLocaleDateString()}</span></>}</span> },
   ], [openReceipt, openingReceiptId]);
 
   // ── Mobile card renderer ────────────────────────────────────
@@ -584,13 +594,13 @@ export default function AdminPaymentsPage() {
         <>
           {(payment.proof_image_path || payment.proof_image_url) && (
             <button type="button" onClick={() => openReceipt(payment)} disabled={openingReceiptId === payment.id}
-              className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-input bg-background px-3 py-2 text-xs font-medium min-h-11 hover:bg-accent transition-colors">
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-[10px] border border-border bg-transparent px-4 text-sm font-medium text-foreground shadow-xs transition-all hover:-translate-y-0.5 hover:border-primary/30 hover:bg-muted hover:shadow-sm">
               {openingReceiptId === payment.id ? <Loader2 className="size-3.5 animate-spin" /> : <Eye className="size-3.5" />} Receipt
             </button>
           )}
           {payment.source === "bank_transfer" && payment.status === "pending" ? (
             <button type="button" onClick={() => handleOpenActionSheet(payment)}
-              className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-primary text-primary-foreground px-3 py-2 text-xs font-medium min-h-11 hover:bg-primary/90 transition-colors">
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-[10px] bg-primary px-4 text-sm font-medium text-white shadow-sm shadow-primary/20 transition-all hover:-translate-y-0.5 hover:bg-primary/90 hover:shadow-md">
               Review
             </button>
           ) : (

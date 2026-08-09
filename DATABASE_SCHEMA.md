@@ -1,18 +1,18 @@
 # Bizravana — Database Schema
 
-> Current-state addendum: 2026-07-26
-> Current migration range: `001` through `036`
+> Current-state addendum: 2026-08-03
+> Current migration range: `001` through `051`
 
-> Last updated: 2026-07-26
+> Last updated: 2026-08-03
 > Database: PostgreSQL (Supabase)
 > RLS: Enabled on all business-scoped tables
-> Migrations: 36 total (001 through 036)
+> Migrations: 51 total (001 through 051)
 
 ---
 
 ## Migration History
 
-### Migrations 026–036
+### Migrations 026–051
 
 | # | Name | Purpose |
 |---|------|---------|
@@ -27,6 +27,21 @@
 | 034 | `add_bug_reports.sql` | Bug reports and private screenshot Storage |
 | 035 | `add_dashboard_ads.sql` | Targeted dashboard campaigns, dismissals, and artwork Storage |
 | 036 | `add_ad_display_options.sql` | Ad labels and Fit/Fill artwork modes |
+| 037 | `add_cloud_backups_bucket.sql` | Private cloud-backup Storage bucket and access policies |
+| 038 | `add_provider_id_to_waybills.sql` | Courier-provider identity on waybills |
+| 039 | `add_courier_provider_to_orders.sql` | Courier-provider identity on orders |
+| 040 | `secure_team_invitations.sql` | Bind invitation RPCs to authenticated user identity and email |
+| 041 | `secure_notification_execution.sql` | Restrict notification RPC execution and repair scheduled-delivery selection |
+| 042 | `add_unified_message_template_context.sql` | Add the unified order WhatsApp template context used by the UI |
+| 043 | `preserve_team_role_on_invitation_acceptance.sql` | Prevent invitation acceptance from downgrading an existing Owner or Business Manager |
+| 044 | `add_atomic_broadcast_delivery.sql` | Serialize manual broadcast delivery with scheduled workers to prevent duplicate recipients |
+| 045 | `repair_notification_schema_resolution.sql` | Schema-qualify notification helpers under an empty search path |
+| 046 | `repair_auto_notification_worker.sql` | Schema-qualify the automatic-notification worker |
+| 047 | `add_message_template_soft_delete.sql` | Tenant-bound Message Template soft-delete RPC |
+| 048 | `add_distributed_request_rate_limits.sql` | Atomic hashed request counters and hourly cleanup |
+| 049 | `repair_distributed_request_rate_limit.sql` | Repair limiter timestamp variable resolution |
+| 050 | `repair_rate_limit_greatest_resolution.sql` | Repair PostgreSQL `GREATEST` expression resolution |
+| 051 | `secure_file_upload_boundaries.sql` | Require server-verified uploads and align private receipt MIME policy |
 
 ### Tables added after migration 025
 
@@ -37,11 +52,16 @@
 | `bug_reports` | User reports, status, screenshot path, and admin response | User-owned + Admin |
 | `ad_campaigns` | Scheduled and targeted dashboard promotions | Admin managed |
 | `ad_dismissals` | Per-user seven-day dismissal state | User-scoped |
+| `request_rate_limits` | Hashed distributed login/callback counters | Service-role RPC only |
 
 ### Current payment and cleanup architecture
 
 - Bank transfers are created and reviewed through secured database functions.
 - PayHere initiation, browser events, notify callbacks, and status reconciliation use server routes.
+- Login and PayHere callback limits use the atomic service-role-only
+  `consume_request_rate_limit` RPC. Raw account/client-address discriminators
+  are hashed before storage, and counters older than 24 hours are removed by an
+  hourly cleanup job.
 - Successful PayHere completion activates the selected plan for 30 days exactly once.
 - Permanent deletion cleans Storage, purges schema-aware business data, removes the Auth user, and records each stage in `admin_activity_log`.
 
@@ -50,7 +70,14 @@
 | Bucket | Visibility | Purpose |
 |--------|------------|---------|
 | `bug-report-screenshots` | Private | User bug-report screenshots via authorized signed URLs |
-| `dashboard-ads` | Public | Promotion artwork; upload/delete restricted to Super Admin |
+| `dashboard-ads` | Public | Promotion artwork; writes use the signature-verifying Super Admin server route |
+
+Profile images and order images remain public for display, but browser roles no
+longer write directly to those buckets. The authenticated `/api/uploads` route
+derives the permitted user/business folder and verifies JPEG, PNG, WEBP, GIF,
+AVIF, or PDF magic bytes as applicable before a service-role upload. The
+`payment-proofs` bucket remains private and now explicitly permits verified PDF
+receipts in addition to JPG, PNG, and WEBP.
 
 | # | Name | Purpose |
 |---|------|---------|
@@ -87,7 +114,7 @@
 | # | Table | Purpose | RLS |
 |---|-------|---------|-----|
 | 1 | `subscription_plans` | SaaS plan definitions (5 plans) | Public read |
-| 2 | `businesses` | Multi-tenant business accounts | Owner + Admin |
+| 2 | `businesses` | Multi-tenant business accounts | Owner + Business Manager |
 | 3 | `profiles` | User profiles (full_name, phone, role, avatar_url) | Self + Business |
 | 4 | `payment_proofs` | Manual payment uploads (pending/approved/rejected) | Business-scoped |
 | 5 | `products` | Product catalog | Business-scoped |
@@ -109,7 +136,7 @@
 | 21 | `categories` | Product categories | Business-scoped |
 | 22 | `inventory_categories` | Inventory categories | Business-scoped |
 | 23 | `expense_categories` | Expense categories | Business-scoped |
-| 24 | `message_templates` | WhatsApp message templates (3 contexts) | Business-scoped |
+| 24 | `message_templates` | WhatsApp message templates (4 contexts, with unified order context) | Business-scoped |
 | 25 | `admin_settings` | Platform-wide admin configuration | Admin only |
 | 26 | `notification_broadcasts` | Admin-created/system notification broadcasts | Admin + Business read |
 | 27 | `notification_recipients` | Delivery tracking per business/user | Business-scoped |
@@ -235,6 +262,7 @@
 - **Run**: Hourly via pg_cron (`process-auto-notifications`)
 - **Covers**: Trial ending, trial expired, subscription expiring (7/3/1 day), subscription expired, deletion scheduled, usage 80%/100%, storage 80%/100%
 - **Dedup**: Uses `notification_already_sent()` to prevent duplicate notifications within 48h
+- **Hardening**: Migration 046 explicitly qualifies all application tables and helper calls while retaining the empty function `search_path` and service-role-only execution.
 
 ### `deliver_scheduled_broadcasts()`
 - **Purpose**: Delivers scheduled admin broadcasts to targeted businesses
@@ -247,6 +275,7 @@
 
 ### `notification_already_sent()`
 - **Purpose**: Checks if a business has received a notification of a given type within the dedup window (default 48h)
+- **Hardening**: Migration 045 keeps an empty function `search_path` and explicitly qualifies notification tables through the `public` schema so delivery works without reintroducing mutable schema resolution.
 
 ---
 

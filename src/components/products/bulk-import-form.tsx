@@ -45,6 +45,15 @@ interface ImportResult {
   errors: { row: number; message: string }[];
 }
 
+interface SpreadsheetDataValidation {
+  type: "list";
+  formula1: string;
+  allowBlank: boolean;
+  showErrorMessage: boolean;
+  errorTitle: string;
+  error: string;
+}
+
 // ─── Props ─────────────────────────────────────────────────────────
 
 interface BulkImportFormProps {
@@ -70,7 +79,7 @@ function normalizeLinkToInventory(val: unknown): boolean {
   return s === "true" || s === "yes" || s === "1";
 }
 
-function validateRow(row: Record<string, unknown>, rowIndex: number): string[] {
+function validateRow(row: Record<string, unknown>): string[] {
   const errors: string[] = [];
   // Note: row values are accessed by raw keys from XLSX; the header map
   // is built later in handleFile. Since validateRow is called per-row inside
@@ -221,7 +230,6 @@ function FileUploadZone({
 export function BulkImportForm({
   businessId,
   categories,
-  onCategoriesChange: _onCategoriesChange,
   onCancel,
   onComplete,
 }: BulkImportFormProps) {
@@ -259,7 +267,7 @@ export function BulkImportForm({
     instSheet["!cols"] = [{ wch: 55 }];
     // Bold the header cell while preserving its value
     const instCell = instSheet["A1"];
-    if (instCell) instSheet["A1"] = { ...instCell, font: { bold: true } as any };
+    if (instCell) instSheet["A1"] = { ...instCell, font: { bold: true } };
     XLSX.utils.book_append_sheet(wb, instSheet, "Instructions");
 
     // Sheet 2: Products Template — headers + example row
@@ -285,7 +293,7 @@ export function BulkImportForm({
     ws["!cols"] = headers.map((h) => ({ wch: Math.max(h.length, 24) }));
 
     // ── Data Validation dropdowns ──
-    const validations: Record<string, XLSX.ColInfo> = {};
+    const validations: Record<string, SpreadsheetDataValidation> = {};
     // Category column (B) — dropdown from Instructions sheet (only if categories exist)
     if (categories.length > 0) {
       const lastCategoryRow = categories.length + 1; // A1 = header, data starts at A2
@@ -296,7 +304,7 @@ export function BulkImportForm({
         showErrorMessage: true,
         errorTitle: "Invalid Category",
         error: "Please select a category from the list, or refer to the Instructions sheet.",
-      } as any;
+      };
     }
     // Link to Inventory column (F) — TRUE/FALSE dropdown
     validations["F2:F1048576"] = {
@@ -306,7 +314,7 @@ export function BulkImportForm({
       showErrorMessage: true,
       errorTitle: "Invalid value",
       error: 'Please enter "TRUE" or "FALSE".',
-    } as any;
+    };
     // Status column (G) — active/inactive dropdown
     validations["G2:G1048576"] = {
       type: "list",
@@ -315,13 +323,13 @@ export function BulkImportForm({
       showErrorMessage: true,
       errorTitle: "Invalid Status",
       error: 'Status must be "active" or "inactive".',
-    } as any;
+    };
     ws["!dataValidations"] = validations;
 
     // Bold headers
     headers.forEach((_, i) => {
       const cell = XLSX.utils.encode_cell({ r: 0, c: i });
-      if (ws[cell]) ws[cell] = { ...ws[cell], font: { bold: true } as any };
+      if (ws[cell]) ws[cell] = { ...ws[cell], font: { bold: true } };
     });
     XLSX.utils.book_append_sheet(wb, ws, "Products Template");
 
@@ -402,7 +410,7 @@ export function BulkImportForm({
               row[col] = getColValue(rawRow, col, headerMap);
             }
 
-            const errors = validateRow(row, i + 2);
+            const errors = validateRow(row);
             return {
               rowNumber: i + 2,
               name: String(row["Product Name"] || "").trim(),
@@ -619,7 +627,7 @@ export function BulkImportForm({
           "Selling Price (Rs.)": updated.selling_price,
           "Status": updated.is_active ? "active" : "inactive",
         };
-        updated.errors = validateRow(row, updated.rowNumber);
+        updated.errors = validateRow(row);
         return updated;
       });
       return next;
@@ -636,7 +644,7 @@ export function BulkImportForm({
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, ease: "easeOut" }}
-      className="flex flex-col rounded-2xl glass-card"
+      className="flex flex-col rounded-xl glass-card"
     >
       {/* ═══════ Header ════════════════════════════════════════════ */}
       <div className="flex items-start justify-between px-8 pt-7 pb-5">

@@ -64,15 +64,6 @@ export function StockForm({
   const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
   const [showCategoryManager, setShowCategoryManager] = useState(false);
 
-  // Re-initialize when initialData changes
-  useEffect(() => {
-    if (initialData) {
-      setForm(initialData);
-      setErrors({});
-      setIsDirty(false);
-    }
-  }, [initialData]);
-
   // ─── Form helpers ─────────────────────────────────────────────
   const updateForm = useCallback(<K extends keyof StockFormData>(
     key: K,
@@ -169,7 +160,7 @@ export function StockForm({
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, ease: "easeOut" }}
-      className="flex flex-col rounded-2xl glass-card"
+      className="flex flex-col rounded-xl glass-card"
     >
       {/* ═══════ Header ════════════════════════════════════════════ */}
       <div className={isMobile ? "px-4 pt-4 pb-3" : "flex items-start justify-between px-8 pt-7 pb-5"}>
@@ -560,7 +551,7 @@ export function StockForm({
               variant="outline"
               onClick={handleCancel}
               disabled={saving}
-              className="flex-1 gap-1.5 text-sm font-medium h-10"
+              className="flex-1"
             >
               <ArrowLeft className="size-3.5" />
               Cancel
@@ -569,7 +560,7 @@ export function StockForm({
               variant="gradient"
               onClick={handleSave}
               disabled={saving}
-              className="flex-1 text-sm font-medium h-10"
+              className="flex-1"
             >
               {saving
                 ? "Saving..."

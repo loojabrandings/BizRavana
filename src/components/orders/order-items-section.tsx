@@ -57,7 +57,7 @@ export function OrderItemsSection({
       <h2 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-foreground/70">
         <span>Order Items</span>
         {items.length > 0 && (
-          <span className="inline-flex size-5 items-center justify-center rounded-full bg-primary/10 text-[11px] font-bold text-primary leading-none">
+          <span className="inline-flex size-5 items-center justify-center rounded-full bg-primary/10 text-xs font-bold leading-none text-primary">
             {items.length}
           </span>
         )}

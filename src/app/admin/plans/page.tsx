@@ -94,7 +94,6 @@ function PlanFormDialog({ open, onOpenChange, initialData, onSave, loading }: {
 }) {
   const [form, setForm] = useState<PlanFormData>(initialData || defaultPlan);
   const isEditing = !!initialData;
-  useEffect(() => { if (open) setForm(initialData || defaultPlan); }, [open, initialData]);
 
   const updateField = useCallback(<K extends keyof PlanFormData>(key: K, value: PlanFormData[K]) => {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -204,7 +203,7 @@ function StatusBadge({ active }: { active: boolean }) {
 
 function FeatureTag({ label, enabled }: { label: string; enabled: boolean }) {
   if (!enabled) return null;
-  return <span className="inline-flex items-center rounded-md bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary">{label}</span>;
+  return <span className="inline-flex items-center rounded-md bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">{label}</span>;
 }
 
 // ══════════════════════════════════════════════════════════════════
@@ -243,7 +242,12 @@ export default function AdminPlansPage() {
     finally { setLoading(false); }
   }, [supabase]);
 
-  useEffect(() => { fetchPlans(); }, [fetchPlans]);
+  useEffect(() => {
+    const taskId = window.setTimeout(() => {
+      void fetchPlans();
+    }, 0);
+    return () => window.clearTimeout(taskId);
+  }, [fetchPlans]);
 
   // ── Save Plan ─────────────────────────────────────────────────
   const handleSave = useCallback(async (data: PlanFormData) => {
@@ -324,7 +328,7 @@ export default function AdminPlansPage() {
           </div>
           <div>
             <p className={cn("text-sm font-medium", plan.is_active ? "text-foreground" : "text-muted-foreground/60")}>{plan.name}</p>
-            <p className="text-[10px] text-muted-foreground/50">Sort: {plan.sort_order}</p>
+            <p className="text-xs text-muted-foreground">Sort: {plan.sort_order}</p>
           </div>
         </div>
       );
@@ -377,7 +381,6 @@ export default function AdminPlansPage() {
 
   // ── Mobile card renderer ─────────────────────────────────────
   const renderMobileCard = useCallback((plan: PlanRecord) => {
-    const isPremiumOrEnterprise = plan.name.toLowerCase().includes("premium") || plan.name.toLowerCase().includes("enterprise");
     return (
       <AdminMobileRecordCard
         primary={<span className={plan.is_active ? "" : "text-muted-foreground/60"}>{plan.name}</span>}
@@ -393,7 +396,7 @@ export default function AdminPlansPage() {
         ]}
         actions={
           <button type="button" onClick={() => handleOpenActionSheet(plan)}
-            className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-primary text-primary-foreground px-3 py-2 text-xs font-medium min-h-11 hover:bg-primary/90 transition-colors">
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-[10px] bg-primary px-4 text-sm font-medium text-white shadow-sm shadow-primary/20 transition-all hover:-translate-y-0.5 hover:bg-primary/90 hover:shadow-md">
             <ExternalLink className="size-3.5" /> Manage
           </button>
         }
@@ -434,9 +437,18 @@ export default function AdminPlansPage() {
         />
       )}
 
-      <PlanFormDialog open={formOpen} onOpenChange={(o) => { if (!o) { setFormOpen(false); setEditingPlan(null); } }}
-        initialData={editingPlan ? (() => { const { id, created_at, updated_at, businesses_count, ...data } = editingPlan; return data; })() : null}
-        onSave={handleSave} loading={saving} />
+      {formOpen && (
+        <PlanFormDialog open onOpenChange={(o) => { if (!o) { setFormOpen(false); setEditingPlan(null); } }}
+          initialData={editingPlan ? (() => {
+            const { id, created_at, updated_at, businesses_count, ...data } = editingPlan;
+            void id;
+            void created_at;
+            void updated_at;
+            void businesses_count;
+            return data;
+          })() : null}
+          onSave={handleSave} loading={saving} />
+      )}
 
       <ConfirmDialog open={disableTarget !== null} onOpenChange={() => setDisableTarget(null)} onConfirm={handleToggleActive}
         title={disableTarget?.is_active ? "Disable Plan" : "Enable Plan"}

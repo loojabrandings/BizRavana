@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import {
@@ -396,8 +396,6 @@ async function fetchLocalDeliveryStats(
     (d) => !d.order_id || validOrderIds.has(String(d.order_id)),
   );
 
-  const existingOrderIds = new Set(filteredDeliveries.map((d) => d.order_id).filter(Boolean));
-
   // ── 2. Also fetch orders that have waybill_id but no delivery record ──
   // Only fetch orders that were dispatched through THIS provider.
   const { data: ordersWithWaybills } = await supabase
@@ -495,7 +493,7 @@ async function fetchLocalDeliveryStats(
     .filter((d) => d.order_id)
     .map((d) => d.order_id!);
 
-  let orderNameMap = new Map<string, { order_number: string; customer_name: string }>();
+  const orderNameMap = new Map<string, { order_number: string; customer_name: string }>();
   if (deliveryOrderIds.length > 0) {
     const { data: orders } = await supabase
       .from("orders")
@@ -560,6 +558,7 @@ export default function CourierPage() {
   const [activeTab, setActiveTab] = useState<"orders" | "finance">("orders");
 
   const [providerLabel, setProviderLabel] = useState<string | null>(null);
+  const [providerId, setProviderId] = useState<string | null>(null);
   const [connected, setConnected] = useState(false);
   const [statusBreakdown, setStatusBreakdown] = useState<CourierStatusBreakdown[]>([]);
   const [recentActivity, setRecentActivity] = useState<CourierRecentActivity[]>([]);
@@ -573,12 +572,6 @@ export default function CourierPage() {
 
   /** Local type alias for the merged breakdown that includes a category. */
   type StatusWithCategory = CourierStatusBreakdown & { category: StatusCategory };
-
-  // Refs to persist config across re-renders
-  const configRef = useRef<{ providerId: string | null; credentials: Record<string, string> }>({
-    providerId: null,
-    credentials: {},
-  });
 
   // ── Fetch all data ─────────────────────────────────────────────
   const fetchData = useCallback(async (options?: { isRefresh?: boolean; allowApiSync?: boolean }) => {
@@ -598,24 +591,20 @@ export default function CourierPage() {
       const config = await loadCourierConfig();
       if (!config?.provider) {
         setProviderLabel(null);
+        setProviderId(null);
         setConnected(false);
         setStatusBreakdown([]);
         setRecentActivity([]);
         setTotalOrders(0);
         setApiStatuses([]);
-        configRef.current = { providerId: null, credentials: {} };
         console.log("[CourierPage] No courier configured — clearing store");
         // Clear shared store so the dashboard doesn't show stale counts
         useCourierStore.getState().clear();
         return;
       }
 
-      configRef.current = {
-        providerId: config.provider,
-        credentials: config.credentials,
-      };
-
       setProviderLabel(config.providerLabel);
+      setProviderId(config.provider);
       setConnected(true);
 
       const supabase = createClient();
@@ -693,20 +682,23 @@ export default function CourierPage() {
 
   // ── Load on mount ──────────────────────────────────────────────
   useEffect(() => {
-    const cached = useCourierStore.getState();
-    const age = cached.lastUpdated
-      ? Date.now() - new Date(cached.lastUpdated).getTime()
-      : Infinity;
-    const isStale = !cached.lastUpdated || age >= CACHE_TTL_MS;
-    console.log(
-      `[CourierPage] Mount: lastUpdated=${cached.lastUpdated}, ` +
-      `age=${age}ms, TTL=${CACHE_TTL_MS}ms, isStale=${isStale}, ` +
-      `allowApiSync=${isStale}`
-    );
-    // When the cache is fresh, skip the heavy API calls (syncDeliveryStatuses,
-    // fetchDashboard) but still run the lightweight DB queries so component
-    // state (connected, statusBreakdown, recentActivity, etc.) gets hydrated.
-    fetchData({ isRefresh: false, allowApiSync: isStale });
+    const taskId = window.setTimeout(() => {
+      const cached = useCourierStore.getState();
+      const age = cached.lastUpdated
+        ? Date.now() - new Date(cached.lastUpdated).getTime()
+        : Infinity;
+      const isStale = !cached.lastUpdated || age >= CACHE_TTL_MS;
+      console.log(
+        `[CourierPage] Mount: lastUpdated=${cached.lastUpdated}, ` +
+        `age=${age}ms, TTL=${CACHE_TTL_MS}ms, isStale=${isStale}, ` +
+        `allowApiSync=${isStale}`
+      );
+      // When the cache is fresh, skip the heavy API calls (syncDeliveryStatuses,
+      // fetchDashboard) but still run the lightweight DB queries so component
+      // state (connected, statusBreakdown, recentActivity, etc.) gets hydrated.
+      void fetchData({ isRefresh: false, allowApiSync: isStale });
+    }, 0);
+    return () => window.clearTimeout(taskId);
   }, [fetchData]);
 
   // ── Handle refresh ─────────────────────────────────────────────
@@ -718,7 +710,7 @@ export default function CourierPage() {
   // ── Active statuses to display ─────────────────────────────────
   const activeStatuses = useMemo((): StatusWithCategory[] => {
     const source = statusBreakdown.length > 0 ? statusBreakdown : apiStatuses;
-    const config = getStatusDisplayConfig(configRef.current.providerId);
+    const config = getStatusDisplayConfig(providerId);
     const merged = mergeWithStatusDisplayConfig(source, config);
     // The "To Be Delivered" card uses the direct orders-table count
     // (dispatched but not yet delivered) rather than the status-match count.
@@ -727,7 +719,7 @@ export default function CourierPage() {
     return merged.map((s) =>
       s.id === "to_be_delivered" ? { ...s, count: activeOrders } : s,
     );
-  }, [statusBreakdown, apiStatuses, activeOrders]);
+  }, [statusBreakdown, apiStatuses, activeOrders, providerId]);
 
   const formatRatio = useCallback(
     (count: number) => {
@@ -1133,7 +1125,7 @@ export default function CourierPage() {
                   onMouseEnter={() => setHoveredCard(status.id)}
                   onMouseLeave={() => setHoveredCard(null)}
                   className={cn(
-                    "group relative overflow-hidden rounded-2xl glass-card p-3.5",
+                    "group relative overflow-hidden rounded-xl glass-card p-3.5",
                     "transition-all duration-200 ease-out",
                     "hover:shadow-md hover:border-primary/15",
                     "active:scale-[0.97]",
@@ -1197,7 +1189,7 @@ export default function CourierPage() {
       {/* RECENT ACTIVITY                                           */}
       {/* ══════════════════════════════════════════════════════════ */}
       <motion.div variants={itemVariants}>
-        <div className="glass-card overflow-hidden rounded-2xl">
+        <div className="glass-card overflow-hidden rounded-xl">
           {/* Header */}
           <div className="flex items-center justify-between border-b border-border/50 px-5 py-4">
             <div className="flex items-center gap-2.5">
@@ -1241,7 +1233,7 @@ export default function CourierPage() {
                   </thead>
                   <tbody className="divide-y divide-border/30">
                     {recentActivity.map((item, idx) => {
-                      const cat = getCategoryForStatus(item.status, configRef.current.providerId);
+                      const cat = getCategoryForStatus(item.status, providerId);
                       const c = categoryStyle(cat);
                       return (
                         <tr
@@ -1265,7 +1257,7 @@ export default function CourierPage() {
                               )}
                             >
                               <span className={cn("size-1.5 rounded-full", c.dot)} />
-                              {getDisplayStatusLabel(item.status, configRef.current.providerId)}
+                              {getDisplayStatusLabel(item.status, providerId)}
                             </span>
                           </td>
                           <td className="px-5 py-3.5 text-muted-foreground">
@@ -1281,7 +1273,7 @@ export default function CourierPage() {
               {/* Mobile Cards */}
               <div className="divide-y divide-border/30 sm:hidden">
                 {recentActivity.map((item, idx) => {
-                  const cat = getCategoryForStatus(item.status, configRef.current.providerId);
+                  const cat = getCategoryForStatus(item.status, providerId);
                   const Icon = categoryIcon(cat);
                   const c = categoryStyle(cat);
                   return (
@@ -1304,11 +1296,11 @@ export default function CourierPage() {
                           </p>
                           <span
                             className={cn(
-                              "rounded-full px-2 py-0.5 text-[11px] font-semibold",
+                              "rounded-full px-2 py-0.5 text-xs font-semibold",
                               c.badge,
                             )}
                           >
-                            {getDisplayStatusLabel(item.status, configRef.current.providerId)}
+                            {getDisplayStatusLabel(item.status, providerId)}
                           </span>
                         </div>
                         <p className="mt-0.5 text-[13px] text-muted-foreground">
@@ -1341,7 +1333,7 @@ export default function CourierPage() {
       {/* ══════════════════════════════════════════════════════════ */}
       {activeStatuses.length > 0 && (
         <motion.div variants={itemVariants}>
-          <div className="glass-card overflow-hidden rounded-2xl">
+          <div className="glass-card overflow-hidden rounded-xl">
             {/* Header */}
             <div className="border-b border-border/50 px-5 py-4">
               <div className="flex items-center gap-2.5">

@@ -1,16 +1,13 @@
 import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
+import { validateUploadedFile } from "@/lib/file-signature";
 import { getAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
 
 const BUCKET = "bug-report-screenshots";
-const ALLOWED_TYPES = new Map([
-  ["image/jpeg", "jpg"],
-  ["image/png", "png"],
-  ["image/webp", "webp"],
-]);
+const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"] as const;
 
 function json(body: object, status = 200) {
   return NextResponse.json(body, {
@@ -72,15 +69,24 @@ export async function POST(request: Request) {
   let screenshotPath: string | null = null;
 
   if (screenshot instanceof File && screenshot.size > 0) {
-    const extension = ALLOWED_TYPES.get(screenshot.type);
-    if (!extension || screenshot.size > 5 * 1024 * 1024) {
-      return json({ error: "Screenshot must be JPG, PNG, or WEBP and under 5 MB." }, 400);
+    let validatedScreenshot: Awaited<ReturnType<typeof validateUploadedFile>>;
+    try {
+      validatedScreenshot = await validateUploadedFile(
+        screenshot,
+        ALLOWED_TYPES,
+        5 * 1024 * 1024,
+      );
+    } catch (error) {
+      return json(
+        { error: error instanceof Error ? error.message : "Invalid screenshot file." },
+        400,
+      );
     }
-    screenshotPath = `${profile.business_id}/${user.id}/${reportId}.${extension}`;
+    screenshotPath = `${profile.business_id}/${user.id}/${reportId}.${validatedScreenshot.extension}`;
     const { error: uploadError } = await admin.storage
       .from(BUCKET)
-      .upload(screenshotPath, screenshot, {
-        contentType: screenshot.type,
+      .upload(screenshotPath, validatedScreenshot.bytes, {
+        contentType: validatedScreenshot.mime,
         upsert: false,
       });
     if (uploadError) return json({ error: "Screenshot upload failed." }, 500);

@@ -160,7 +160,7 @@ function ActivityDetailDialog({ open, onOpenChange, log }: {
                 <span className="text-xs font-medium text-muted-foreground/70 uppercase tracking-wider shrink-0 min-w-[100px]">{key.replace(/_/g, " ")}</span>
                 <span className="text-sm text-foreground text-right break-all">{value === null ? <span className="text-muted-foreground/50 italic">—</span> : typeof value === "object" ? <pre className="text-xs text-muted-foreground/80 text-right whitespace-pre-wrap font-mono">{JSON.stringify(value, null, 2)}</pre> : String(value)}</span></div>)}</div></div>}
           <details className="group"><summary className="flex cursor-pointer items-center gap-1.5 text-xs text-muted-foreground/50 hover:text-muted-foreground/70 transition-colors"><ChevronDown className="size-3 group-open:rotate-180 transition-transform" />Raw JSON</summary>
-            <pre className="mt-2 rounded-lg bg-muted/20 p-3 text-[11px] text-muted-foreground/60 font-mono overflow-x-auto whitespace-pre-wrap">{JSON.stringify(log.details, null, 2)}</pre></details></div>
+            <pre className="mt-2 overflow-x-auto whitespace-pre-wrap rounded-lg bg-muted/20 p-3 font-mono text-xs text-muted-foreground">{JSON.stringify(log.details, null, 2)}</pre></details></div>
       </DialogContent>
     </Dialog>
   );
@@ -262,7 +262,12 @@ export default function AdminActivityLogPage() {
     finally { setLoading(false); }
   }, [supabase]);
 
-  useEffect(() => { fetchLogs(); }, [fetchLogs]);
+  useEffect(() => {
+    const taskId = window.setTimeout(() => {
+      void fetchLogs();
+    }, 0);
+    return () => window.clearTimeout(taskId);
+  }, [fetchLogs]);
 
   // ── Stats ──────────────────────────────────────────────────────
   const stats: StatsSummary = useMemo(() => ({
@@ -304,7 +309,7 @@ export default function AdminActivityLogPage() {
   const columns: Column<ActivityLogRow>[] = useMemo(() => [
     { header: "Timestamp", className: "w-48", accessor: (log) => (
       <div className="flex flex-col"><span className="text-sm text-foreground tabular-nums">{new Date(log.created_at).toLocaleDateString()}</span>
-        <span className="text-[10px] text-muted-foreground/60 tabular-nums">{new Date(log.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span></div>
+        <span className="text-xs tabular-nums text-muted-foreground">{new Date(log.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span></div>
     )},
     { header: "Action", accessor: (log) => <ActionBadge action={log.action} /> },
     { header: "Admin", hideBelow: "sm", accessor: (log) => <span className="text-sm text-foreground/80">{log.admin_name || <span className="text-muted-foreground/50 italic">Unknown</span>}</span> },
@@ -361,7 +366,7 @@ export default function AdminActivityLogPage() {
         ]}
         actions={
           <button type="button" onClick={() => setSelectedLog(log)}
-            className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-input bg-background px-3 py-2 text-xs font-medium min-h-11 hover:bg-accent transition-colors">
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-[10px] border border-border bg-transparent px-4 text-sm font-medium text-foreground shadow-xs transition-all hover:-translate-y-0.5 hover:border-primary/30 hover:bg-muted hover:shadow-sm">
             <FileText className="size-3.5" /> View Details
           </button>
         }

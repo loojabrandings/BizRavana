@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { BarChart3 } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-media-query";
 import { PageHeader } from "@/components/shared/page-header";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";

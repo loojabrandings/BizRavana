@@ -45,7 +45,7 @@ function MobileNavItemLink({ item }: { item: MobileNavItem }) {
         "transition-all duration-150",
         active
           ? "text-primary"
-          : "text-muted-foreground/60 hover:text-muted-foreground/85",
+          : "text-muted-foreground hover:text-foreground",
       )}
       aria-current={active ? "page" : undefined}
       aria-label={item.label}
@@ -60,16 +60,16 @@ function MobileNavItemLink({ item }: { item: MobileNavItem }) {
           "size-[21px] shrink-0 transition-colors duration-150",
           active
             ? "text-primary"
-            : "text-muted-foreground/55 group-hover:text-muted-foreground/75",
+            : "text-muted-foreground group-hover:text-foreground",
         )}
         aria-hidden
       />
       <span
         className={cn(
-          "max-w-full truncate text-[10px] font-medium leading-tight transition-colors duration-150",
+          "max-w-full truncate text-xs font-medium leading-tight transition-colors duration-150",
           active
             ? "text-primary font-semibold"
-            : "text-muted-foreground/60",
+            : "text-muted-foreground",
         )}
       >
         {item.label}
@@ -88,7 +88,7 @@ function MobileNavQuickAction({ onTap, isOpen }: { onTap: () => void; isOpen?: b
         {/* Invisible text for alignment */}
         <span className="size-[21px]" aria-hidden />
         {/* Translucent hidden label to keep column balanced */}
-        <span className="invisible text-[10px] font-medium leading-tight">
+        <span className="invisible text-xs font-medium leading-tight">
           Action
         </span>
       </div>
@@ -130,7 +130,7 @@ function MobileNavDrawerButton({ item, onTap, isOpen }: { item: MobileNavItem; o
       className={cn(
         "group relative flex min-w-0 min-h-[44px] w-full flex-col items-center justify-center gap-0.5 px-1",
         "transition-all duration-150",
-        "text-muted-foreground/60 hover:text-muted-foreground/85",
+        "text-muted-foreground hover:text-foreground",
       )}
       aria-label={item.label}
       aria-expanded={isOpen ?? false}
@@ -138,10 +138,10 @@ function MobileNavDrawerButton({ item, onTap, isOpen }: { item: MobileNavItem; o
       aria-haspopup="dialog"
     >
       <item.icon
-        className="size-[21px] shrink-0 text-muted-foreground/55 group-hover:text-muted-foreground/75 transition-colors duration-150"
+        className="size-[21px] shrink-0 text-muted-foreground group-hover:text-foreground transition-colors duration-150"
         aria-hidden
       />
-      <span className="max-w-full truncate text-[10px] font-medium leading-tight text-muted-foreground/60">
+      <span className="max-w-full truncate text-xs font-medium leading-tight text-muted-foreground">
         {item.label}
       </span>
     </button>

@@ -1,5 +1,4 @@
-import { Button } from "@/components/ui/button";
-import Link from "next/link";
+import { Button, ButtonLink } from "@/components/ui/button";
 
 interface PageHeaderProps {
   title: string;
@@ -15,7 +14,7 @@ export function PageHeader({ title, description, action }: PageHeaderProps) {
   return (
     <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
       <div className="space-y-1">
-        <h1 className="text-xl font-semibold tracking-tight">{title}</h1>
+        <h1 className="text-xl font-semibold leading-[1.25] tracking-tight sm:text-2xl">{title}</h1>
         {description && (
           <p className="text-sm text-muted-foreground">{description}</p>
         )}
@@ -23,14 +22,14 @@ export function PageHeader({ title, description, action }: PageHeaderProps) {
       {action && (
         <>
           {action.href ? (
-            <Link
+            <ButtonLink
               href={action.href}
-              className="inline-flex h-7 items-center justify-center gap-1.5 rounded-lg bg-primary px-2.5 text-sm font-medium text-primary-foreground transition-all hover:bg-primary/80 active:translate-y-px"
+              size="md"
             >
               {action.label}
-            </Link>
+            </ButtonLink>
           ) : (
-            <Button size="sm" onClick={action.onClick}>
+            <Button size="md" onClick={action.onClick}>
               {action.label}
             </Button>
           )}

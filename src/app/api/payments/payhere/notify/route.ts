@@ -5,9 +5,14 @@ import {
   getPayHereConfig,
   signaturesMatch,
 } from "@/lib/payhere";
+import { consumeRateLimit, getClientAddress } from "@/lib/rate-limit";
 import type { Json } from "@/types/database";
 
 export const runtime = "nodejs";
+
+const MAX_CALLBACK_BYTES = 64 * 1024;
+const CALLBACK_RATE_LIMIT = 120;
+const CALLBACK_RATE_WINDOW_SECONDS = 60;
 
 type PayHereNonSuccessStatus =
   | "pending"
@@ -22,18 +27,23 @@ const STATUS_MAP: Record<number, PayHereNonSuccessStatus> = {
   [-3]: "chargedback",
 };
 
-function textResponse(message: string, status: number) {
+function textResponse(
+  message: string,
+  status: number,
+  extraHeaders?: HeadersInit,
+) {
+  const headers = new Headers(extraHeaders);
+  headers.set("Cache-Control", "no-store");
+  headers.set("Content-Type", "text/plain; charset=utf-8");
+
   return new NextResponse(message, {
     status,
-    headers: {
-      "Cache-Control": "no-store",
-      "Content-Type": "text/plain; charset=utf-8",
-    },
+    headers,
   });
 }
 
-function formValue(formData: FormData, key: string) {
-  return String(formData.get(key) ?? "").trim();
+function formValue(formData: FormData, key: string, maxLength = 500) {
+  return String(formData.get(key) ?? "").trim().slice(0, maxLength);
 }
 
 function safePayload(values: {
@@ -69,12 +79,27 @@ function safePayload(values: {
 }
 
 export async function POST(request: Request) {
-  let config;
+  const contentLength = Number(request.headers.get("content-length"));
+  if (Number.isFinite(contentLength) && contentLength > MAX_CALLBACK_BYTES) {
+    return textResponse("Notification too large", 413);
+  }
+
+  let rateLimit;
   try {
-    config = getPayHereConfig();
-  } catch (error) {
-    console.error("PayHere configuration error:", error);
-    return textResponse("Configuration error", 503);
+    rateLimit = await consumeRateLimit({
+      scope: "payhere-callback-ip",
+      discriminator: getClientAddress(request),
+      limit: CALLBACK_RATE_LIMIT,
+      windowSeconds: CALLBACK_RATE_WINDOW_SECONDS,
+    });
+  } catch {
+    return textResponse("Temporary error", 503);
+  }
+
+  if (!rateLimit.allowed) {
+    return textResponse("Too many notifications", 429, {
+      "Retry-After": String(rateLimit.retryAfterSeconds),
+    });
   }
 
   let formData: FormData;
@@ -85,21 +110,21 @@ export async function POST(request: Request) {
   }
 
   const values = {
-    merchantId: formValue(formData, "merchant_id"),
-    orderId: formValue(formData, "order_id"),
-    payherePaymentId: formValue(formData, "payment_id"),
-    amount: formValue(formData, "payhere_amount"),
-    currency: formValue(formData, "payhere_currency"),
-    statusCode: formValue(formData, "status_code"),
+    merchantId: formValue(formData, "merchant_id", 100),
+    orderId: formValue(formData, "order_id", 200),
+    payherePaymentId: formValue(formData, "payment_id", 200),
+    amount: formValue(formData, "payhere_amount", 50),
+    currency: formValue(formData, "payhere_currency", 10),
+    statusCode: formValue(formData, "status_code", 20),
     statusMessage: formValue(formData, "status_message"),
     method: formValue(formData, "method"),
     cardHolderName: formValue(formData, "card_holder_name"),
-    cardNo: formValue(formData, "card_no"),
-    cardExpiry: formValue(formData, "card_expiry"),
-    custom1: formValue(formData, "custom_1"),
-    custom2: formValue(formData, "custom_2"),
+    cardNo: formValue(formData, "card_no", 50),
+    cardExpiry: formValue(formData, "card_expiry", 20),
+    custom1: formValue(formData, "custom_1", 200),
+    custom2: formValue(formData, "custom_2", 200),
   };
-  const receivedSignature = formValue(formData, "md5sig");
+  const receivedSignature = formValue(formData, "md5sig", 64);
 
   if (
     !values.merchantId ||
@@ -110,6 +135,14 @@ export async function POST(request: Request) {
     !receivedSignature
   ) {
     return textResponse("Missing notification fields", 400);
+  }
+
+  let config;
+  try {
+    config = getPayHereConfig();
+  } catch (error) {
+    console.error("PayHere configuration error:", error);
+    return textResponse("Configuration error", 503);
   }
 
   const admin = getAdminClient();
@@ -156,50 +189,16 @@ export async function POST(request: Request) {
     !currencyMatches ||
     !signatureMatches
   ) {
-    const rejectionDetails: Json = {
-      payment_id: payment.id,
+    // Invalid public callbacks must never mutate payment or audit state. A
+    // guessed order ID plus an invalid signature previously allowed an attacker
+    // to mark a legitimate checkout invalid and create unbounded audit rows.
+    console.warn("Rejected PayHere notification", {
       order_id: values.orderId,
-      business_id: payment.business_id,
       merchant_matches: merchantMatches,
       amount_matches: amountMatches,
       currency_matches: currencyMatches,
       signature_matches: signatureMatches,
-      received_amount: values.amount,
-      received_currency: values.currency,
-    };
-
-    const { error: logError } = await admin
-      .from("admin_activity_log")
-      .insert({
-        admin_id: null,
-        action: "payhere_notification_rejected",
-        target_type: "payhere_payment",
-        target_id: payment.id,
-        details: rejectionDetails,
-      });
-
-    if (logError) {
-      console.error("Could not record rejected PayHere notification:", logError);
-    }
-
-    if (!payment.activated_at) {
-      const { error: invalidUpdateError } = await admin
-        .from("payhere_payments")
-        .update({
-          status: "invalid",
-          status_message: "Rejected callback validation",
-          last_notified_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", payment.id);
-
-      if (invalidUpdateError) {
-        console.error(
-          "Could not mark PayHere notification invalid:",
-          invalidUpdateError,
-        );
-      }
-    }
+    });
 
     return textResponse("Invalid notification", 400);
   }

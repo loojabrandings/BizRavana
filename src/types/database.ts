@@ -3,6 +3,21 @@ export type Json = string | number | boolean | null | { [key: string]: Json | un
 export interface Database {
   public: {
     Tables: {
+      request_rate_limits: {
+        Row: {
+          scope: string; key_hash: string; window_started_at: string;
+          request_count: number; updated_at: string;
+        };
+        Insert: {
+          scope: string; key_hash: string; window_started_at?: string;
+          request_count?: number; updated_at?: string;
+        };
+        Update: {
+          scope?: string; key_hash?: string; window_started_at?: string;
+          request_count?: number; updated_at?: string;
+        };
+        Relationships: [];
+      };
       subscription_plans: {
         Row: {
           id: string; name: string; monthly_price: number;
@@ -569,16 +584,82 @@ export interface Database {
           id: string; business_id: string; user_id: string;
           type: string; title: string; message: string | null;
           data: Json; is_read: boolean; created_at: string;
+          source: string; priority: string; category: string;
+          expires_at: string | null; action_label: string | null;
+          action_url: string | null; broadcast_id: string | null;
         };
         Insert: {
           id?: string; business_id: string; user_id: string;
           type: string; title: string; message?: string | null;
           data?: Json; is_read?: boolean; created_at?: string;
+          source?: string; priority?: string; category?: string;
+          expires_at?: string | null; action_label?: string | null;
+          action_url?: string | null; broadcast_id?: string | null;
         };
         Update: {
           id?: string; business_id?: string; user_id?: string;
           type?: string; title?: string; message?: string | null;
           data?: Json; is_read?: boolean; created_at?: string;
+          source?: string; priority?: string; category?: string;
+          expires_at?: string | null; action_label?: string | null;
+          action_url?: string | null; broadcast_id?: string | null;
+        };
+        Relationships: [];
+      };
+      notification_broadcasts: {
+        Row: {
+          id: string; title: string; message: string; category: string;
+          priority: string; source: string; audience_type: string;
+          audience_config: Json; action_label: string | null;
+          action_url: string | null; status: string;
+          scheduled_at: string | null; sent_at: string | null;
+          expires_at: string | null; recipient_count: number;
+          read_count: number; created_by: string | null;
+          created_at: string; updated_at: string;
+        };
+        Insert: {
+          id?: string; title: string; message: string; category?: string;
+          priority?: string; source?: string; audience_type?: string;
+          audience_config?: Json; action_label?: string | null;
+          action_url?: string | null; status?: string;
+          scheduled_at?: string | null; sent_at?: string | null;
+          expires_at?: string | null; recipient_count?: number;
+          read_count?: number; created_by?: string | null;
+          created_at?: string; updated_at?: string;
+        };
+        Update: {
+          id?: string; title?: string; message?: string; category?: string;
+          priority?: string; source?: string; audience_type?: string;
+          audience_config?: Json; action_label?: string | null;
+          action_url?: string | null; status?: string;
+          scheduled_at?: string | null; sent_at?: string | null;
+          expires_at?: string | null; recipient_count?: number;
+          read_count?: number; created_by?: string | null;
+          created_at?: string; updated_at?: string;
+        };
+        Relationships: [];
+      };
+      notification_recipients: {
+        Row: {
+          id: string; broadcast_id: string | null;
+          notification_id: string | null; business_id: string;
+          user_id: string | null; read_at: string | null;
+          delivered_at: string; dismissed_at: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string; broadcast_id?: string | null;
+          notification_id?: string | null; business_id: string;
+          user_id?: string | null; read_at?: string | null;
+          delivered_at?: string; dismissed_at?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string; broadcast_id?: string | null;
+          notification_id?: string | null; business_id?: string;
+          user_id?: string | null; read_at?: string | null;
+          delivered_at?: string; dismissed_at?: string | null;
+          created_at?: string;
         };
         Relationships: [];
       };
@@ -600,7 +681,7 @@ export interface Database {
       message_templates: {
         Row: {
           id: string; business_id: string;
-          template_context: "order_table_whatsapp" | "order_preview_whatsapp" | "quotation_preview_whatsapp";
+          template_context: "order_whatsapp" | "order_table_whatsapp" | "order_preview_whatsapp" | "quotation_preview_whatsapp";
           title: string; channel: "whatsapp"; content: string;
           is_default: boolean; is_active: boolean; sort_order: number;
           created_by: string | null; created_at: string;
@@ -609,7 +690,7 @@ export interface Database {
         };
         Insert: {
           id?: string; business_id: string;
-          template_context: "order_table_whatsapp" | "order_preview_whatsapp" | "quotation_preview_whatsapp";
+          template_context: "order_whatsapp" | "order_table_whatsapp" | "order_preview_whatsapp" | "quotation_preview_whatsapp";
           title: string; channel?: "whatsapp"; content: string;
           is_default?: boolean; is_active?: boolean; sort_order?: number;
           created_by?: string | null; created_at?: string;
@@ -618,7 +699,7 @@ export interface Database {
         };
         Update: {
           id?: string; business_id?: string;
-          template_context?: "order_table_whatsapp" | "order_preview_whatsapp" | "quotation_preview_whatsapp";
+          template_context?: "order_whatsapp" | "order_table_whatsapp" | "order_preview_whatsapp" | "quotation_preview_whatsapp";
           title?: string; channel?: "whatsapp"; content?: string;
           is_default?: boolean; is_active?: boolean; sort_order?: number;
           created_by?: string | null; created_at?: string;
@@ -696,6 +777,27 @@ export interface Database {
     };
     Views: Record<string, never>;
     Functions: {
+      consume_request_rate_limit: {
+        Args: {
+          p_scope: string;
+          p_key_hash: string;
+          p_limit: number;
+          p_window_seconds: number;
+        };
+        Returns: Array<{
+          allowed: boolean;
+          remaining: number;
+          retry_after_seconds: number;
+        }>;
+      };
+      cleanup_request_rate_limits: {
+        Args: Record<string, never>;
+        Returns: number;
+      };
+      deliver_notification_broadcast: {
+        Args: { p_broadcast_id: string };
+        Returns: Json;
+      };
       get_user_emails: {
         Args: Record<string, never>;
         Returns: Array<{ id: string; email: string }>;
@@ -753,6 +855,10 @@ export interface Database {
           p_delete_root?: boolean;
         };
         Returns: Json;
+      };
+      soft_delete_message_template: {
+        Args: { p_template_id: string };
+        Returns: boolean;
       };
     };
     Enums: Record<string, never>;

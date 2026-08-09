@@ -62,7 +62,6 @@ async function apiFetch<T>(
  * When context is omitted, returns templates for ALL contexts.
  */
 export async function fetchTemplates(
-  businessId: string,
   context?: TemplateContext,
 ): Promise<MessageTemplate[]> {
   const params = new URLSearchParams();
@@ -73,19 +72,17 @@ export async function fetchTemplates(
 /**
  * Fetch all active templates for a business across all contexts.
  */
-export async function fetchAllTemplates(businessId: string): Promise<MessageTemplate[]> {
-  return fetchTemplates(businessId);
+export async function fetchAllTemplates(): Promise<MessageTemplate[]> {
+  return fetchTemplates();
 }
 
 /**
  * Create a new template.
  */
 export async function createTemplate(
-  businessId: string,
   context: TemplateContext,
   title: string,
   content: string,
-  userId?: string | null,
 ): Promise<MessageTemplate> {
   return apiFetch<MessageTemplate>(API_BASE, {
     method: "POST",
@@ -93,7 +90,6 @@ export async function createTemplate(
       template_context: context,
       title,
       content,
-      userId,
     }),
   });
 }
@@ -105,11 +101,10 @@ export async function updateTemplate(
   id: string,
   title: string,
   content: string,
-  userId?: string | null,
 ): Promise<MessageTemplate> {
   return apiFetch<MessageTemplate>(API_BASE, {
     method: "PATCH",
-    body: JSON.stringify({ id, title, content, userId }),
+    body: JSON.stringify({ id, title, content }),
   });
 }
 
@@ -118,13 +113,10 @@ export async function updateTemplate(
  */
 export async function setDefaultTemplate(
   id: string,
-  businessId: string,
-  context: TemplateContext,
-  userId?: string | null,
 ): Promise<void> {
   await apiFetch<void>(API_BASE, {
     method: "PUT",
-    body: JSON.stringify({ id, template_context: context, userId }),
+    body: JSON.stringify({ id }),
   });
 }
 
@@ -133,12 +125,10 @@ export async function setDefaultTemplate(
  */
 export async function deleteTemplate(
   id: string,
-  userId?: string | null,
 ): Promise<void> {
   const params = new URLSearchParams({ id });
   await apiFetch<void>(`${API_BASE}?${params.toString()}`, {
     method: "DELETE",
-    body: JSON.stringify({ userId }),
   });
 }
 
@@ -147,14 +137,11 @@ export async function deleteTemplate(
  */
 export async function duplicateTemplate(
   template: MessageTemplate,
-  userId?: string | null,
 ): Promise<MessageTemplate> {
   return createTemplate(
-    template.business_id,
     template.template_context,
     `${template.title} (Copy)`,
     template.content,
-    userId,
   );
 }
 
@@ -174,14 +161,4 @@ export async function getUserBusinessId(): Promise<string | null> {
     .single();
 
   return data?.business_id ?? null;
-}
-
-/**
- * Get the current user's ID from session.
- */
-export async function getCurrentUserId(): Promise<string | null> {
-  const { createClient } = await import("./client");
-  const supabase = createClient();
-  const { data: { session } } = await supabase.auth.getSession();
-  return session?.user?.id ?? null;
 }

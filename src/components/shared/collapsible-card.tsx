@@ -17,7 +17,7 @@ const collapseVariants = {
 function CardBadge({ children, variant = "default" }: { children: React.ReactNode; variant?: "default" | "success" | "warning" | "info" }) {
   return (
     <span className={cn(
-      "inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider",
+      "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold",
       variant === "default" && "bg-muted text-muted-foreground/60",
       variant === "success" && "bg-success/10 text-success",
       variant === "warning" && "bg-warning/10 text-warning",

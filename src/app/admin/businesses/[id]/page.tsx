@@ -261,6 +261,7 @@ export default function BusinessDetailPage() {
   const businessId = params.id as string;
 
   const [loading, setLoading] = useState(true);
+  const [referenceTime] = useState(Date.now);
   const [business, setBusiness] = useState<BusinessDetail | null>(null);
   const [owner, setOwner] = useState<OwnerProfile | null>(null);
   const [plan, setPlan] = useState<PlanInfo | null>(null);
@@ -450,7 +451,10 @@ export default function BusinessDetailPage() {
   }, [businessId, supabase, router]);
 
   useEffect(() => {
-    fetchData();
+    const taskId = window.setTimeout(() => {
+      void fetchData();
+    }, 0);
+    return () => window.clearTimeout(taskId);
   }, [fetchData]);
 
   // ─── Danger Zone Actions ──────────────────────────────────
@@ -607,7 +611,7 @@ export default function BusinessDetailPage() {
 
   const daysRemaining = (dateStr: string | null): number | null => {
     if (!dateStr) return null;
-    const diff = new Date(dateStr).getTime() - Date.now();
+    const diff = new Date(dateStr).getTime() - referenceTime;
     return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
   };
 

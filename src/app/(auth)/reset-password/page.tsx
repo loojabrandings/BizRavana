@@ -181,8 +181,9 @@ function ResetPasswordForm() {
 
             <Button
               variant="gradient"
+              size="lg"
               onClick={() => router.push("/login")}
-              className="h-12 w-full rounded-xl text-sm font-semibold"
+              className="w-full"
             >
               Go to sign in
               <ArrowRight className="size-4" />
@@ -236,7 +237,7 @@ function ResetPasswordForm() {
                   <button
                     type="button"
                     onClick={() => setShowPassword((v) => !v)}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 rounded-md text-muted-foreground transition-colors hover:text-foreground"
+                    className="absolute right-1 top-1/2 inline-flex size-11 -translate-y-1/2 touch-manipulation items-center justify-center rounded-[10px] text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/45"
                     aria-label={showPassword ? "Hide password" : "Show password"}
                   >
                     {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
@@ -267,7 +268,7 @@ function ResetPasswordForm() {
                   <button
                     type="button"
                     onClick={() => setShowConfirmPassword((v) => !v)}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 rounded-md text-muted-foreground transition-colors hover:text-foreground"
+                    className="absolute right-1 top-1/2 inline-flex size-11 -translate-y-1/2 touch-manipulation items-center justify-center rounded-[10px] text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/45"
                     aria-label={showConfirmPassword ? "Hide password" : "Show password"}
                   >
                     {showConfirmPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
@@ -277,8 +278,9 @@ function ResetPasswordForm() {
 
               <Button
                 type="submit"
+                size="lg"
                 disabled={loading}
-                className="group btn-gradient btn-gradient-shadow h-12 w-full rounded-xl text-sm font-semibold text-primary-foreground transition-all hover:-translate-y-0.5 hover:btn-gradient-hover hover:shadow-xl disabled:translate-y-0"
+                className="w-full"
               >
                 {loading ? (
                   <>

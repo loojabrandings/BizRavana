@@ -13,14 +13,14 @@ import {
 } from "lucide-react";
 import { motion, useReducedMotion } from "framer-motion";
 import { createClient } from "@/lib/supabase/client";
-import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/formatters";
 import { getDateRange, dateFilterOptions } from "@/lib/date-utils";
 import { HeroStatCard, type HeroStatTrendBadge } from "@/components/dashboard/hero-stat-card";
 import { RankedBarList } from "@/components/charts/ranked-bar-list";
 import { DonutChart } from "@/components/charts/donut-chart";
 import { SectionCard } from "@/components/reports/section-card";
-import { Dropdown } from "@/components/ui/dropdown";
+import { DateFilterMenu } from "@/components/shared/date-filter-menu";
+import { DateRangePickerModal } from "@/components/shared/lazy-date-range-picker-modal";
 import { summarizeBy } from "@/lib/chart-utils";
 
 // ─── Animations ────────────────────────────────────────────────────
@@ -112,7 +112,7 @@ export function ExpensesAnalyticsContent() {
   const [dateFilter, setDateFilter] = useState<string>("this_month");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
-  const [customMode, setCustomMode] = useState(false);
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
 
   const [expenses, setExpenses] = useState<RawExpense[]>([]);
 
@@ -295,26 +295,13 @@ export function ExpensesAnalyticsContent() {
     (value: string | null) => {
       if (!value) return;
       if (value === "custom") {
-        setCustomMode(true);
+        setDatePickerOpen(true);
       } else {
-        setCustomMode(false);
         setDateFilter(value);
       }
     },
     [],
   );
-
-  const handleCalendarClick = useCallback(() => {
-    if (customMode) {
-      setCustomMode(false);
-      setDateFilter("this_month");
-      setDateFrom("");
-      setDateTo("");
-    } else {
-      setCustomMode(true);
-      setDateFilter("custom");
-    }
-  }, [customMode]);
 
   const avgExpense = totalExpensesCount > 0
     ? Math.round(totalExpenses / totalExpensesCount)
@@ -352,32 +339,25 @@ export function ExpensesAnalyticsContent() {
         variants={safeItemVariants}
         className="flex items-center justify-end gap-2"
       >
-        {!customMode ? (
-          <Dropdown
+        <div className="flex items-center gap-2">
+          <DateFilterMenu
             value={dateFilter}
-            onChange={handleDateChange}
-            options={dateFilterOptions.map((o) => ({ value: o.value, label: o.label }))}
-            label="Period"
-            size="default"
-            className="min-w-[130px] h-9 text-sm"
+            options={dateFilterOptions}
+            onSelect={handleDateChange}
           />
-        ) : (
-          <div className="flex items-center gap-2">
-            <div className="flex items-center gap-1.5">
-              <span className="text-sm font-medium text-muted-foreground uppercase tracking-wider">From</span>
-              <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)}
-                className="h-9 w-[140px] rounded-xl border border-input bg-background px-3 text-sm font-medium text-foreground shadow-xs outline-none transition-colors focus:border-ring focus:ring-[3px] focus:ring-ring/50 [color-scheme:light] dark:[color-scheme:dark]" aria-label="From date" />
-            </div>
-            <span className="text-sm text-muted-foreground">—</span>
-            <div className="flex items-center gap-1.5">
-              <span className="text-sm font-medium text-muted-foreground uppercase tracking-wider">To</span>
-              <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)}
-                className="h-9 w-[140px] rounded-xl border border-input bg-background px-3 text-sm font-medium text-foreground shadow-xs outline-none transition-colors focus:border-ring focus:ring-[3px] focus:ring-ring/50 [color-scheme:light] dark:[color-scheme:dark]" aria-label="To date" />
-            </div>
-            <button type="button" onClick={handleCalendarClick}
-              className="inline-flex h-9 items-center rounded-xl border border-input bg-background px-3 text-sm font-medium text-muted-foreground transition-all hover:bg-accent hover:text-accent-foreground active:scale-95">Done</button>
-          </div>
-        )}
+          <DateRangePickerModal
+            open={datePickerOpen}
+            onOpenChange={setDatePickerOpen}
+            from={dateFrom}
+            to={dateTo}
+            onApply={(f, t) => {
+              setDateFrom(f);
+              setDateTo(t);
+              setDateFilter("custom");
+              setDatePickerOpen(false);
+            }}
+          />
+        </div>
       </motion.div>
 
       {/* ─── Section 1: Total Expenses + Top Category Spend ────── */}
@@ -497,7 +477,7 @@ export function ExpensesAnalyticsContent() {
         variants={safeItemVariants}
         className="grid grid-cols-2 gap-3 sm:gap-5 sm:grid-cols-4"
       >
-        <div className="rounded-2xl glass-card p-3 sm:p-4 text-center">
+        <div className="rounded-xl glass-card p-3 sm:p-4 text-center">
           <div className="mx-auto mb-1.5 sm:mb-2 flex size-8 sm:size-9 items-center justify-center rounded-lg sm:rounded-xl bg-status-info-bg">
             <ReceiptText className="size-3.5 sm:size-4 text-primary" />
           </div>
@@ -507,7 +487,7 @@ export function ExpensesAnalyticsContent() {
           <p className="text-xs sm:text-sm text-muted-foreground mt-0.5 sm:mt-1">Total Expenses</p>
         </div>
 
-        <div className="rounded-2xl glass-card p-3 sm:p-4 text-center">
+        <div className="rounded-xl glass-card p-3 sm:p-4 text-center">
           <div className="mx-auto mb-1.5 sm:mb-2 flex size-8 sm:size-9 items-center justify-center rounded-lg sm:rounded-xl bg-status-warning-bg">
             <DollarSign className="size-3.5 sm:size-4 text-warning" />
           </div>
@@ -517,7 +497,7 @@ export function ExpensesAnalyticsContent() {
           <p className="text-xs sm:text-sm text-muted-foreground mt-0.5 sm:mt-1">Avg Cost Per Expense</p>
         </div>
 
-        <div className="rounded-2xl glass-card p-3 sm:p-4 text-center">
+        <div className="rounded-xl glass-card p-3 sm:p-4 text-center">
           <div className="mx-auto mb-1.5 sm:mb-2 flex size-8 sm:size-9 items-center justify-center rounded-lg sm:rounded-xl bg-status-success-bg">
             <Layers3 className="size-3.5 sm:size-4 text-success" />
           </div>
@@ -527,7 +507,7 @@ export function ExpensesAnalyticsContent() {
           <p className="text-xs sm:text-sm text-muted-foreground mt-0.5 sm:mt-1">Categories Used</p>
         </div>
 
-        <div className="rounded-2xl glass-card p-3 sm:p-4 text-center">
+        <div className="rounded-xl glass-card p-3 sm:p-4 text-center">
           <div className="mx-auto mb-1.5 sm:mb-2 flex size-8 sm:size-9 items-center justify-center rounded-lg sm:rounded-xl bg-status-danger-bg">
             <ArrowUpRight className="size-3.5 sm:size-4 text-destructive" />
           </div>

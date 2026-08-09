@@ -5,14 +5,23 @@ import { cn } from "@/lib/utils"
 function Card({
   className,
   size = "default",
+  variant = "base",
   ...props
-}: React.ComponentProps<"div"> & { size?: "default" | "sm" }) {
+}: React.ComponentProps<"div"> & {
+  size?: "default" | "sm"
+  variant?: "base" | "inset" | "elevated" | "solid"
+}) {
   return (
     <div
       data-slot="card"
       data-size={size}
+      data-variant={variant}
       className={cn(
-        "group/card flex flex-col gap-(--card-spacing) overflow-hidden rounded-xl bg-card py-(--card-spacing) text-sm text-card-foreground ring-1 ring-foreground/10 [--card-spacing:--spacing(4)] has-data-[slot=card-footer]:pb-0 has-[>img:first-child]:pt-0 data-[size=sm]:[--card-spacing:--spacing(3)] data-[size=sm]:has-data-[slot=card-footer]:pb-0 *:[img:first-child]:rounded-t-xl *:[img:last-child]:rounded-b-xl",
+        "group/card flex flex-col gap-(--card-spacing) overflow-hidden rounded-xl py-(--card-spacing) text-sm text-card-foreground [--card-spacing:--spacing(4)] has-data-[slot=card-footer]:pb-0 has-[>img:first-child]:pt-0 data-[size=sm]:[--card-spacing:--spacing(3)] data-[size=sm]:has-data-[slot=card-footer]:pb-0 *:[img:first-child]:rounded-t-xl *:[img:last-child]:rounded-b-xl",
+        variant === "base" && "glass-base",
+        variant === "inset" && "glass-inset",
+        variant === "elevated" && "border border-[var(--glass-border)] bg-popover/75 shadow-xl backdrop-blur-2xl",
+        variant === "solid" && "border border-border/60 bg-card shadow-sm",
         className
       )}
       {...props}
@@ -38,7 +47,7 @@ function CardTitle({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="card-title"
       className={cn(
-        "font-heading text-base leading-snug font-medium group-data-[size=sm]/card:text-sm",
+        "font-heading text-base leading-[1.35] font-semibold group-data-[size=sm]/card:text-sm",
         className
       )}
       {...props}
@@ -50,7 +59,7 @@ function CardDescription({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="card-description"
-      className={cn("text-sm text-muted-foreground", className)}
+      className={cn("text-[13px] leading-5 text-muted-foreground", className)}
       {...props}
     />
   )

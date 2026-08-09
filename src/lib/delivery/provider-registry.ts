@@ -1,5 +1,4 @@
 import type {
-  CourierConfig,
   CourierDashboardData,
   CourierLocations,
   TrackingEvent,

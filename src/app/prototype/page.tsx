@@ -31,7 +31,7 @@ const variants: Record<DemoVariant, string> = {
   secondary:
     "border-transparent bg-secondary text-secondary-foreground hover:-translate-y-0.5 hover:bg-secondary/80 hover:shadow-sm",
   outline:
-    "border-border bg-background text-foreground shadow-xs hover:-translate-y-0.5 hover:border-primary/30 hover:bg-muted hover:shadow-sm",
+    "border-border bg-transparent text-foreground shadow-xs hover:-translate-y-0.5 hover:border-primary/30 hover:bg-muted hover:shadow-sm",
   ghost:
     "border-transparent bg-transparent text-muted-foreground hover:bg-muted hover:text-foreground",
   success:
@@ -87,12 +87,10 @@ function DemoButton({
         {loading && <Loader2 className="animate-spin" />}
         {children}
       </span>
-      {variant === "primary" && (
-        <span
-          aria-hidden
-          className="animate-shimmer pointer-events-none absolute inset-0 bg-[linear-gradient(110deg,transparent_30%,rgba(255,255,255,0.35)_50%,transparent_70%)] bg-[length:250%_100%] opacity-0 transition-opacity duration-500 group-hover:opacity-100"
-        />
-      )}
+      <span
+        aria-hidden
+        className="button-shimmer animate-shimmer pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-500 group-hover:opacity-100"
+      />
     </button>
   );
 }

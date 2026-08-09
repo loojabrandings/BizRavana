@@ -1,6 +1,6 @@
 # BizRavana
 
-> Current implementation snapshot: 2026-07-26. Database migrations are tracked through `036_add_ad_display_options.sql`.
+> Current implementation snapshot: 2026-08-03. Database migrations are tracked through `051_secure_file_upload_boundaries.sql`.
 
 A modern, multi-tenant business management SaaS platform for Sri Lankan small and medium enterprises. Manage orders, products, inventory, expenses, quotations, deliveries, reports, and notifications — all in one place.
 
@@ -128,14 +128,14 @@ src/
 └── constants/           # App constants (districts, etc.)
 
 supabase/
-└── migrations/          # 36 ordered SQL migrations (001–036)
+└── migrations/          # 51 ordered SQL migrations (001–051)
 
 > **Note:** 3 orphaned tables (`courier_cities`, `courier_districts`, `courier_waybills`) exist in Supabase with no migration coverage. See [DATABASE_SCHEMA.md](./DATABASE_SCHEMA.md).
 ```
 
 ## Database
 
-The current database history contains 36 ordered migrations (`001`–`036`). It includes RLS, Storage buckets, bank-transfer and PayHere workflows, account purging, team invitations, bug reports, dispatch-cost expenses, and targeted ads. See [DATABASE_SCHEMA.md](./DATABASE_SCHEMA.md).
+The current database history contains 51 ordered migrations (`001`–`051`). It includes RLS, Storage buckets, bank-transfer and PayHere workflows, account purging, team invitations, secured and atomic notification delivery, unified Message Templates, bug reports, dispatch-cost expenses, courier-provider metadata, cloud backups, targeted ads, invitation role-preservation hardening, hardened notification schema resolution, tenant-bound Message Template soft deletion, distributed request-rate limiting, and server-verified upload boundaries. See [DATABASE_SCHEMA.md](./DATABASE_SCHEMA.md).
 
 ## API
 
@@ -147,3 +147,8 @@ Authenticated Route Handler methods, authorization boundaries, and responsibilit
 - **Lint** — `npm run lint`
 - **Build** — `npm run build`
 - **Dev** — `npm run dev`
+- **Repository tests** — `npm test`
+- **Complete local quality gate** — `npm run quality`
+- **Staging security regression** — `npm run test:staging`
+
+See [QUALITY_GATES.md](./QUALITY_GATES.md) for CI and staging-runner details.

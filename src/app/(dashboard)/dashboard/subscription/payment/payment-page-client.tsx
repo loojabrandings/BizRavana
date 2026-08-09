@@ -134,7 +134,7 @@ export function PaymentPageClient({
   const [loading, setLoading] = useState(true);
   const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
   const [selectedPlanId, setSelectedPlanId] = useState(initialPlanId);
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("card");
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("bank");
   const [cardCustomer, setCardCustomer] = useState<CardCustomerDetails>(
     EMPTY_CARD_CUSTOMER_DETAILS,
   );
@@ -691,7 +691,7 @@ export function PaymentPageClient({
 
       <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
         <div className="space-y-6">
-          <section className="glass-card rounded-2xl p-5 sm:p-6">
+          <section className="glass-card rounded-xl p-5 sm:p-6">
             <p className="text-sm font-semibold text-foreground">
               Choose a payment method
             </p>
@@ -702,30 +702,18 @@ export function PaymentPageClient({
             <div className="mt-5 grid gap-3 sm:grid-cols-2">
               <button
                 type="button"
-                onClick={() => setPaymentMethod("card")}
+                disabled
+                aria-disabled="true"
+                title="Card payments are not available yet"
                 className={cn(
                   "relative rounded-2xl border p-4 text-left transition-all",
-                  paymentMethod === "card"
-                    ? "border-2 border-primary bg-primary/[0.04] shadow-sm shadow-primary/10"
-                    : "border-border/30 bg-muted/10 hover:border-primary/30 hover:bg-primary/[0.02]",
+                  "cursor-not-allowed border-border/30 bg-muted/10 opacity-60",
                 )}
               >
                 <div className="flex items-start justify-between gap-3">
-                  <div
-                    className={cn(
-                      "flex size-10 items-center justify-center rounded-xl",
-                      paymentMethod === "card"
-                        ? "bg-primary/10 text-primary"
-                        : "bg-muted text-muted-foreground",
-                    )}
-                  >
+                  <div className="flex size-10 items-center justify-center rounded-xl bg-muted text-muted-foreground">
                     <CreditCard className="size-5" />
                   </div>
-                  {paymentMethod === "card" && (
-                    <span className="flex size-6 items-center justify-center rounded-full bg-primary text-primary-foreground">
-                      <Check className="size-3.5" />
-                    </span>
-                  )}
                 </div>
                 <p className="mt-4 text-sm font-semibold text-foreground">
                   Card Payment
@@ -733,16 +721,9 @@ export function PaymentPageClient({
                 <p className="mt-1 text-sm text-muted-foreground">
                   Secure online payment with PayHere.
                 </p>
-                <div
-                  className={cn(
-                    "mt-4 flex items-center gap-1.5 text-xs font-medium",
-                    paymentMethod === "card"
-                      ? "text-primary"
-                      : "text-muted-foreground",
-                  )}
-                >
-                  <BadgeCheck className="size-3.5" />
-                  {paymentMethod === "card" ? "Selected" : "Select method"}
+                <div className="mt-4 flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                  <Clock className="size-3.5" />
+                  Unavailable
                 </div>
               </button>
 
@@ -809,7 +790,7 @@ export function PaymentPageClient({
               onCopy={copyBankDetail}
             />
 
-            <section className="glass-card flex h-full flex-col rounded-2xl p-5 sm:p-6">
+            <section className="glass-card flex h-full flex-col rounded-xl p-5 sm:p-6">
             <p className="text-sm font-semibold text-foreground">
               Attach payment receipt
             </p>
@@ -1004,7 +985,7 @@ function CardCustomerForm({
   ];
 
   return (
-    <section className="glass-card rounded-2xl p-5 sm:p-6">
+    <section className="glass-card rounded-xl p-5 sm:p-6">
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="text-sm font-semibold text-foreground">
@@ -1083,7 +1064,7 @@ function BankDetails({
   const paymentRemark = `BzR_${businessName || "Business"}`;
 
   return (
-    <section className="glass-card h-full rounded-2xl p-5 sm:p-6">
+    <section className="glass-card h-full rounded-xl p-5 sm:p-6">
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="text-sm font-semibold text-foreground">
@@ -1174,7 +1155,7 @@ function OrderSummary({
   onCardContinue: () => void;
 }) {
   return (
-    <aside className="glass-card rounded-2xl p-5 lg:sticky lg:top-24 sm:p-6">
+    <aside className="glass-card rounded-xl p-5 lg:sticky lg:top-24 sm:p-6">
       <p className="text-sm font-semibold text-foreground">Order summary</p>
       <div className="mt-5 space-y-2">
         <p className="text-sm font-medium text-foreground">

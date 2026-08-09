@@ -38,6 +38,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { provisionUser } from "@/lib/supabase/provision-user";
+import { uploadFile } from "@/lib/uploads";
 import Image from "next/image";
 
 // ──────────────────────────────────────────────
@@ -464,30 +465,11 @@ function RegisterForm() {
             .single();
 
           if (business) {
-            const mimeToExt: Record<string, string> = {
-              "image/jpeg": "jpg",
-              "image/png": "png",
-              "image/webp": "webp",
-              "image/gif": "gif",
-              "image/avif": "avif",
-            };
-            const ext = mimeToExt[formData.logoFile.type] || "png";
-            const filePath = `logos/${business.id}/logo.${ext}`;
-
-            const { data: uploadData, error: uploadError } = await supabase.storage
-              .from("profile-images")
-              .upload(filePath, formData.logoFile, { upsert: true });
-
-            if (!uploadError && uploadData) {
-              const { data: publicUrlData } = supabase.storage
-                .from("profile-images")
-                .getPublicUrl(uploadData.path);
-
-              await supabase
-                .from("businesses")
-                .update({ logo_url: publicUrlData.publicUrl })
-                .eq("id", business.id);
-            }
+            const { publicUrl } = await uploadFile("business-logo", formData.logoFile);
+            await supabase
+              .from("businesses")
+              .update({ logo_url: publicUrl })
+              .eq("id", business.id);
           }
         } catch (logoErr) {
           console.error("Logo upload failed:", logoErr);
@@ -568,7 +550,7 @@ function RegisterForm() {
         {/* Steps Indicator */}
         <div className="mb-7">
           <div className="flex items-center justify-between">
-            {STEPS.map((s, index) => (
+            {STEPS.map((s) => (
               <div key={s.number} className="flex flex-col items-center">
                 <div
                   className={cn(
@@ -698,7 +680,7 @@ function RegisterForm() {
                   <button
                     type="button"
                     onClick={() => setShowPassword((v) => !v)}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 rounded-md text-muted-foreground transition-colors hover:text-foreground"
+                    className="absolute right-1 top-1/2 inline-flex size-11 -translate-y-1/2 touch-manipulation items-center justify-center rounded-[10px] text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/45"
                     aria-label={showPassword ? "Hide password" : "Show password"}
                   >
                     {showPassword ? (
@@ -724,7 +706,7 @@ function RegisterForm() {
                   <button
                     type="button"
                     onClick={() => setShowConfirmPassword((v) => !v)}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 rounded-md text-muted-foreground transition-colors hover:text-foreground"
+                    className="absolute right-1 top-1/2 inline-flex size-11 -translate-y-1/2 touch-manipulation items-center justify-center rounded-[10px] text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/45"
                     aria-label={
                       showConfirmPassword ? "Hide password" : "Show password"
                     }
@@ -749,8 +731,9 @@ function RegisterForm() {
                   )}
 
                 <Button
-                  className="btn-gradient btn-gradient-shadow group h-12 w-full rounded-xl text-sm font-semibold transition-all hover:-translate-y-0.5 hover:shadow-xl disabled:translate-y-0"
+                  className="group w-full"
                   variant="gradient"
+                  size="lg"
                   disabled={!isStep1Valid}
                   onClick={() => goToStep(2)}
                 >
@@ -823,9 +806,12 @@ function RegisterForm() {
                   {formData.logoPreviewUrl ? (
                     <div className="group relative flex items-center gap-4 rounded-xl border-2 border-border/50 bg-card p-4">
                       <div className="relative size-16 shrink-0 overflow-hidden rounded-xl border border-border/30 bg-muted/20">
-                        <img
+                        <Image
                           src={formData.logoPreviewUrl}
                           alt="Business logo preview"
+                          fill
+                          sizes="64px"
+                          unoptimized
                           className="size-full object-contain"
                         />
                       </div>
@@ -873,15 +859,17 @@ function RegisterForm() {
                 <div className="flex gap-3 pt-1">
                   <Button
                     variant="outline"
+                    size="lg"
                     onClick={() => goToStep(1)}
-                    className="group flex-1 rounded-xl text-sm font-semibold"
+                    className="group flex-1"
                   >
                     <ArrowLeft className="size-4 transition-transform group-hover:-translate-x-0.5" />
                     Back
                   </Button>
                   <Button
-                    className="btn-gradient btn-gradient-shadow group flex-1 rounded-xl text-sm font-semibold transition-all hover:-translate-y-0.5 hover:shadow-xl disabled:translate-y-0"
+                    className="group flex-1"
                     variant="gradient"
+                    size="lg"
                     disabled={!isStep2Valid}
                     onClick={() => goToStep(3)}
                   >
@@ -953,8 +941,9 @@ function RegisterForm() {
 
                 {/* Actions */}
                 <Button
-                  className="btn-gradient btn-gradient-shadow group h-12 w-full rounded-xl text-sm font-semibold transition-all hover:-translate-y-0.5 hover:shadow-xl disabled:translate-y-0"
+                  className="group w-full"
                   variant="gradient"
+                  size="lg"
                   disabled={loading}
                   onClick={handleSubmit}
                 >
@@ -973,7 +962,8 @@ function RegisterForm() {
 
                 <Button
                   variant="outline"
-                  className="group h-12 w-full rounded-xl text-sm font-semibold"
+                  size="lg"
+                  className="group w-full"
                   onClick={() => goToStep(2)}
                   disabled={loading}
                 >
@@ -1086,27 +1076,6 @@ function Row({ label, value }: { label: string; value: string }) {
 // ──────────────────────────────────────────────
 // Loading Skeleton
 // ──────────────────────────────────────────────
-
-function RegisterSkeleton() {
-  return (
-    <div className="flex min-h-screen w-full bg-background">
-      <div className="hidden w-[52%] max-w-[760px] bg-hero lg:block" />
-      <div className="flex flex-1 items-center justify-center p-8">
-        <div className="w-full max-w-[420px] space-y-5">
-          <div className="h-4 w-24 animate-pulse rounded bg-muted" />
-          <div className="h-10 w-72 animate-pulse rounded-lg bg-muted" />
-          <div className="h-5 w-56 animate-pulse rounded bg-muted/60" />
-          <div className="h-12 animate-pulse rounded-xl bg-muted" />
-          <div className="h-12 animate-pulse rounded-xl bg-muted" />
-          <div className="h-12 animate-pulse rounded-xl bg-muted" />
-          <div className="h-12 animate-pulse rounded-xl bg-muted" />
-          <div className="h-12 animate-pulse rounded-xl bg-muted" />
-          <div className="h-12 animate-pulse rounded-xl bg-muted/70" />
-        </div>
-      </div>
-    </div>
-  );
-}
 
 // ──────────────────────────────────────────────
 // Page Export

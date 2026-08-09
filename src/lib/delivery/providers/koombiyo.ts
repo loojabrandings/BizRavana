@@ -24,7 +24,13 @@ import {
   type CourierProvider,
   type StatusDisplayEntry,
 } from "@/lib/delivery/provider-registry";
-import type { CourierLocations, CourierState, CourierCity, TrackingEvent } from "@/lib/delivery/types";
+import type {
+  CourierLocations,
+  CourierState,
+  CourierCity,
+  OrderFinanceInfo,
+  TrackingEvent,
+} from "@/lib/delivery/types";
 
 
 // ─── Settings Keys ───────────────────────────────────────────────────
@@ -36,6 +42,29 @@ const SETTINGS_KEYS = {
 // ─── API Base URL ────────────────────────────────────────────────────
 
 const API_BASE = "https://application.koombiyodelivery.lk/api";
+
+type ApiRecord = Record<string, unknown>;
+
+function isApiRecord(value: unknown): value is ApiRecord {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function firstField(record: ApiRecord, keys: readonly string[]): unknown {
+  for (const key of keys) {
+    const value = record[key];
+    if (value !== null && value !== undefined && value !== "") return value;
+  }
+  return undefined;
+}
+
+function stringField(
+  record: ApiRecord,
+  keys: readonly string[],
+  fallback = "",
+): string {
+  const value = firstField(record, keys);
+  return value === undefined ? fallback : String(value);
+}
 
 // ─── Helpers ─────────────────────────────────────────────────────────
 
@@ -54,7 +83,7 @@ function formBody(params: Record<string, string>): URLSearchParams {
 async function apiPost(
   endpoint: string,
   body: Record<string, string>,
-): Promise<any> {
+): Promise<unknown> {
   const url = `${API_BASE}${endpoint}`;
   const res = await fetch(url, {
     method: "POST",
@@ -81,7 +110,7 @@ async function apiPost(
   // Some endpoints may return plain text
   const text = await res.text();
   try {
-    return JSON.parse(text);
+    return JSON.parse(text) as unknown;
   } catch {
     return text;
   }
@@ -91,15 +120,15 @@ async function apiPost(
  * Safely extract an array from an API response.
  * Handles { data: [...] }, [...], and { ...single... } formats.
  */
-function extractArray(data: any, field?: string): any[] {
+function extractArray(data: unknown, field?: string): unknown[] {
   if (Array.isArray(data)) return data;
-  if (data?.data && Array.isArray(data.data)) return data.data;
-  if (data?.result && Array.isArray(data.result)) return data.result;
-  if (data?.list && Array.isArray(data.list)) return data.list;
-  if (field && data?.[field] && Array.isArray(data[field])) return data[field];
+  if (!isApiRecord(data)) return [];
+  if (Array.isArray(data.data)) return data.data;
+  if (Array.isArray(data.result)) return data.result;
+  if (Array.isArray(data.list)) return data.list;
+  if (field && Array.isArray(data[field])) return data[field];
   // Single object wrapped in response
-  if (data && typeof data === "object" && !Array.isArray(data)) return [data];
-  return [];
+  return [data];
 }
 
 // ─── District / City ID Lookup ──────────────────────────────────────
@@ -317,16 +346,10 @@ export const koombiyoProvider: CourierProvider = {
         waybill = entry;
         break;
       }
-      if (entry?.waybill_id) {
-        waybill = String(entry.waybill_id);
-        break;
-      }
-      if (entry?.waybill) {
-        waybill = String(entry.waybill);
-        break;
-      }
-      if (entry?.barcode) {
-        waybill = String(entry.barcode);
+      if (isApiRecord(entry)) {
+        const value = firstField(entry, ["waybill_id", "waybill", "barcode"]);
+        if (value === undefined) continue;
+        waybill = String(value);
         break;
       }
     }
@@ -424,18 +447,18 @@ export const koombiyoProvider: CourierProvider = {
 
     if (events.length === 0) return [];
 
-    return events.map((e: any) => ({
-      status: e.status || e.status_name || e.event || "Unknown",
-      dateTime: e.date || e.date_time || e.created_at || "",
-      dateTimeAgo: "",
-      user: e.user || e.updated_by || "",
-    }));
+    return events.map((event) => {
+      const record = isApiRecord(event) ? event : {};
+      return {
+        status: stringField(record, ["status", "status_name", "event"], "Unknown"),
+        dateTime: stringField(record, ["date", "date_time", "created_at"]),
+        dateTimeAgo: "",
+        user: stringField(record, ["user", "updated_by"]),
+      };
+    });
   },
 
-  async fetchFinance(
-    _waybillNumber: string,
-    _credentials: Record<string, string>,
-  ): Promise<any> {
+  async fetchFinance(): Promise<OrderFinanceInfo> {
     // Koombiyo does not have a dedicated COD/finance endpoint.
     // The `del_charge` value is delivered only via webhook.
     // The finance tab will show "N/A" and rely on manual toggle.
@@ -462,10 +485,14 @@ export const koombiyoProvider: CourierProvider = {
     });
 
     const districtEntries = extractArray(districtsRaw);
-    const districts: CourierState[] = districtEntries.map((d: any) => ({
-      id: Number(d.id || d.district_id || d.state_id),
-      name: d.name || d.district_name || d.state_name || String(d.id),
-    }));
+    const districts: CourierState[] = districtEntries.map((district) => {
+      const record = isApiRecord(district) ? district : {};
+      const id = firstField(record, ["id", "district_id", "state_id"]);
+      return {
+        id: Number(id),
+        name: stringField(record, ["name", "district_name", "state_name"], String(id)),
+      };
+    });
 
     // ── 2. Fetch cities for each district ──────────────────────
     const allCities: CourierCity[] = [];
@@ -493,11 +520,15 @@ export const koombiyoProvider: CourierProvider = {
         const result = results[j];
         if (result.status === "fulfilled" && result.value) {
           const cityEntries = extractArray(result.value);
-          const cities: CourierCity[] = cityEntries.map((c: any) => ({
-            id: Number(c.id || c.city_id),
-            name: c.name || c.city_name || String(c.id),
-            state_id: batch[j].id,
-          }));
+          const cities: CourierCity[] = cityEntries.map((city) => {
+            const record = isApiRecord(city) ? city : {};
+            const id = firstField(record, ["id", "city_id"]);
+            return {
+              id: Number(id),
+              name: stringField(record, ["name", "city_name"], String(id)),
+              state_id: batch[j].id,
+            };
+          });
           allCities.push(...cities);
         }
       }

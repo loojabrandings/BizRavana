@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Loader2, Truck, Package, Clock, User, AlertCircle } from "lucide-react";
 import { motion } from "framer-motion";
 import {
@@ -25,37 +25,48 @@ export function TrackShipmentDialog({
   onOpenChange,
   waybillNumber,
 }: TrackShipmentDialogProps) {
-  const [events, setEvents] = useState<TrackingEvent[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const fetchTracking = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const config = await loadCourierConfig();
-      if (!config?.provider) {
-        throw new Error("Courier not configured. Set up a courier in Settings first.");
-      }
-      const result = await trackShipment(waybillNumber, config.credentials, config.provider);
-      setEvents(result);
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : "Failed to fetch tracking info";
-      setError(msg);
-      toast.error("Tracking failed", { description: msg });
-    } finally {
-      setLoading(false);
-    }
-  }, [waybillNumber]);
+  const [retryVersion, setRetryVersion] = useState(0);
+  const [trackingResult, setTrackingResult] = useState<{
+    key: string;
+    events: TrackingEvent[];
+    error: string | null;
+  } | null>(null);
+  const trackingKey = open ? `${waybillNumber}:${retryVersion}` : null;
+  const currentResult = trackingResult?.key === trackingKey ? trackingResult : null;
+  const events = currentResult?.events ?? [];
+  const error = currentResult?.error ?? null;
+  const loading = trackingKey !== null && currentResult === null;
 
   useEffect(() => {
-    if (open) {
-      fetchTracking();
-    } else {
-      setEvents([]);
-      setError(null);
-    }
-  }, [open, fetchTracking]);
+    if (!trackingKey) return;
+    let cancelled = false;
+
+    const fetchTracking = async () => {
+      try {
+        const config = await loadCourierConfig();
+        if (!config?.provider) {
+          throw new Error("Courier not configured. Set up a courier in Settings first.");
+        }
+        const result = await trackShipment(waybillNumber, config.credentials, config.provider);
+        if (!cancelled) {
+          setTrackingResult({ key: trackingKey, events: result, error: null });
+        }
+      } catch (fetchError) {
+        const message = fetchError instanceof Error
+          ? fetchError.message
+          : "Failed to fetch tracking info";
+        if (!cancelled) {
+          setTrackingResult({ key: trackingKey, events: [], error: message });
+          toast.error("Tracking failed", { description: message });
+        }
+      }
+    };
+
+    void fetchTracking();
+    return () => {
+      cancelled = true;
+    };
+  }, [trackingKey, waybillNumber]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -151,7 +162,11 @@ export function TrackShipmentDialog({
 
         {error && !loading && (
           <div className="flex justify-end">
-            <Button variant="outline" size="sm" onClick={fetchTracking}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setRetryVersion((version) => version + 1)}
+            >
               <Loader2 className="size-3.5" />
               Retry
             </Button>

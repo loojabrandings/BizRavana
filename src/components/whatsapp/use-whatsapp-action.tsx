@@ -60,7 +60,7 @@ export function useWhatsAppAction() {
       contextRef.current = context;
       setLoading(true);
       try {
-        const tpls = await fetchTemplates(bid, context);
+        const tpls = await fetchTemplates(context);
         setTemplates(tpls);
 
         if (tpls.length === 0) {

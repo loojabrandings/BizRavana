@@ -8,6 +8,7 @@ import {
   Boxes,
   CalendarClock,
   CalendarDays,
+  ChevronDown,
   Layers3,
   LineChart,
   Minus,
@@ -40,6 +41,7 @@ import {
 import { MiniBarChart } from "@/components/charts/mini-bar-chart";
 import { RankedBarList } from "@/components/charts/ranked-bar-list";
 import { DashboardSkeleton } from "@/components/dashboard/dashboard-skeleton";
+import { DateRangePickerModal } from "@/components/shared/lazy-date-range-picker-modal";
 import { DashboardAdBanner } from "@/components/dashboard/dashboard-ad-banner";
 import { useCourierStore } from "@/stores/courier-store";
 
@@ -127,6 +129,7 @@ export default function DashboardPage() {
   const [dateFilter, setDateFilter] = useState<string>("this_month");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [revenueWindow, setRevenueWindow] = useState<RevenueWindow>("this_month");
   const prefersReducedMotion = useReducedMotion();
   const safeContainerVariants = prefersReducedMotion ? undefined : containerVariants;
@@ -180,7 +183,7 @@ export default function DashboardPage() {
             // "New Orders" and "Pending Payments", plus the Delivery Status cards
             // and Scheduled Deliveries, which must always reflect totals.
             (() => {
-              let q = supabase
+              const q = supabase
                 .from("orders")
                 .select("id, order_number, customer_name, total, balance_remaining, status, payment_status, expected_delivery_date, created_at")
                 .eq("business_id", businessId)
@@ -540,7 +543,7 @@ export default function DashboardPage() {
           <AlertTriangle className="mx-auto size-10 text-warning" />
           <h1 className="mt-4 text-xl font-semibold">Unable to load dashboard</h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            Refresh the page or sign in again. If this continues, check your Supabase setup.
+            Refresh the page or sign in again. If the problem continues, contact support.
           </p>
         </div>
       </div>
@@ -587,6 +590,7 @@ export default function DashboardPage() {
                 <span className="hidden sm:inline">
                   {dateFilterOptions.find((o) => o.value === dateFilter)?.label ?? "This month"}
                 </span>
+                <ChevronDown className="size-3.5 text-hero-foreground/50 transition-transform duration-200 group-data-[popup-open]:rotate-180" />
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="min-w-[180px] p-1.5">
                 {dateFilterOptions.map((option) => (
@@ -602,7 +606,7 @@ export default function DashboardPage() {
                         setDateFrom("");
                         setDateTo("");
                       } else {
-                        setDateFilter("custom");
+                        setDatePickerOpen(true);
                       }
                     }}
                   >
@@ -613,26 +617,6 @@ export default function DashboardPage() {
             </DropdownMenu>
           </div>
 
-          {/* Custom date inputs */}
-          {dateFilter === "custom" && (
-            <div className="mt-3 flex items-center gap-2">
-              <input
-                type="date"
-                value={dateFrom}
-                onChange={(e) => setDateFrom(e.target.value)}
-                className="h-9 flex-1 rounded-xl border border-hero-foreground/10 bg-hero-foreground/10 px-3 text-sm font-medium text-hero-foreground shadow-xs outline-none transition-colors focus:border-hero-foreground/30 focus:ring-[3px] focus:ring-hero-foreground/10 [color-scheme:light] dark:[color-scheme:dark]"
-                aria-label="From date"
-              />
-              <span className="text-sm text-hero-foreground/50">—</span>
-              <input
-                type="date"
-                value={dateTo}
-                onChange={(e) => setDateTo(e.target.value)}
-                className="h-9 flex-1 rounded-xl border border-hero-foreground/10 bg-hero-foreground/10 px-3 text-sm font-medium text-hero-foreground shadow-xs outline-none transition-colors focus:border-hero-foreground/30 focus:ring-[3px] focus:ring-hero-foreground/10 [color-scheme:light] dark:[color-scheme:dark]"
-                aria-label="To date"
-              />
-            </div>
-          )}
 
           {/* 2×2 metric grid on tablet, stacked on phone */}
           <div className="mt-4 grid gap-2.5 sm:grid-cols-2">
@@ -686,7 +670,7 @@ export default function DashboardPage() {
                           {trendIcon}
                           {badge.percentage}
                         </span>
-                        <span className="text-[10px] leading-none text-hero-foreground/40">{badge.label}</span>
+                        <span className="text-xs leading-none text-hero-foreground/70">{badge.label}</span>
                       </div>
                     )}
                   </div>
@@ -735,6 +719,7 @@ export default function DashboardPage() {
               >
                 <CalendarDays className="size-4" />
                 {dateFilterOptions.find((o) => o.value === dateFilter)?.label ?? "This month"}
+                <ChevronDown className="size-3.5 text-hero-foreground/50 transition-transform duration-200 group-data-[popup-open]:rotate-180" />
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="min-w-[180px] p-1.5">
                 {dateFilterOptions.map((option) => (
@@ -750,7 +735,7 @@ export default function DashboardPage() {
                         setDateFrom("");
                         setDateTo("");
                       } else {
-                        setDateFilter("custom");
+                        setDatePickerOpen(true);
                       }
                     }}
                   >
@@ -761,25 +746,6 @@ export default function DashboardPage() {
             </DropdownMenu>
           </div>
 
-          {dateFilter === "custom" && (
-            <div className="mt-4 flex items-center gap-2">
-              <input
-                type="date"
-                value={dateFrom}
-                onChange={(e) => setDateFrom(e.target.value)}
-                className="h-9 w-[140px] rounded-xl border border-hero-foreground/10 bg-hero-foreground/5 px-3 text-sm font-medium text-hero-foreground shadow-xs outline-none transition-colors focus:border-hero-foreground/30 focus:ring-[3px] focus:ring-hero-foreground/10 [color-scheme:light] dark:[color-scheme:dark]"
-                aria-label="From date"
-              />
-              <span className="text-sm text-hero-foreground/50">—</span>
-              <input
-                type="date"
-                value={dateTo}
-                onChange={(e) => setDateTo(e.target.value)}
-                className="h-9 w-[140px] rounded-xl border border-hero-foreground/10 bg-hero-foreground/5 px-3 text-sm font-medium text-hero-foreground shadow-xs outline-none transition-colors focus:border-hero-foreground/30 focus:ring-[3px] focus:ring-hero-foreground/10 [color-scheme:light] dark:[color-scheme:dark]"
-                aria-label="To date"
-              />
-            </div>
-          )}
 
           <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {heroMetrics.map((metric) => (
@@ -866,7 +832,7 @@ export default function DashboardPage() {
                   }
                 }
               }}
-              className="flex h-[52px] cursor-pointer items-center justify-between gap-2 rounded-2xl glass-card px-3 transition-colors hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+              className="flex h-[52px] cursor-pointer items-center justify-between gap-2 rounded-xl glass-card px-3 transition-colors hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/40"
             >
               <div className="min-w-0 flex-1">
                 {delivery.source === 'order' ? (
@@ -914,7 +880,7 @@ export default function DashboardPage() {
           {data.lowStockItems.slice(0, 3).map((item, idx) => (
             <div
               key={`low-stock-${idx}`}
-              className="flex h-[52px] items-center justify-between gap-2 rounded-2xl glass-card px-3 transition-colors hover:bg-muted/30"
+              className="flex h-[52px] items-center justify-between gap-2 rounded-xl glass-card px-3 transition-colors hover:bg-muted/30"
             >
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium text-foreground">
@@ -973,7 +939,7 @@ export default function DashboardPage() {
                     }
                   }
                 }}
-                className="flex h-[52px] cursor-pointer items-center justify-between gap-2 rounded-2xl glass-card px-3 transition-colors hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+                className="flex h-[52px] cursor-pointer items-center justify-between gap-2 rounded-xl glass-card px-3 transition-colors hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/40"
               >
                 <div className="min-w-0 flex-1">
                   {delivery.source === 'order' ? (
@@ -1024,7 +990,7 @@ export default function DashboardPage() {
             {data.lowStockItems.slice(0, 3).map((item, idx) => (
               <div
                 key={`low-stock-${idx}`}
-                className="flex h-[52px] items-center justify-between gap-2 rounded-2xl glass-card px-3 transition-colors hover:bg-muted/30"
+                className="flex h-[52px] items-center justify-between gap-2 rounded-xl glass-card px-3 transition-colors hover:bg-muted/30"
               >
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium text-foreground">
@@ -1295,6 +1261,20 @@ export default function DashboardPage() {
           </motion.div>
         </section>
       </motion.section>
+
+      {/* Custom date range picker modal */}
+      <DateRangePickerModal
+        open={datePickerOpen}
+        onOpenChange={setDatePickerOpen}
+        from={dateFrom}
+        to={dateTo}
+        onApply={(f, t) => {
+          setDateFrom(f);
+          setDateTo(t);
+          setDateFilter("custom");
+          setDatePickerOpen(false);
+        }}
+      />
     </motion.div>
   );
 }

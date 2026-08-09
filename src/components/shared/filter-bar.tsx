@@ -1,9 +1,10 @@
 "use client";
 
-import { Calendar, Search, X } from "lucide-react";
+import { Search, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Dropdown } from "@/components/ui/dropdown";
+import { DateFilterMenu } from "@/components/shared/date-filter-menu";
 
 // ─── Types ────────────────────────────────────────────────────────
 
@@ -40,10 +41,10 @@ interface FilterBarProps {
     value: string;
     onChange: (value: string | null) => void;
     options: readonly FilterOption[] | FilterOption[];
-    /** Called when the calendar icon is clicked to toggle custom date inputs */
+    /** Custom label for the dropdown — defaults to "Date" */
+    label?: string;
+    /** Called when the "Custom" preset is chosen to open the date range picker modal */
     onCalendarClick?: () => void;
-    /** Whether custom date mode is active */
-    isCustomMode?: boolean;
   };
   /** Active filter count for the clear button */
   activeFilterCount?: number;
@@ -109,23 +110,21 @@ export function FilterBar({
             />
           )}
 
-          {/* Date calendar button */}
+          {/* Date filter — single calendar trigger with presets, like the dashboard */}
           {date && (
-            <button
-              type="button"
-              onClick={date.onCalendarClick}
-              className={cn(
-                "inline-flex shrink-0 h-9 w-9 items-center justify-center rounded-xl border transition-all",
-                "text-muted-foreground hover:bg-accent hover:text-accent-foreground active:scale-95",
-                date.isCustomMode
-                  ? "border-primary/30 bg-primary/5 text-primary"
-                  : "border-input bg-transparent",
-              )}
-              aria-label="Filter by date"
-              title="Filter by date"
-            >
-              <Calendar className="size-4" />
-            </button>
+            <DateFilterMenu
+              value={date.value}
+              options={date.options}
+              fallbackLabel={date.label ?? "Date"}
+              onSelect={(value) => {
+                if (value === "custom" && date.onCalendarClick) {
+                  date.onCalendarClick();
+                } else {
+                  date.onChange(value);
+                }
+              }}
+              className="min-w-0 flex-1 sm:min-w-[150px] sm:flex-none"
+            />
           )}
 
           {/* Clear filters */}

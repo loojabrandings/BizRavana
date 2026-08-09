@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { Loader2, MapPin, Truck } from "lucide-react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -12,7 +12,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { toast } from "sonner";
 
 // ─── Types ────────────────────────────────────────────────────────
 
@@ -36,11 +35,6 @@ export function DispatchDialog({
 }: DispatchDialogProps) {
   const [dispatching, setDispatching] = useState<DispatchMode | null>(null);
   const [focusedIndex, setFocusedIndex] = useState(0);
-
-  // Reset focus when dialog opens
-  useEffect(() => {
-    if (open) setFocusedIndex(0);
-  }, [open]);
 
   const handleDispatch = useCallback(
     async (mode: DispatchMode) => {

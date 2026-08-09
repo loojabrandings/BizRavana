@@ -39,7 +39,7 @@ export function SettingsSection({
           </span>
         )}
       </h3>
-      <div className="rounded-xl bg-card/50 p-4 ring-1 ring-border/30">
+      <div className="glass-inset rounded-[10px] p-4">
         {children}
       </div>
     </section>
