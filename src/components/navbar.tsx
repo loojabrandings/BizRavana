@@ -1,10 +1,35 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import Button from "@/components/button";
 import ThemeToggle from "./theme-toggle";
+
+/** The real BizRavana emblem — white on the ink theme, ink on the cream
+ *  theme (CSS toggles the visible one via data-theme). */
+function BrandMark() {
+  return (
+    <span className="navbar__logo" aria-hidden="true">
+      <Image
+        src="/brand-logo-dark.png"
+        alt=""
+        width={560}
+        height={786}
+        priority
+        className="brand-logo brand-logo--dark"
+      />
+      <Image
+        src="/brand-logo-light.png"
+        alt=""
+        width={560}
+        height={809}
+        className="brand-logo brand-logo--light"
+      />
+    </span>
+  );
+}
 
 // Home, About, Features, Pricing and Contact have real routes; the rest are
 // placeholders until their pages ship (rendered as non-links, same as before).
@@ -46,9 +71,7 @@ export default function Navbar() {
     <header className="navbar">
       <nav className="navbar__inner" aria-label="Primary">
         <Link className="navbar__brand" href="/" aria-label="BizRavana — Home">
-          <span className="navbar__logo" aria-hidden="true">
-            B
-          </span>
+          <BrandMark />
           <span>BizRavana</span>
         </Link>
 

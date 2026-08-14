@@ -14,7 +14,18 @@ export type FaqItem = {
  * button carries aria-expanded + aria-controls, and closed answers are
  * hidden from the accessibility tree via `visibility`.
  */
-export default function FaqList({ items }: { items: FaqItem[] }) {
+export default function FaqList({
+  items,
+  idPrefix = "faq",
+  className = "",
+}: {
+  items: FaqItem[];
+  /** Prefix for the question/answer ids — pass a unique value per list so
+   * multiple accordions on one page don't share ids. */
+  idPrefix?: string;
+  /** Extra classes appended to the list (e.g. density overrides). */
+  className?: string;
+}) {
   const [open, setOpen] = useState<Set<number>>(new Set());
 
   const toggle = (index: number) =>
@@ -26,7 +37,7 @@ export default function FaqList({ items }: { items: FaqItem[] }) {
     });
 
   return (
-    <ul className="faq__list">
+    <ul className={`faq__list${className ? ` ${className}` : ""}`}>
       {items.map((item, index) => {
         const isOpen = open.has(index);
         return (
@@ -36,11 +47,11 @@ export default function FaqList({ items }: { items: FaqItem[] }) {
           >
             <h3 className="faq__heading">
               <button
-                id={`faq-question-${index}`}
+                id={`${idPrefix}-question-${index}`}
                 type="button"
                 className="faq__question"
                 aria-expanded={isOpen}
-                aria-controls={`faq-answer-${index}`}
+                aria-controls={`${idPrefix}-answer-${index}`}
                 onClick={() => toggle(index)}
               >
                 <span className="faq__question-text">{item.question}</span>
@@ -50,7 +61,7 @@ export default function FaqList({ items }: { items: FaqItem[] }) {
               </button>
             </h3>
             <div
-              id={`faq-answer-${index}`}
+              id={`${idPrefix}-answer-${index}`}
               className="faq__answer-wrap"
             >
               <div className="faq__answer">

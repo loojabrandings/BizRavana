@@ -2,7 +2,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
 export type ThemeMode = "light" | "dark" | "system";
-export type AccentColor = "blue" | "green" | "purple" | "rose" | "amber" | "custom";
+export type AccentColor = "bizravana" | "blue" | "purple" | "rose" | "amber" | "custom";
 export type FontFamily = "poppins" | "lora" | "caveat";
 export type FontSize = "small" | "medium" | "large";
 export type BackgroundStyle = "blobs" | "solid";
@@ -30,7 +30,7 @@ export const usePreferences = create<PreferencesState>()(
   persist(
     (set) => ({
       theme: "system",
-      accent: "blue",
+      accent: "bizravana",
       accentCustom: "#6366f1",
       fontFamily: "poppins",
       fontSize: "medium",
@@ -47,6 +47,18 @@ export const usePreferences = create<PreferencesState>()(
       setDateFormat: (dateFormat) => set({ dateFormat }),
       setBackgroundStyle: (backgroundStyle) => set({ backgroundStyle }),
     }),
-    { name: "freebuff-preferences" },
+    {
+      name: "freebuff-preferences",
+      version: 1,
+      migrate: (persistedState, version) => {
+        const state = persistedState as { accent?: string } & Record<string, unknown>;
+        // The old "green" (Forest) accent was removed; map it to the new
+        // BizRavana (landing-site) default palette.
+        if (version < 1 && state.accent === "green") {
+          return { ...state, accent: "bizravana" } as unknown as PreferencesState;
+        }
+        return state as unknown as PreferencesState;
+      },
+    },
   ),
 );

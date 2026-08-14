@@ -2,6 +2,7 @@
 
 import { Suspense, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useSearchParams } from "next/navigation";
 import {
   ArrowRight,
@@ -121,7 +122,20 @@ function LoginForm() {
         aria-label="BizRavana — Home"
       >
         <span className="navbar__logo" aria-hidden="true">
-          B
+          <Image
+            src="/brand-logo-dark.png"
+            alt=""
+            width={560}
+            height={786}
+            className="brand-logo brand-logo--dark"
+          />
+          <Image
+            src="/brand-logo-light.png"
+            alt=""
+            width={560}
+            height={809}
+            className="brand-logo brand-logo--light"
+          />
         </span>
         <span>BizRavana</span>
       </Link>

@@ -4,6 +4,8 @@ import { Poiret_One, Quicksand } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
 import SmoothScroll from "@/components/smooth-scroll";
 import AuthCallbackHandler from "@/components/auth-callback-handler";
+import JsonLd from "@/components/json-ld";
+import { CONTACT, SITE_URL } from "@/config/site";
 
 // Global typography system (self-hosted via next/font — no layout shift, no
 // external requests). Poiret One (single 400 weight, airy geometric display)
@@ -24,10 +26,44 @@ const quicksand = Quicksand({
 // Landing-site metadata. `absolute` ignores the app root layout's
 // "%s | BizRavana" template so landing titles stay clean (the sub-pages'
 // own titles, e.g. "About — BizRavana", also render without the suffix).
+// The openGraph/twitter block gives every public page shareable social
+// metadata; the (site)/opengraph-image.tsx file supplies the image.
 export const metadata: Metadata = {
   title: { absolute: "BizRavana" },
   description:
     "Manage orders, customers, inventory, expenses, quotations, deliveries and reports — all from one powerful platform.",
+  openGraph: {
+    type: "website",
+    siteName: "BizRavana",
+    locale: "en_LK",
+    url: SITE_URL,
+    title: "BizRavana — Your business. Under control.",
+    description:
+      "Manage orders, customers, inventory, expenses, quotations, deliveries and reports — all from one powerful platform.",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "BizRavana — Your business. Under control.",
+    description:
+      "Manage orders, customers, inventory, expenses, quotations, deliveries and reports — all from one powerful platform.",
+  },
+};
+
+// Brand-level structured data, present on every public page. Contact info
+// reads from the same config the contact page uses, so it never drifts.
+const organizationJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  name: "BizRavana",
+  url: SITE_URL,
+  logo: `${SITE_URL}/icon-512x512.png`,
+  contactPoint: {
+    "@type": "ContactPoint",
+    telephone: `+94${CONTACT.phone.slice(1)}`,
+    contactType: "customer service",
+    email: CONTACT.email,
+    availableLanguage: ["en", "si", "ta"],
+  },
 };
 
 // Runs before first paint: resolve the theme from localStorage (else the ink
@@ -61,6 +97,7 @@ const themeInitScript = `(function () {
 export default function SiteLayout({ children }: LayoutProps<"/">) {
   return (
     <div className={`landing-site ${poiret.variable} ${quicksand.variable}`}>
+      <JsonLd data={organizationJsonLd} />
       <script
         type={typeof window === "undefined" ? "text/javascript" : "text/plain"}
         suppressHydrationWarning

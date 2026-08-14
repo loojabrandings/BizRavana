@@ -122,8 +122,8 @@ const FONT_SIZE_OPTIONS: { value: FontSize; label: string; preview: string; desc
 ];
 
 const PALETTE_OPTIONS: { value: AccentColor; label: string; colors: string[] }[] = [
+  { value: "bizravana", label: "BizRavana", colors: ["bg-[#6fc59b]", "bg-[#8fd4b0]", "bg-[#0e3b29]", "bg-[#e0f4ea]", "bg-[#f3f1eb]"] },
   { value: "blue", label: "Ocean", colors: ["bg-[oklch(0.546_0.245_262.881)]", "bg-[oklch(0.623_0.214_259.815)]", "bg-[oklch(0.4_0.2_262)]", "bg-[oklch(0.85_0.04_270)]", "bg-[oklch(0.922_0_0)]"] },
-  { value: "green", label: "Forest", colors: ["bg-[oklch(0.527_0.154_150.069)]", "bg-[oklch(0.627_0.194_149.214)]", "bg-[oklch(0.4_0.15_149)]", "bg-[oklch(0.85_0.04_149)]", "bg-[oklch(0.922_0_0)]"] },
   { value: "purple", label: "Twilight", colors: ["bg-[oklch(0.558_0.288_302.321)]", "bg-[oklch(0.627_0.265_303.9)]", "bg-[oklch(0.4_0.2_303)]", "bg-[oklch(0.85_0.04_303)]", "bg-[oklch(0.922_0_0)]"] },
   { value: "rose", label: "Blush", colors: ["bg-[oklch(0.645_0.246_16.439)]", "bg-[oklch(0.715_0.143_16.439)]", "bg-[oklch(0.5_0.2_16)]", "bg-[oklch(0.85_0.04_16)]", "bg-[oklch(0.922_0_0)]"] },
   { value: "amber", label: "Sunset", colors: ["bg-[oklch(0.769_0.188_70.08)]", "bg-[oklch(0.828_0.167_70.08)]", "bg-[oklch(0.6_0.15_70)]", "bg-[oklch(0.85_0.04_70)]", "bg-[oklch(0.922_0_0)]"] },
@@ -2206,7 +2206,7 @@ const SETTINGS_SEARCH_INDEX: SettingsSearchEntry[] = [
   // ── General
   { keywords: ["theme", "style", "color", "accent", "appearance", "palette", "personality"], tab: "general", sectionId: "theme-style", path: "General > Theme & Style", description: "Customize color palette and design personality" },
   { keywords: ["interface", "theme", "light", "dark", "system", "mode", "appearance"], tab: "general", sectionId: "theme-style", path: "General > Theme & Style > Interface Theme", description: "Switch between light, dark, or system theme" },
-  { keywords: ["design", "personality", "color", "accent", "ocean", "forest", "twilight", "blush", "sunset", "custom", "palette"], tab: "general", sectionId: "theme-style", path: "General > Theme & Style > Design Personality", description: "Choose accent color and palette" },
+  { keywords: ["design", "personality", "color", "accent", "bizravana", "landing", "ocean", "twilight", "blush", "sunset", "custom", "palette"], tab: "general", sectionId: "theme-style", path: "General > Theme & Style > Design Personality", description: "Choose accent color and palette" },
   { keywords: ["background", "style", "blobs", "solid", "gradient", "bg", "wallpaper"], tab: "general", sectionId: "theme-style", path: "General > Theme & Style > Background Style", description: "Select between gradient blobs or solid background" },
   { keywords: ["font", "typography", "text", "typeface", "poppins", "lora", "caveat", "letter"], tab: "general", sectionId: "typography", path: "General > Typography", description: "Font family and typeface settings" },
   { keywords: ["font", "personality", "poppins", "lora", "caveat", "serif", "sans", "script"], tab: "general", sectionId: "typography", path: "General > Typography > Font Personality", description: "Choose between Poppins, Lora, or Caveat font" },

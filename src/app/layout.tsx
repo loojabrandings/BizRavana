@@ -31,6 +31,27 @@ const mohave = Mohave({
   variable: "--font-mohave",
 });
 
+// Runs before first paint: resolve the accent from the persisted preferences
+// (else the BizRavana default), then set `data-accent` on <html> so the
+// correct palette applies with no flash of the base (Ocean) colors. Mirrors
+// the landing site's theme init script in (site)/layout.tsx.
+const accentInitScript = `(function () {
+  try {
+    var raw = localStorage.getItem("freebuff-preferences");
+    var accent = "bizravana";
+    if (raw) {
+      var parsed = JSON.parse(raw);
+      var stored = parsed && parsed.state && parsed.state.accent;
+      var known = ["bizravana", "blue", "purple", "rose", "amber", "custom"];
+      // Legacy "green" (Forest) accent was removed — map it to BizRavana.
+      if (stored === "green" || known.indexOf(stored) !== -1) {
+        accent = stored === "green" ? "bizravana" : stored;
+      }
+    }
+    document.documentElement.setAttribute("data-accent", accent);
+  } catch (e) {}
+})();`;
+
 export const metadata: Metadata = {
   title: {
     template: "%s | BizRavana",
@@ -67,7 +88,16 @@ export default function RootLayout({
       className={`h-full antialiased ${poppins.variable} ${lora.variable} ${caveat.variable} ${mohave.variable}`}
     >
       <body className="min-h-full flex flex-col">
-        <ThemeProvider defaultTheme="system" accent="blue">
+        {/* Sets data-accent before first paint; the type switch follows the
+            landing site's theme script: text/javascript on the server so it
+            runs during HTML parsing, text/plain on the client so React
+            ignores it while hydrating. */}
+        <script
+          type={typeof window === "undefined" ? "text/javascript" : "text/plain"}
+          suppressHydrationWarning
+          dangerouslySetInnerHTML={{ __html: accentInitScript }}
+        />
+        <ThemeProvider defaultTheme="system" accent="bizravana">
           <PreferencesProvider>
             <QueryProvider>
               {children}

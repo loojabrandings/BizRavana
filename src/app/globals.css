@@ -240,32 +240,32 @@
 }
 
 /* ============================
-   Accent: Green
+   Accent: BizRavana (landing-site palette)
    ============================ */
-[data-accent="green"] {
-  --primary: oklch(0.627 0.194 149.214);
-  --primary-foreground: oklch(0.985 0 0);
-  --ring: oklch(0.527 0.154 150.069);
-  --sidebar-primary: oklch(0.527 0.154 150.069);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --chart-1: oklch(0.527 0.154 150.069);
-  --hero: oklch(0.985 0.003 149);
-  --hero-accent: oklch(0.627 0.194 149.214 / 0.08);
-  --brand-accent: oklch(0.627 0.194 149.214);
-  --brand-accent-foreground: oklch(0.205 0 0);
+[data-accent="bizravana"] {
+  --primary: #6fc59b;
+  --primary-foreground: #08090b;
+  --ring: #6fc59b;
+  --sidebar-primary: #6fc59b;
+  --sidebar-primary-foreground: #08090b;
+  --chart-1: #6fc59b;
+  --hero: #f3f1eb;
+  --hero-accent: rgb(111 197 155 / 0.08);
+  --brand-accent: #6fc59b;
+  --brand-accent-foreground: #08090b;
 }
 
-.dark[data-accent="green"] {
-  --primary: oklch(0.627 0.194 149.214);
-  --primary-foreground: oklch(0.205 0 0);
-  --ring: oklch(0.627 0.194 149.214);
-  --sidebar-primary: oklch(0.627 0.194 149.214);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --chart-1: oklch(0.627 0.194 149.214);
-  --hero: oklch(0.06 0.03 149);
-  --hero-accent: oklch(0.527 0.154 150.069 / 0.35);
-  --brand-accent: oklch(0.527 0.154 150.069);
-  --brand-accent-foreground: oklch(0.985 0 0);
+.dark[data-accent="bizravana"] {
+  --primary: #0b8959;
+  --primary-foreground: #08090b;
+  --ring: #0b8959;
+  --sidebar-primary: #0b8959;
+  --sidebar-primary-foreground: #08090b;
+  --chart-1: #0b8959;
+  --hero: #07130d;
+  --hero-accent: rgb(111 197 155 / 0.35);
+  --brand-accent: #6fc59b;
+  --brand-accent-foreground: #08090b;
 }
 
 /* ============================

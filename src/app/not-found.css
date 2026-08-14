@@ -1,0 +1,244 @@
+/* --------------------------------------------------------------------------
+ * Global 404 page — self-contained by design. The root layout (dashboard
+ * tokens) wraps this page, so all styles live here, scoped under `.nf`,
+ * carrying the landing site's ink/accent palette and its own Poiret/Quicksand
+ * type system (loaded in not-found.tsx) so the page is indistinguishable
+ * from the marketing pages it belongs to.
+ * ------------------------------------------------------------------------ */
+
+.nf {
+  --nf-bg: #08090b; /* landing ink */
+  --nf-fg: #f3f1eb; /* landing cream */
+  --nf-accent: #6fc59b; /* landing soft green */
+  --nf-ink: var(--nf-bg);
+
+  /* The landing type system — same token names as landing.css. */
+  --font-display: var(--font-poiret), "Century Gothic", "Futura", sans-serif;
+  --font-body: var(--font-quicksand), "Segoe UI", system-ui, sans-serif;
+  --tracking-wide: 0.03em;
+  --transition-duration: 300ms;
+
+  position: relative;
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: clamp(2rem, 6vw, 4rem);
+  overflow: hidden;
+  background: var(--nf-bg);
+  color: var(--nf-fg);
+  color-scheme: dark;
+  font-family: var(--font-body);
+}
+
+/* Ambient accent blobs — a minimal echo of the landing page's fixed blob
+   layer, so the 404 still feels like the same site. */
+.nf__blobs {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.nf__blobs::before,
+.nf__blobs::after {
+  content: "";
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(100px);
+}
+
+.nf__blobs::before {
+  width: min(420px, 60vw);
+  height: min(420px, 60vw);
+  top: -140px;
+  right: -100px;
+  background: radial-gradient(
+    circle,
+    color-mix(in srgb, var(--nf-accent) 40%, transparent),
+    transparent 70%
+  );
+}
+
+.nf__blobs::after {
+  width: min(380px, 55vw);
+  height: min(380px, 55vw);
+  bottom: -160px;
+  left: -120px;
+  background: radial-gradient(
+    circle,
+    color-mix(in srgb, var(--nf-accent) 26%, transparent),
+    transparent 70%
+  );
+}
+
+.nf__inner {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 36rem;
+  display: grid;
+  justify-items: center;
+  text-align: center;
+}
+
+/* Brand — the same mark the navbar uses, rebuilt with local tokens: the
+   gradient accent tile + display-font initial, and the Quicksand wordmark. */
+.nf__brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+  margin-bottom: clamp(2.5rem, 6vh, 4rem);
+  color: var(--nf-fg);
+  text-decoration: none;
+  transition: color var(--transition-duration) ease;
+}
+
+.nf__brand:hover {
+  color: var(--nf-accent);
+}
+
+.nf__logo {
+  display: flex;
+  width: 26px;
+  height: auto;
+  flex: none;
+  line-height: 0;
+}
+
+/* The emblem image — landing.css isn't loaded on this page (it renders in
+   the root layout), so the sizing rule is repeated here. */
+.brand-logo {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.nf__brand-name {
+  font-size: 1.15rem;
+  font-weight: 400;
+  letter-spacing: var(--tracking-wide);
+}
+
+/* Eyebrow — the same small uppercase label as the editorial pages. */
+.nf__eyebrow {
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--nf-fg) 45%, transparent);
+}
+
+/* The giant numeral — Poiret One, the hero's own display voice, faded to a
+   soft gradient so it reads as a backdrop for the message rather than a
+   shouting error. */
+.nf__code {
+  margin-top: 1rem;
+  font-family: var(--font-display);
+  font-size: clamp(7rem, 22vw, 13rem);
+  font-weight: 400;
+  line-height: 0.9;
+  letter-spacing: 0.02em;
+  background: linear-gradient(
+    180deg,
+    var(--nf-fg),
+    color-mix(in srgb, var(--nf-fg) 35%, transparent)
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  user-select: none;
+}
+
+.nf__title {
+  margin-top: 0.75rem;
+  font-family: var(--font-display);
+  font-size: clamp(1.75rem, 4.5vw, 2.6rem);
+  font-weight: 400;
+  line-height: 1.15;
+  letter-spacing: var(--tracking-wide);
+  text-wrap: balance;
+}
+
+.nf__desc {
+  margin-top: 1rem;
+  max-width: 30rem;
+  font-size: clamp(1rem, 1.4vw, 1.125rem);
+  line-height: 1.65;
+  color: color-mix(in srgb, var(--nf-fg) 62%, transparent);
+  text-wrap: pretty;
+}
+
+/* Buttons — pill CTAs in the site's primary/secondary language. */
+.nf__links {
+  margin-top: 2.25rem;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.75rem;
+}
+
+.nf__btn {
+  padding: 0.8rem 1.5rem;
+  border: 1px solid color-mix(in srgb, var(--nf-fg) 26%, transparent);
+  border-radius: 9999px;
+  background: transparent;
+  color: var(--nf-fg);
+  font: inherit;
+  font-size: 0.95rem;
+  font-weight: 500;
+  text-decoration: none;
+  transition:
+    border-color var(--transition-duration) ease,
+    background-color var(--transition-duration) ease,
+    color var(--transition-duration) ease;
+}
+
+.nf__btn:hover {
+  border-color: var(--nf-accent);
+  color: var(--nf-accent);
+}
+
+.nf__btn:focus-visible {
+  outline: 2px solid var(--nf-accent);
+  outline-offset: 3px;
+}
+
+.nf__btn--primary {
+  background: var(--nf-fg);
+  border-color: var(--nf-fg);
+  color: var(--nf-ink);
+}
+
+.nf__btn--primary:hover {
+  background: color-mix(in srgb, var(--nf-fg) 88%, var(--nf-accent));
+  border-color: color-mix(in srgb, var(--nf-fg) 88%, var(--nf-accent));
+  color: var(--nf-ink);
+}
+
+.nf__btn--primary:focus-visible {
+  outline-color: var(--nf-accent);
+}
+
+/* Closing hint — a quiet path to real help. */
+.nf__hint {
+  margin-top: 2rem;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  color: color-mix(in srgb, var(--nf-fg) 45%, transparent);
+}
+
+.nf__hint-link {
+  color: var(--nf-accent);
+  text-decoration: none;
+}
+
+.nf__hint-link:hover {
+  text-decoration: underline;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nf__brand-name,
+  .nf__btn {
+    transition: none;
+  }
+}

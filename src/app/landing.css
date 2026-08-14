@@ -181,26 +181,46 @@ html[data-theme="dark"] .landing-site {
   color: var(--accent);
 }
 
-/* Logo mark — a gradient accent tile holding the brand initial, with a soft
-   accent glow. The wordmark keeps the site's display voice. */
+/* The real BizRavana emblem, theme-aware — white on the ink theme, ink on
+   the cream theme (see .brand-logo rules below). The wordmark keeps the
+   site's voice. */
 .navbar__logo {
-  display: grid;
-  place-items: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 9px;
-  background: linear-gradient(
-    135deg,
-    var(--accent),
-    color-mix(in srgb, var(--accent) 55%, var(--primary))
-  );
-  box-shadow:
-    inset 0 0 0 1px color-mix(in srgb, var(--accent) 35%, transparent),
-    0 4px 12px -4px color-mix(in srgb, var(--accent) 45%, transparent);
-  color: var(--on-accent);
-  font-family: var(--font-display);
-  font-size: 1rem;
-  line-height: 1;
+  display: flex;
+  width: 22px;
+  height: auto;
+  flex: none;
+  line-height: 0;
+}
+
+/* Theme-aware emblem — the white mark renders by default (the ink site);
+   the ink mark takes over on the cream theme. Mirrors the landing theme
+   handling, including the no-JS system-scheme fallback. */
+.brand-logo {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.brand-logo--light {
+  display: none;
+}
+
+html[data-theme="light"] .landing-site .brand-logo--light {
+  display: block;
+}
+
+html[data-theme="light"] .landing-site .brand-logo--dark {
+  display: none;
+}
+
+@media (prefers-color-scheme: light) {
+  html:not([data-theme]) .landing-site .brand-logo--light {
+    display: block;
+  }
+
+  html:not([data-theme]) .landing-site .brand-logo--dark {
+    display: none;
+  }
 }
 
 /* Links live inside a frosted glass pill group — the floating-nav treatment
@@ -448,9 +468,11 @@ html[data-theme="dark"] .landing-site {
   inset: 0;
   z-index: 0;
   pointer-events: none;
-  background: var(--background);
-  /* The laptop's journey ends at the FAQ: fade the whole scene out once the
-     final CTA is on screen, so the closing block reads as clean page content. */
+  /* Transparent at every breakpoint: the page background is painted by the
+     .landing-site wrapper itself, so an opaque fill here would hide the
+     ambient blob layer (which sits on its own z-index-0 sibling, painted
+     below the canvas on tablet/mobile) — breaking the blob backdrop that
+     every other page shares. */
   transition: opacity 0.6s ease;
 }
 
@@ -540,16 +562,16 @@ html[data-theme="light"] .landing-site .scene-blobs::after {
 }
 
 /* Desktop (≥1024px — the 3D engine's desktop breakpoint): the laptop floats
-   OVER the section copy — the text renders behind the device. The scene's
-   opaque fill is dropped (the body already paints the page background) so
-   copy stays visible through the transparent canvas around the laptop; only
-   the device itself occludes it. Tablet and mobile keep the text-in-front
-   layout (the scene stays at z-index 0 there). */
+   OVER the section copy — the text renders behind the device, so copy stays
+   visible through the transparent canvas around the laptop; only the device
+   itself occludes it. Tablet and mobile keep the text-in-front layout (the
+   scene stays at z-index 0 there), with the canvas staying transparent so
+   the ambient blobs paint through it there too — one blob backdrop on every
+   screen and page. */
 @media (min-width: 1024px) {
   .scene-canvas {
     /* Above the sections (z-index 1), below the navbar (z-index 50). */
     z-index: 2;
-    background: transparent;
   }
 
 }
@@ -1047,10 +1069,11 @@ html.layout-guides .layout-guides-toggle {
 }
 
 .footer__logo {
-  width: 22px;
-  height: 22px;
-  border-radius: 6px;
-  background: var(--foreground);
+  display: flex;
+  width: 18px;
+  height: auto;
+  flex: none;
+  line-height: 0;
 }
 
 .footer__tagline {
@@ -3883,4 +3906,979 @@ html.layout-guides .layout-guides-toggle {
   line-height: var(--leading-relaxed);
   color: var(--text-secondary);
   text-wrap: pretty;
+}
+
+/* --------------------------------------------------------------------------
+ * Getting Started page (hero + numbered setup journey + next-step cards +
+ * the shared closing CTA — the editorial structure from Features/About)
+ * ------------------------------------------------------------------------ */
+
+/* The setup journey — one card per step on a numbered rail. The rail column
+   stretches the full row height so the connecting line can cross the grid
+   gap into the next step. */
+.gs-steps {
+  list-style: none;
+  margin-top: 2.5rem;
+  display: grid;
+  gap: 1.25rem;
+  text-align: left;
+}
+
+.gs-steps__item {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 1.25rem;
+  align-items: stretch;
+}
+
+/* The rail cell — holds the number badge and the connector line. */
+.gs-steps__num-wrap {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 100%;
+}
+
+/* Number badge — accent circle, mirroring the site's soft glass badges. */
+.gs-steps__num {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 3rem;
+  height: 3rem;
+  flex: none;
+  border-radius: 9999px;
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 30%, transparent);
+  color: var(--accent);
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  letter-spacing: 0.08em;
+}
+
+/* Connector — a hairline drops from under the badge and crosses the grid
+   gap into the next step, so the sequence reads as one journey. */
+.gs-steps__num-wrap::after {
+  content: "";
+  position: absolute;
+  top: calc(3rem + 0.75rem);
+  bottom: -1.25rem;
+  width: 2px;
+  background: var(--border-strong);
+}
+
+.gs-steps__item:last-child .gs-steps__num-wrap::after {
+  display: none;
+}
+
+/* Step card — fills its rail row so all rows keep equal presence. */
+.gs-steps__cell {
+  min-width: 0;
+  height: 100%;
+}
+
+.gs-steps__card {
+  height: 100%;
+  padding: 1.75rem 1.75rem 1.9rem;
+}
+
+/* Checklist inside a step card — denser than the standalone list. The
+   card's own flex gap handles the spacing from the description above. */
+.gs-steps__checklist {
+  margin-top: 1.25rem;
+  gap: 0.6rem;
+}
+
+.gs-steps__checklist li {
+  font-size: 0.95rem;
+}
+
+/* Tip line — separated from the checklist by the card's hairline. */
+.gs-tip {
+  margin-top: 1.25rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--border-subtle);
+  font-size: var(--text-sm);
+  line-height: var(--leading-relaxed);
+  color: var(--text-tertiary);
+}
+
+.gs-tip strong {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+/* Next-step destination cards — equal-height grid like the features page. */
+.gs-next__grid {
+  list-style: none;
+  margin-top: 2.5rem;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.25rem;
+  text-align: left;
+}
+
+/* Reveal wrapper inside a grid cell — stretch so the card fills the cell. */
+.gs-next__cell {
+  height: 100%;
+}
+
+.gs-next__card {
+  height: 100%;
+  padding: 1.75rem 1.75rem 1.9rem;
+}
+
+/* The small CTA sits at the card's base, away from the description. */
+.gs-next__actions {
+  margin-top: 1.5rem;
+}
+
+/* Hovering one card softly dims its siblings, so the focused card reads as
+   the spotlight — same trick as the features and beliefs pages. */
+.gs-next__grid:hover .gs-next__card:not(:hover) {
+  opacity: 0.55;
+  transform: none;
+}
+
+/* Getting Started page — responsive polish. */
+@media (max-width: 900px) {
+  .gs-next__grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  /* The rail moves above the card on phones: number first, card below. */
+  .gs-steps__item {
+    grid-template-columns: 1fr;
+    gap: 0.6rem;
+  }
+
+  .gs-steps__num-wrap {
+    align-items: flex-start;
+  }
+
+  .gs-steps__num-wrap::after {
+    display: none;
+  }
+
+  .gs-next__grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* --------------------------------------------------------------------------
+ * Documentation page (hero + browse grid + one accordion section per
+ * category + help band — the editorial structure from Features/About)
+ * ------------------------------------------------------------------------ */
+
+/* Browse grid — compact category cards linking to their sections below. */
+.docs-cats__grid {
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.25rem;
+  text-align: left;
+}
+
+/* Reveal wrapper inside a grid cell — stretch so the card fills the cell. */
+.docs-cats__cell {
+  height: 100%;
+}
+
+/* The whole card is the link — anchor wraps the Card, keeping the card's
+   own hover shimmer while making the entire tile clickable. */
+.docs-cats__link {
+  display: block;
+  height: 100%;
+  color: inherit;
+  text-decoration: none;
+}
+
+.docs-cats__link:focus-visible {
+  outline: 2px solid var(--foreground);
+  outline-offset: 3px;
+  border-radius: 16px;
+}
+
+/* Compact cards — a touch less padding than the full-size editorial cards. */
+.docs-cats__card {
+  height: 100%;
+  padding: 1.4rem 1.5rem 1.55rem;
+}
+
+/* Hovering one card softly dims its siblings — the same spotlight trick as
+   the features and getting-started grids. */
+.docs-cats__grid:hover .docs-cats__card:not(:hover) {
+  opacity: 0.55;
+  transform: none;
+}
+
+/* Accordion density — the default FAQ list is capped at 40rem and uses the
+   landing page's display-size questions. Docs entries run denser: slightly
+   wider column, smaller question type, tighter padding. */
+.docs-faq {
+  max-width: 44rem;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.docs-faq .faq__question {
+  font-size: clamp(1.0625rem, 1.8vw, 1.3rem);
+  padding: 1.05rem 0;
+}
+
+.docs-faq .faq__answer p {
+  max-width: 40rem;
+  padding-bottom: 1.25rem;
+}
+
+/* Help band — a single centered card closing the page before the footer. */
+.docs-help__card {
+  padding: 2rem 2rem 2.25rem;
+  align-items: center;
+  text-align: center;
+}
+
+.docs-help__actions {
+  margin-top: 1.5rem;
+}
+
+/* Documentation page — responsive polish. */
+@media (max-width: 900px) {
+  .docs-cats__grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .docs-cats__grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* --------------------------------------------------------------------------
+ * Help Center page (hero + live search + popular topics + top questions +
+ * contact channels — reuses the docs-cats link cards and docs-faq density)
+ * ------------------------------------------------------------------------ */
+
+/* The search — a prominent field under the hero statement, with the results
+   dropdown below it. */
+.help-search {
+  margin: 2.25rem auto 0;
+  max-width: 44rem;
+  text-align: left;
+}
+
+.help-search__box {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--border-strong);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--background) 55%, transparent);
+  box-shadow: 0 18px 44px -24px color-mix(in srgb, var(--foreground) 35%, transparent);
+  transition:
+    border-color var(--transition-duration) ease,
+    box-shadow var(--transition-duration) ease;
+}
+
+.help-search__box:focus-within {
+  border-color: var(--accent);
+  box-shadow:
+    0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent),
+    0 18px 44px -24px color-mix(in srgb, var(--foreground) 35%, transparent);
+}
+
+.help-search__icon {
+  flex: none;
+  color: var(--text-tertiary);
+}
+
+/* Visually hidden label — the search icon + placeholder carry the meaning,
+   but screen readers get a proper field label. */
+.help-search__label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.help-search__input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  color: var(--foreground);
+  font: inherit;
+  font-size: 1.05rem;
+  outline: none;
+}
+
+.help-search__input::placeholder {
+  color: var(--text-tertiary);
+}
+
+/* The clear (×) button appears only while typing. */
+.help-search__clear {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border-strong);
+  border-radius: 9999px;
+  background: transparent;
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 1.15rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color var(--transition-duration) ease;
+}
+
+.help-search__clear:hover {
+  background: var(--fill-hover);
+}
+
+/* Popular searches — one-tap chips shown before any input. */
+.help-search__popular {
+  margin-top: 0.9rem;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  font-size: var(--text-sm);
+  color: var(--text-tertiary);
+}
+
+.help-search__chips {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.help-search__chip {
+  padding: 0.3rem 0.85rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: 9999px;
+  background: transparent;
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: var(--text-sm);
+  cursor: pointer;
+  transition:
+    border-color var(--transition-duration) ease,
+    color var(--transition-duration) ease;
+}
+
+.help-search__chip:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* Results — a soft panel of rows under the field, each row a real link. */
+.help-search__results {
+  list-style: none;
+  margin-top: 0.9rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: 14px;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--background) 55%, transparent);
+  text-align: left;
+}
+
+.help-search__result {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.85rem 1rem;
+  color: inherit;
+  text-decoration: none;
+  border-top: 1px solid var(--border-subtle);
+  transition: background-color var(--transition-duration) ease;
+}
+
+.help-search__result:first-child {
+  border-top: none;
+}
+
+.help-search__result:hover,
+.help-search__result:focus-visible {
+  background: var(--fill-hover);
+  outline: none;
+}
+
+.help-search__result-main {
+  display: grid;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.help-search__result-title {
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.help-search__result-snippet {
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  color: var(--text-secondary);
+}
+
+.help-search__result-meta {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.help-search__result-category {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+
+.help-search__result-open {
+  color: var(--text-tertiary);
+}
+
+/* Empty state — keeps the visitor pointed somewhere useful. */
+.help-search__empty {
+  margin-top: 0.9rem;
+  font-size: var(--text-sm);
+  line-height: var(--leading-relaxed);
+  color: var(--text-tertiary);
+  text-align: left;
+}
+
+.help-search__empty a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.help-search__empty a:hover {
+  text-decoration: underline;
+}
+
+/* Contact note under the channel cards. */
+.help-contact__note {
+  margin-top: 1.5rem;
+  font-size: var(--text-sm);
+  line-height: var(--leading-relaxed);
+  color: var(--text-tertiary);
+  text-align: center;
+}
+
+.help-contact__link {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.help-contact__link:hover {
+  text-decoration: underline;
+}
+
+/* --------------------------------------------------------------------------
+ * Changelog page (hero + one hairline-divided entry per release, each
+ * grouped under Added / Improved / Fixed)
+ * ------------------------------------------------------------------------ */
+
+.chg-list {
+  list-style: none;
+  text-align: left;
+}
+
+/* One release — hairline-divided rows like the legal pages, so the
+   changelog speaks the site's own visual language. */
+.chg-release {
+  padding: 3rem 0;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.chg-list li:last-child .chg-release {
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+/* Head row — the "Latest" pill, version and date in one baseline. */
+.chg-release__head {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.4rem 0.9rem;
+}
+
+.chg-latest {
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 35%, transparent);
+  color: var(--accent);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.chg-release__version {
+  font-family: var(--font-display);
+  font-size: clamp(1.4rem, 2.4vw, 1.9rem);
+  font-weight: 400;
+  letter-spacing: var(--tracking-wide);
+  color: var(--accent);
+}
+
+.chg-release__date {
+  font-size: var(--text-sm);
+  color: var(--text-tertiary);
+}
+
+.chg-release__title {
+  margin-top: 0.9rem;
+  font-family: var(--font-display);
+  font-size: clamp(1.5rem, 2.8vw, 2.25rem);
+  font-weight: 400;
+  line-height: var(--leading-tight);
+  letter-spacing: var(--tracking-wide);
+  text-wrap: balance;
+}
+
+.chg-release__summary {
+  margin-top: 0.75rem;
+  font-size: var(--text-base);
+  line-height: var(--leading-relaxed);
+  color: var(--text-secondary);
+  text-wrap: pretty;
+}
+
+/* Change groups — the standard buckets, each headed by a tinted label. */
+.chg-group {
+  margin-top: 1.75rem;
+}
+
+.chg-type {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.chg-type::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 9999px;
+}
+
+.chg-type--added {
+  color: var(--accent);
+}
+
+.chg-type--added::before {
+  background: var(--accent);
+}
+
+.chg-type--improved {
+  color: var(--text-secondary);
+}
+
+.chg-type--improved::before {
+  background: var(--text-tertiary);
+}
+
+.chg-type--fixed {
+  color: color-mix(in srgb, var(--alert) 85%, transparent);
+}
+
+.chg-type--fixed::before {
+  background: var(--alert);
+}
+
+/* Change items — dotted rows, with links underlining softly on hover. */
+.chg-group__items {
+  list-style: none;
+  margin-top: 0.9rem;
+  display: grid;
+  gap: 0.55rem;
+}
+
+.chg-item {
+  position: relative;
+  padding-left: 1.15rem;
+  font-size: var(--text-base);
+  line-height: var(--leading-relaxed);
+  color: var(--text-secondary);
+  text-wrap: pretty;
+}
+
+.chg-item::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.58em;
+  width: 6px;
+  height: 6px;
+  border-radius: 9999px;
+  background: var(--border-strong);
+}
+
+.chg-item__link {
+  color: inherit;
+  text-decoration: none;
+  border-bottom: 1px solid var(--border-subtle);
+  transition:
+    color var(--transition-duration) ease,
+    border-color var(--transition-duration) ease;
+}
+
+.chg-item__link:hover,
+.chg-item__link:focus-visible {
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+  outline: none;
+}
+
+/* Closing note under the releases. */
+.chg-note {
+  margin-top: 2.5rem;
+  font-size: var(--text-sm);
+  line-height: var(--leading-relaxed);
+  color: var(--text-tertiary);
+  text-align: center;
+}
+
+.chg-note__link {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.chg-note__link:hover {
+  text-decoration: underline;
+}
+
+/* --------------------------------------------------------------------------
+ * Blog (listing page + article pages — post cards, article typography and
+ * prev/next navigation, in the site's editorial voice)
+ * ------------------------------------------------------------------------ */
+
+/* Post cards — the whole card is a link, wrapping the shared Card shell. */
+.blog-card__link {
+  display: block;
+  height: 100%;
+  color: inherit;
+  text-decoration: none;
+}
+
+.blog-card__link:focus-visible {
+  outline: 2px solid var(--foreground);
+  outline-offset: 3px;
+  border-radius: 18px;
+}
+
+.blog-card {
+  height: 100%;
+  padding: 1.75rem 1.75rem 1.9rem;
+  text-align: left;
+}
+
+/* Category chip — the same quiet pill as the changelog's "Latest". */
+.blog-chip {
+  align-self: flex-start;
+  padding: 0.3rem 0.75rem;
+  border-radius: 9999px;
+  border: 1px solid var(--border-subtle);
+  background: color-mix(in srgb, var(--background) 55%, transparent);
+  color: var(--text-tertiary);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.blog-card__title {
+  font-family: var(--font-display);
+  font-size: clamp(1.35rem, 2.2vw, 1.6rem);
+  font-weight: 400;
+  line-height: var(--leading-tight);
+  letter-spacing: var(--tracking-wide);
+  text-wrap: balance;
+}
+
+.blog-card__excerpt {
+  font-size: var(--text-base);
+  line-height: var(--leading-relaxed);
+  color: var(--text-secondary);
+  text-wrap: pretty;
+}
+
+/* Meta pinned to the card base so equal-height rows line up. */
+.blog-card__meta {
+  margin-top: auto;
+  font-size: var(--text-sm);
+  color: var(--text-tertiary);
+}
+
+/* The featured post — the latest, full-width with larger type. */
+.blog-card--featured {
+  padding: clamp(1.75rem, 4vw, 2.75rem);
+  gap: 1.1rem;
+}
+
+.blog-card--featured .blog-card__title {
+  font-size: clamp(1.9rem, 4vw, 2.6rem);
+}
+
+.blog-card--featured .blog-card__excerpt {
+  max-width: 44rem;
+  font-size: clamp(1.05rem, 1.5vw, 1.2rem);
+}
+
+/* The listing grid — two columns, equal-height cards. */
+.blog-grid {
+  list-style: none;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
+  text-align: left;
+}
+
+.blog-grid__cell {
+  height: 100%;
+}
+
+/* Hovering one card softly dims its siblings — the same spotlight trick as
+   the features and getting-started grids. */
+.blog-grid:hover .blog-card:not(:hover) {
+  opacity: 0.55;
+  transform: none;
+}
+
+/* Post header — centered category, title and meta, lighter than the page
+   heroes so the article leads the page. */
+.blog-post-hero {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  justify-items: center;
+  padding: clamp(4rem, 10vh, 6.5rem) var(--section-gutter) clamp(3rem, 7vh, 4.5rem);
+  text-align: center;
+}
+
+.blog-post-hero__inner {
+  width: 100%;
+  max-width: 52rem;
+}
+
+.blog-post-hero__title {
+  margin-top: 1.25rem;
+  font-family: var(--font-display);
+  font-size: clamp(2.4rem, 5.5vw, 4rem);
+  font-weight: 400;
+  line-height: 1.08;
+  letter-spacing: var(--tracking-wide);
+  text-wrap: balance;
+}
+
+.blog-post-hero__meta {
+  margin-top: 1.25rem;
+  font-size: var(--text-sm);
+  color: var(--text-tertiary);
+}
+
+/* Article body — a readable centered column in the site's editorial voice. */
+.blog-post {
+  max-width: 44rem;
+  margin: 0 auto;
+  text-align: left;
+}
+
+.blog-post h2 {
+  margin-top: 2.75rem;
+  font-family: var(--font-display);
+  font-size: clamp(1.6rem, 2.8vw, 2.1rem);
+  font-weight: 400;
+  line-height: var(--leading-tight);
+  letter-spacing: var(--tracking-wide);
+  text-wrap: balance;
+}
+
+.blog-post p {
+  margin-top: 1.15rem;
+  font-size: clamp(1rem, 1.4vw, 1.125rem);
+  line-height: var(--leading-relaxed);
+  color: var(--text-secondary);
+  text-wrap: pretty;
+}
+
+.blog-post ul {
+  list-style: none;
+  margin-top: 1.25rem;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.blog-post ul li {
+  position: relative;
+  padding-left: 1.4rem;
+  font-size: clamp(1rem, 1.4vw, 1.125rem);
+  line-height: var(--leading-normal);
+  color: var(--text-secondary);
+}
+
+.blog-post ul li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.55em;
+  width: 7px;
+  height: 7px;
+  border-radius: 9999px;
+  background: var(--accent);
+}
+
+.blog-post strong {
+  color: var(--foreground);
+  font-weight: 600;
+}
+
+.blog-post a {
+  color: var(--accent);
+  text-decoration: none;
+  border-bottom: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  transition: border-color var(--transition-duration) ease;
+}
+
+.blog-post a:hover {
+  border-color: var(--accent);
+}
+
+/* Pull-quote — display voice with an accent rule, like the reviews. */
+.blog-post blockquote {
+  margin-top: 1.75rem;
+  padding: 0.25rem 0 0.25rem 1.25rem;
+  border-left: 2px solid var(--accent);
+  font-family: var(--font-display);
+  font-size: clamp(1.3rem, 2.2vw, 1.6rem);
+  font-weight: 400;
+  letter-spacing: var(--tracking-wide);
+  line-height: var(--leading-tight);
+  color: var(--foreground);
+  text-wrap: balance;
+}
+
+.blog-post blockquote p {
+  margin-top: 0;
+  color: inherit;
+  font-size: inherit;
+  font-family: inherit;
+  line-height: inherit;
+}
+
+/* Post navigation — newer / all / older across the footer-width measure. */
+.blog-post__nav {
+  border-top: 1px solid var(--border-subtle);
+  padding: 2rem var(--section-gutter) clamp(3rem, 7vh, 4.5rem);
+}
+
+.blog-post__nav-inner {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+.blog-post__nav-link {
+  display: grid;
+  gap: 0.25rem;
+  min-width: 0;
+  color: inherit;
+  text-decoration: none;
+}
+
+.blog-post__nav-link--right {
+  justify-items: end;
+  text-align: right;
+}
+
+.blog-post__nav-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+
+.blog-post__nav-title {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  letter-spacing: var(--tracking-wide);
+  color: var(--foreground);
+  text-wrap: balance;
+  transition: color var(--transition-duration) ease;
+}
+
+.blog-post__nav-link:hover .blog-post__nav-title,
+.blog-post__nav-link:focus-visible .blog-post__nav-title {
+  color: var(--accent);
+}
+
+.blog-post__nav-link:focus-visible {
+  outline: 2px solid var(--foreground);
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+
+.blog-post__nav-all {
+  padding: 0.6rem 1.25rem;
+  border: 1px solid var(--border-strong);
+  border-radius: 9999px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--foreground);
+  white-space: nowrap;
+  transition:
+    border-color var(--transition-duration) ease,
+    color var(--transition-duration) ease;
+}
+
+.blog-post__nav-all:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* Blog — responsive polish. */
+@media (max-width: 900px) {
+  .blog-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .blog-post__nav-inner {
+    grid-template-columns: 1fr;
+    justify-items: center;
+    text-align: center;
+    gap: 1.5rem;
+  }
+
+  .blog-post__nav-link--right {
+    justify-items: center;
+    text-align: center;
+  }
 }

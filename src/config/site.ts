@@ -1,4 +1,12 @@
 /**
+ * The public site origin — used by the sitemap, robots.txt, structured data
+ * and social metadata. Override via NEXT_PUBLIC_SITE_URL for previews;
+ * defaults to the production domain.
+ */
+export const SITE_URL =
+  process.env.NEXT_PUBLIC_SITE_URL ?? "https://bizravana.com";
+
+/**
  * Site-wide business details — the single source of truth for contact info.
  * The contact page (info column + WhatsApp form) reads from here, so the
  * number/email never drift between places.

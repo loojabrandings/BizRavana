@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 
 /** Footer social chips — brand SVG paths (24×24 viewBox); labels kept visually hidden for screen readers. */
 const SOCIALS = [
@@ -19,11 +20,15 @@ const SOCIALS = [
 /** Footer link columns. Entries with a `href` render as links; the rest stay
  *  placeholders until their routes exist. */
 const FOOTER_LINKS: { heading: string; links: { label: string; href?: string }[] }[] = [
-  { heading: "Product", links: [{ label: "Features", href: "/features" }, { label: "Pricing", href: "/pricing" }, { label: "Changelog" }] },
-  { heading: "Company", links: [{ label: "About", href: "/about" }, { label: "Blog" }, { label: "Contact", href: "/contact" }] },
+  { heading: "Product", links: [{ label: "Features", href: "/features" }, { label: "Pricing", href: "/pricing" }, { label: "Changelog", href: "/changelog" }] },
+  { heading: "Company", links: [{ label: "About", href: "/about" }, { label: "Blog", href: "/blog" }, { label: "Contact", href: "/contact" }] },
   {
     heading: "Resources",
-    links: [{ label: "Documentation" }, { label: "Help Center" }, { label: "Getting Started" }],
+    links: [
+      { label: "Documentation", href: "/documentation" },
+      { label: "Help Center", href: "/help-center" },
+      { label: "Getting Started", href: "/getting-started" },
+    ],
   },
   {
     heading: "Legal",
@@ -46,7 +51,23 @@ export default function Footer() {
       <div className="footer__inner">
         <div className="footer__brand">
           <p className="footer__brand-name">
-            <span className="footer__logo" aria-hidden="true" />
+            {/* The real BizRavana emblem — theme-aware like the navbar. */}
+            <span className="footer__logo" aria-hidden="true">
+              <Image
+                src="/brand-logo-dark.png"
+                alt=""
+                width={560}
+                height={786}
+                className="brand-logo brand-logo--dark"
+              />
+              <Image
+                src="/brand-logo-light.png"
+                alt=""
+                width={560}
+                height={809}
+                className="brand-logo brand-logo--light"
+              />
+            </span>
             <span>BizRavana</span>
           </p>
           <p className="footer__tagline">Your business. Under control.</p>

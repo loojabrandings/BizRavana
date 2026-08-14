@@ -4,6 +4,8 @@ import DeferredSceneMount from "@/components/deferred-scene-mount";
 import Button from "@/components/button";
 import FaqList from "@/components/faq-list";
 import Reveal from "@/components/reveal";
+import JsonLd from "@/components/json-ld";
+import { SITE_URL } from "@/config/site";
 
 /**
  * Landing page skeleton (dev scaffold). The 3D laptop is a fixed full-viewport
@@ -47,8 +49,8 @@ type SectionCopy = {
   groups?: FeatureGroup[];
   /**
    * Optional primary CTA shown in the actions row. When present it replaces
-   * the default "Explore all features" next-section link. Omit `href` to
-   * render a plain button (e.g. until the target route exists).
+   * the default "Explore all features" button (which links to /features).
+   * Omit `href` to render a plain button (e.g. until the target route exists).
    */
   cta?: { label: string; href?: string };
   /**
@@ -267,6 +269,41 @@ const SECTIONS: Section[] = [
   },
 ];
 
+/** The landing page's FAQ entries — reused for the FAQPage structured data. */
+const FAQ_ITEMS = SECTIONS.find((section) => section.id === "faq")?.copy?.faq ?? [];
+
+/** Product-level structured data: what BizRavana is, and the trial offer. */
+const softwareJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  name: "BizRavana",
+  url: SITE_URL,
+  applicationCategory: "BusinessApplication",
+  operatingSystem: "Web",
+  description:
+    "All-in-one business management for growing Sri Lankan businesses — orders, quotations, invoices, customers, inventory, expenses, courier deliveries and reports.",
+  offers: {
+    "@type": "Offer",
+    price: "0",
+    priceCurrency: "LKR",
+    description: "Free 3-day trial; subscription plans from Basic to Enterprise.",
+  },
+};
+
+/** The landing FAQ as schema.org questions. */
+const faqJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  mainEntity: FAQ_ITEMS.map((item) => ({
+    "@type": "Question",
+    name: item.question,
+    acceptedAnswer: {
+      "@type": "Answer",
+      text: item.answer,
+    },
+  })),
+};
+
 /**
  * Reviews ("Word of mouth") block — hairline-divided quotes, each with the
  * owner's business. Same left column and glow as the courier section, where
@@ -332,12 +369,12 @@ export default function Home() {
           </Reveal>
           <Reveal delay={280}>
             <div className="hero__actions">
-              {/* Placeholder targets: both sections exist on this page. Swap for
-                  real routes when signup / feature pages exist. */}
+              {/* "Start Free Trial" targets the pricing section on this page;
+                  signup is still a placeholder. Features has a real route. */}
               <Button href="#pricing" variant="primary">
                 Start Free Trial
               </Button>
-              <Button href="#features-order" variant="secondary">
+              <Button href="/features" variant="secondary">
                 Explore features
               </Button>
             </div>
@@ -402,8 +439,8 @@ export default function Home() {
                   </Reveal>
                 ) : null}
                 {section.copy?.cta ? (
-                  /* Custom CTA replaces the default next-section link (e.g.
-                     pricing's "Choose Your Plan"). */
+                  /* Custom CTA replaces the default "Explore all features"
+                     button (e.g. pricing's "Choose Your Plan"). */
                   <Reveal delay={260}>
                     <div className="features__actions">
                       {/* Spread href only when present: without it Button
@@ -419,11 +456,11 @@ export default function Home() {
                     </div>
                   </Reveal>
                 ) : SECTIONS[index + 1] ? (
-                  /* In-page target: the next section is the next feature block;
-                     swap for a real /features route when it exists. */
+                  /* Real route: every feature section's "Explore all features"
+                     links to the dedicated /features page. */
                   <Reveal delay={260}>
                     <div className="features__actions">
-                      <Button href={`#${SECTIONS[index + 1].id}`} variant="secondary">
+                      <Button href="/features" variant="secondary">
                         Explore all features
                       </Button>
                     </div>
@@ -464,6 +501,10 @@ export default function Home() {
           </Reveal>
         </div>
       </section>
+
+      {/* Structured data — product + FAQ (see the consts above). */}
+      <JsonLd data={softwareJsonLd} />
+      <JsonLd data={faqJsonLd} />
 
       {/* Shared footer (also used by /about). Matches the page background;
           the CTA above keeps its inverted panel. */}

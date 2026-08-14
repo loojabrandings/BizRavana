@@ -12,7 +12,7 @@ interface ThemeProviderProps {
 export function ThemeProvider({
   children,
   defaultTheme = "system",
-  accent = "blue",
+  accent = "bizravana",
 }: ThemeProviderProps) {
   useEffect(() => {
     document.documentElement.setAttribute("data-accent", accent);

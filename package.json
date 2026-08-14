@@ -11,6 +11,7 @@
     "test": "node scripts/quality/run-repository-tests.mjs",
     "test:staging": "node scripts/staging/run-security-regression.mjs",
     "staging:start": "node scripts/staging/start-staging-server.mjs",
+    "tts-proxy": "node scripts/tts-proxy.mjs",
     "quality": "npm run lint && npm run typecheck && npm test && npm run build"
   },
   "dependencies": {
