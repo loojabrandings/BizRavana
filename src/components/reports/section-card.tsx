@@ -8,7 +8,7 @@ export function SectionCard({
   children,
   className,
 }: {
-  icon: React.ElementType;
+  icon: React.ComponentType<{ className?: string }>;
   title: string;
   description?: string;
   children: React.ReactNode;

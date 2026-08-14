@@ -1,0 +1,3886 @@
+/* Two themes, both derived from the brand palette:
+   - dark (default): `--primary` ink surface, cream text, green accent blobs
+   - light: warm `--secondary` cream surface, ink text
+   The theme init script sets `data-theme` before first paint (stored
+   preference wins, else the ink dark default); the media queries below cover
+   no-JS visitors. */
+.landing-site {
+  color-scheme: dark;
+
+  /* ---- Brand palette ---- */
+  --primary: #08090b; /* near-black ink */
+  --secondary: #f3f1eb; /* warm cream */
+  --accent: #6fc59b; /* soft green highlight */
+  --alert: #e5484d; /* soft red — form errors (auth pages) */
+
+  /* ---- Core palette: the entire color system derives from these two ---- */
+  --background: var(--primary);
+  --foreground: var(--secondary);
+
+  /* ---- Semantic tokens (derived from the core pair) ---- */
+  --text-secondary: color-mix(in srgb, var(--foreground) 62%, transparent);
+  --text-tertiary: color-mix(in srgb, var(--foreground) 45%, transparent);
+  --border-subtle: color-mix(in srgb, var(--foreground) 12%, transparent);
+  --border-strong: color-mix(in srgb, var(--foreground) 26%, transparent);
+  --fill-hover: color-mix(in srgb, var(--foreground) 8%, transparent);
+  --fill-strong: var(--foreground); /* filled controls (buttons) */
+  --on-strong: var(--background); /* text/icon on filled controls */
+  --on-accent: var(--primary); /* text/icon on the accent fill */
+
+  /* ---- Typography ---- */
+  --font-display: var(--font-poiret), "Century Gothic", "Futura", sans-serif;
+  --font-body: var(--font-quicksand), "Segoe UI", system-ui, sans-serif;
+
+  /* Font weights — the design system's type scale. Quicksand is loaded as a
+     variable font (300–700), so every value here renders. Interactive
+     controls (e.g. buttons) switch between these two for their states. */
+  --font-weight-medium: 500;
+  --font-weight-bold: 700;
+
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.25rem;
+  --text-2xl: 1.5rem;
+  --text-3xl: 2rem;
+  --text-hero: clamp(3rem, 8vw, 6rem);
+
+  --leading-tight: 1.15;
+  --leading-normal: 1.5;
+  --leading-relaxed: 1.65;
+
+  --tracking-tight: -0.01em;
+  --tracking-normal: 0em;
+  --tracking-wide: 0.03em;
+
+  /* ---- Spacing ---- */
+  --space-sm: 1rem;
+  --space-md: 1.5rem;
+  --space-lg: 2rem;
+
+  /* Section side gutter (left/right margins of the page content). The dev
+     layout guides below read the same token so the debug overlay stays true. */
+  --section-gutter: clamp(1.5rem, 6vw, 4rem);
+
+  --transition-duration: 300ms;
+}
+
+html[data-theme="light"] .landing-site {
+  color-scheme: light;
+  --background: var(--secondary);
+  --foreground: var(--primary);
+}
+
+html[data-theme="dark"] .landing-site {
+  color-scheme: dark;
+  --background: var(--primary);
+  --foreground: var(--secondary);
+}
+
+/* No-JS fallback: follow the system scheme when no data-theme was set. */
+@media (prefers-color-scheme: dark) {
+  html:not([data-theme]) .landing-site {
+    color-scheme: dark;
+    --background: var(--primary);
+    --foreground: var(--secondary);
+  }
+}
+
+@media (prefers-color-scheme: light) {
+  html:not([data-theme]) .landing-site {
+    color-scheme: light;
+    --background: var(--secondary);
+    --foreground: var(--primary);
+  }
+}
+
+.landing-site {
+  /* Lenis drives smooth scrolling; native smooth would fight its animation. */
+  scroll-behavior: auto;
+  -webkit-text-size-adjust: 100%;
+  min-height: 100vh;
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-body);
+  transition:
+    background-color var(--transition-duration) ease,
+    color var(--transition-duration) ease;
+}
+
+/* Ensure no layout shift from default UA margins on the empty page. */
+.landing-site,
+.landing-site *,
+.landing-site *::before,
+.landing-site *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* Accessibility: disable the theme transition for reduced-motion users. */
+@media (prefers-reduced-motion: reduce) {
+  .landing-site {
+    transition: none;
+  }
+
+  /* The CTA fade is a visibility toggle — keep it instant, no easing. */
+  .scene-canvas,
+  .scene-blobs {
+    transition: none;
+  }
+
+  /* Blobs hold still for reduced-motion users. */
+  .scene-blobs::before,
+  .scene-blobs::after {
+    animation: none;
+  }
+}
+
+/* --------------------------------------------------------------------------
+ * Navbar
+ * ------------------------------------------------------------------------ */
+
+.navbar {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background-color: color-mix(in srgb, var(--background) 72%, transparent);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--border-subtle);
+  box-shadow: 0 1px 0 color-mix(in srgb, var(--foreground) 4%, transparent);
+  transition:
+    background-color var(--transition-duration) ease,
+    border-color var(--transition-duration) ease;
+}
+
+.navbar__inner {
+  max-width: 1120px;
+  margin: 0 auto;
+  height: 68px;
+  padding: 0 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.navbar__brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+  font-size: 1.15rem;
+  font-weight: 400;
+  letter-spacing: var(--tracking-wide);
+  color: var(--foreground);
+  text-decoration: none;
+  transition: color var(--transition-duration) ease;
+}
+
+.navbar__brand:hover {
+  color: var(--accent);
+}
+
+/* Logo mark — a gradient accent tile holding the brand initial, with a soft
+   accent glow. The wordmark keeps the site's display voice. */
+.navbar__logo {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 9px;
+  background: linear-gradient(
+    135deg,
+    var(--accent),
+    color-mix(in srgb, var(--accent) 55%, var(--primary))
+  );
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--accent) 35%, transparent),
+    0 4px 12px -4px color-mix(in srgb, var(--accent) 45%, transparent);
+  color: var(--on-accent);
+  font-family: var(--font-display);
+  font-size: 1rem;
+  line-height: 1;
+}
+
+/* Links live inside a frosted glass pill group — the floating-nav treatment
+   that reads as one unit between the brand and the actions. */
+.navbar__links {
+  display: flex;
+  align-items: center;
+  gap: 0.15rem;
+  padding: 0.3rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: 9999px;
+  background: color-mix(in srgb, var(--background) 55%, transparent);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  list-style: none;
+}
+
+.navbar__link {
+  display: inline-block;
+  padding: 0.42rem 0.9rem;
+  border-radius: 9999px;
+  font-size: 0.925rem;
+  font-weight: 400;
+  /* Keeps the 400-weight text centered inside the bold-width pill reserved
+     by ::after, at rest and while the weight animates. */
+  text-align: center;
+  color: var(--text-secondary);
+  cursor: pointer;
+  text-decoration: none;
+  transition:
+    color var(--transition-duration) ease,
+    background-color var(--transition-duration) ease,
+    font-weight var(--transition-duration) ease;
+}
+
+/* Reserve the bold advance width with an invisible copy of the label
+   (from data-label), so bolding on hover doesn't shift the text or pill. */
+.navbar__link::after {
+  content: attr(data-label);
+  display: block;
+  height: 0;
+  overflow: hidden;
+  visibility: hidden;
+  font-weight: 600;
+}
+
+.navbar__link:hover,
+.navbar__link:focus-visible {
+  color: var(--foreground);
+  background-color: var(--fill-hover);
+  font-weight: 600;
+}
+
+/* Current page (links with a real route) — the one brand-colored state in
+   the bar: accent text in an accent-tinted pill. */
+.navbar__link[aria-current="page"] {
+  color: var(--accent);
+  background-color: color-mix(in srgb, var(--accent) 12%, transparent);
+  font-weight: 600;
+}
+
+/* --------------------------------------------------------------------------
+ * Theme toggle
+ * ------------------------------------------------------------------------ */
+
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 9999px;
+  border: 1px solid var(--border-subtle);
+  background: transparent;
+  color: var(--foreground);
+  cursor: pointer;
+  transition:
+    background-color var(--transition-duration) ease,
+    color var(--transition-duration) ease,
+    border-color var(--transition-duration) ease,
+    transform 150ms ease;
+}
+
+.theme-toggle:hover {
+  background-color: var(--fill-hover);
+}
+
+.theme-toggle:active {
+  transform: scale(0.94);
+}
+
+/* Right-side actions (login + theme toggle + hamburger) grouped together so
+   the brand hugs the left and both controls hug the right edge. */
+.navbar__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+/* The bar's login button — hidden on phones, where it moves into the menu. */
+.navbar__login {
+  display: block;
+}
+
+/* Hamburger button — hidden on desktop; shown only in the mobile menu. */
+.navbar__toggle {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 9999px;
+  border: 1px solid var(--border-subtle);
+  background: transparent;
+  color: var(--foreground);
+  cursor: pointer;
+  transition:
+    background-color var(--transition-duration) ease,
+    color var(--transition-duration) ease,
+    border-color var(--transition-duration) ease;
+}
+
+.navbar__toggle:hover {
+  background-color: var(--fill-hover);
+}
+
+/* Three stacked bars that morph into an × while the menu is open. */
+.navbar__toggle-bar {
+  display: block;
+  width: 18px;
+  height: 2px;
+  margin: 1px 0;
+  border-radius: 2px;
+  background: currentColor;
+  transition:
+    transform 200ms ease,
+    opacity 200ms ease;
+}
+
+.navbar__toggle[aria-expanded="true"] .navbar__toggle-bar:nth-child(1) {
+  transform: translateY(4px) rotate(45deg);
+}
+
+.navbar__toggle[aria-expanded="true"] .navbar__toggle-bar:nth-child(2) {
+  opacity: 0;
+}
+
+.navbar__toggle[aria-expanded="true"] .navbar__toggle-bar:nth-child(3) {
+  transform: translateY(-4px) rotate(-45deg);
+}
+
+/* Mobile (the 3D engine's mobile breakpoint): swap the inline links for the
+   hamburger menu. */
+@media (max-width: 767px) {
+  .navbar__links {
+    display: none;
+  }
+
+  .navbar__login {
+    display: none;
+  }
+
+  .navbar__toggle {
+    display: inline-flex;
+  }
+}
+
+/* Mobile dropdown menu — a frosted panel that slides in under the bar. */
+.navbar__menu {
+  display: none;
+}
+
+@media (max-width: 767px) {
+  .navbar__menu {
+    display: block;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background-color: color-mix(in srgb, var(--background) 92%, transparent);
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border-subtle);
+    box-shadow: 0 14px 28px rgba(0, 0, 0, 0.2);
+    opacity: 0;
+    transform: translateY(-8px);
+    visibility: hidden;
+    pointer-events: none;
+    transition:
+      opacity var(--transition-duration) ease,
+      transform var(--transition-duration) ease,
+      visibility 0s linear var(--transition-duration);
+  }
+
+  .navbar__menu.is-open {
+    opacity: 1;
+    transform: translateY(0);
+    visibility: visible;
+    pointer-events: auto;
+    transition:
+      opacity var(--transition-duration) ease,
+      transform var(--transition-duration) ease,
+      visibility 0s;
+  }
+
+  /* Full-width login button pinned above the menu links. */
+  .navbar__menu-actions {
+    display: grid;
+    padding: 0.75rem 1.25rem 0.25rem;
+  }
+
+  .navbar__menu-links {
+    list-style: none;
+    display: grid;
+    gap: 0.15rem;
+    padding: 0.75rem 1.25rem 1rem;
+  }
+
+  .navbar__menu-link {
+    display: block;
+    padding: 0.7rem 0.85rem;
+    border-radius: 10px;
+    font-size: 1rem;
+    color: var(--text-secondary);
+    text-decoration: none;
+    cursor: pointer;
+    transition:
+      color var(--transition-duration) ease,
+      background-color var(--transition-duration) ease;
+  }
+
+  .navbar__menu-link:hover,
+  .navbar__menu-link[aria-current="page"] {
+    color: var(--foreground);
+    background-color: var(--fill-hover);
+  }
+}
+
+/* --------------------------------------------------------------------------
+ * 3D scene backdrop (fixed, behind the sections)
+ * ------------------------------------------------------------------------ */
+
+.scene-canvas {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: var(--background);
+  /* The laptop's journey ends at the FAQ: fade the whole scene out once the
+     final CTA is on screen, so the closing block reads as clean page content. */
+  transition: opacity 0.6s ease;
+}
+
+.scene-canvas.is-faded {
+  opacity: 0;
+}
+
+.scene-canvas canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* Ambient accent blobs behind the 3D laptop, on their own fixed layer. Two
+   blurred organic shapes drift and morph slowly; the WebGL canvas (and the
+   laptop) paints above them. Keeping them off the scene layer means they
+   stay BEHIND the section copy on desktop, where the laptop itself floats
+   in front of the text (the blobs' layer sits at z-index 0, below the
+   sections). They fade with the rest of the scene on the final CTA. */
+.scene-blobs {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  transition: opacity 0.6s ease;
+}
+
+.scene-blobs.is-faded {
+  opacity: 0;
+}
+
+.scene-blobs::before,
+.scene-blobs::after {
+  content: "";
+  position: absolute;
+  border-radius: 42% 58% 60% 40% / 45% 45% 55% 55%;
+  background: radial-gradient(
+    circle at 35% 30%,
+    color-mix(in srgb, var(--accent) 65%, transparent) 0%,
+    color-mix(in srgb, var(--accent) 22%, transparent) 50%,
+    transparent 72%
+  );
+  filter: blur(30px);
+  animation: blob-morph 16s ease-in-out infinite alternate;
+}
+
+.scene-blobs::before {
+  width: 52vmax;
+  height: 46vmax;
+  top: -14vmax;
+  left: -12vmax;
+  opacity: 0.55;
+}
+
+.scene-blobs::after {
+  width: 40vmax;
+  height: 40vmax;
+  right: -10vmax;
+  bottom: -16vmax;
+  opacity: 0.4;
+  animation-duration: 20s;
+  animation-delay: -8s;
+}
+
+/* Blobs read bolder on the dark ink; dial them back on the cream surface. */
+html[data-theme="light"] .landing-site .scene-blobs::before {
+  opacity: 0.3;
+}
+
+html[data-theme="light"] .landing-site .scene-blobs::after {
+  opacity: 0.22;
+}
+
+@keyframes blob-morph {
+  0% {
+    border-radius: 42% 58% 60% 40% / 45% 45% 55% 55%;
+    transform: translate(0, 0) rotate(0deg) scale(1);
+  }
+  50% {
+    border-radius: 58% 42% 46% 54% / 55% 60% 40% 45%;
+    transform: translate(3vmax, -2vmax) rotate(10deg) scale(1.08);
+  }
+  100% {
+    border-radius: 48% 52% 58% 42% / 40% 56% 44% 60%;
+    transform: translate(-2vmax, 3vmax) rotate(-8deg) scale(0.95);
+  }
+}
+
+/* Desktop (≥1024px — the 3D engine's desktop breakpoint): the laptop floats
+   OVER the section copy — the text renders behind the device. The scene's
+   opaque fill is dropped (the body already paints the page background) so
+   copy stays visible through the transparent canvas around the laptop; only
+   the device itself occludes it. Tablet and mobile keep the text-in-front
+   layout (the scene stays at z-index 0 there). */
+@media (min-width: 1024px) {
+  .scene-canvas {
+    /* Above the sections (z-index 1), below the navbar (z-index 50). */
+    z-index: 2;
+    background: transparent;
+  }
+
+}
+
+/* While the gizmo simulates a device screen, darken the letterbox surround
+   and outline the simulated screen so its edge reads clearly. */
+.scene-canvas.is-device-frame {
+  background: #141416;
+}
+
+.scene-canvas.is-device-frame canvas {
+  border: 2px solid rgba(255, 255, 255, 0.45);
+  border-radius: 10px;
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.6),
+    0 14px 44px rgba(0, 0, 0, 0.5);
+}
+
+/* While the dev gizmo is editing a keyframe, let pointer events reach the
+   canvas (and the 3D transform gizmo) instead of the sections. */
+html.is-editing .section {
+  pointer-events: none;
+}
+
+html.is-editing .scene-canvas {
+  pointer-events: auto;
+}
+
+/* --------------------------------------------------------------------------
+ * Section scaffold (dev skeleton — real copy replaces this later)
+ * ------------------------------------------------------------------------ */
+
+.section {
+  position: relative;
+  z-index: 1;
+  min-height: 100vh;
+  display: grid;
+  align-items: start;
+  justify-items: start;
+  padding: 5rem var(--section-gutter);
+}
+
+/* Sticky: while its section is on screen the label pins just below the
+   64px navbar, so the current section's name is always visible above the
+   fixed 3D laptop backdrop. A frosted chip keeps it legible over the scene. */
+.section__title {
+  position: sticky;
+  top: 72px;
+  font-size: clamp(0.8rem, 1.4vw, 1.05rem);
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  text-align: left;
+  color: color-mix(in srgb, var(--foreground) 72%, transparent);
+  padding: 0.4rem 0.8rem;
+  border: 1px solid color-mix(in srgb, var(--foreground) 10%, transparent);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--background) 78%, transparent);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
+}
+
+/* TEMP (dev only) — section layout guides. Remove before shipping.
+   Red = section top hairline, blue = section bottom hairline.
+   Dashed blue lines = the 1.5rem left/right padding edge; the tinted bands
+   are the padding gutters themselves. Skipped on the hero, which now carries
+   real copy. Scoped to `html.layout-guides` so these hide/show with the
+   floating "guides" button (LayoutGuidesToggle), like the margin & padding
+   overlay below. */
+html.layout-guides .section:not(.section--hero) {
+  border-top: 1px solid rgba(239, 68, 68, 0.55);
+  border-bottom: 1px solid rgba(59, 130, 246, 0.55);
+  background-image:
+    linear-gradient(to right, rgba(59, 130, 246, 0.08), rgba(59, 130, 246, 0.08)),
+    linear-gradient(to left, rgba(59, 130, 246, 0.08), rgba(59, 130, 246, 0.08)),
+    repeating-linear-gradient(to bottom, rgba(59, 130, 246, 0.55) 0 5px, transparent 5px 11px),
+    repeating-linear-gradient(to bottom, rgba(59, 130, 246, 0.55) 0 5px, transparent 5px 11px);
+  background-size: var(--section-gutter) 100%, var(--section-gutter) 100%, 1px 100%, 1px 100%;
+  background-position: 0 0, 100% 0, var(--section-gutter) 0, calc(100% - var(--section-gutter)) 0;
+  background-repeat: no-repeat;
+}
+
+/* TEMP (dev only) — margin & padding debug overlay. Remove before shipping.
+   Toggled by the floating "guides" button (LayoutGuidesToggle): the
+   `layout-guides` class starts on <html> (layout.tsx) so the overlay is on
+   from first paint, and the button strips/restores it.
+   Color codes (consistent with the section guides above):
+   - Red outline ......... element box (border-box)
+   - Amber inset ring .... inner edge of the padding zone
+   - Blue outer ring ..... space outside the box (margin zone; fixed 4px
+                           indicator, NOT the exact margin size)
+   Reading nested boxes: the band between a parent's outline and a child's
+   outline is the parent's padding (or the child's margin). */
+html.layout-guides * {
+  outline: 1px solid rgba(239, 68, 68, 0.4) !important;
+  box-shadow:
+    inset 0 0 0 1px rgba(245, 158, 11, 0.45),
+    0 0 0 4px rgba(59, 130, 246, 0.18) !important;
+}
+
+/* Keep the toggle button itself readable while the overlay is on. */
+html.layout-guides .layout-guides-toggle {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* TEMP (dev only) — floating button that hides/shows the margin & padding
+   debug overlay above. Remove before shipping. */
+.layout-guides-toggle {
+  position: fixed;
+  right: 1rem;
+  bottom: 1rem;
+  z-index: 100;
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--foreground);
+  background: color-mix(in srgb, var(--background) 82%, transparent);
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  padding: 0.45rem 0.9rem;
+  cursor: pointer;
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
+  transition:
+    background-color var(--transition-duration) ease,
+    border-color var(--transition-duration) ease;
+}
+
+.layout-guides-toggle:hover {
+  background: var(--fill-hover);
+}
+
+/* --------------------------------------------------------------------------
+ * Hero (first real copy — centered over the fixed 3D backdrop)
+ * ------------------------------------------------------------------------ */
+
+.section--hero {
+  /* Top-center: the copy sits just below the sticky navbar instead of being
+     vertically centered, leaving the 3D laptop to fill the rest of the viewport. */
+  align-items: start;
+  justify-items: center;
+  text-align: center;
+  min-height: 100vh;
+  min-height: 100svh;
+  padding: 3.5rem var(--section-gutter) 6rem;
+}
+
+.hero {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 52rem;
+}
+
+.hero__title {
+  font-family: var(--font-display);
+  font-size: var(--text-hero);
+  font-weight: 400;
+  line-height: var(--leading-tight);
+  letter-spacing: var(--tracking-wide);
+  text-wrap: balance;
+}
+
+.hero__title-line {
+  display: block;
+}
+
+.hero__subtitle {
+  max-width: 40rem;
+  margin: var(--space-lg) auto 0;
+  font-size: clamp(1.0625rem, 1.5vw, 1.25rem);
+  line-height: var(--leading-relaxed);
+  color: var(--text-secondary);
+  text-wrap: pretty;
+}
+
+.hero__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.9rem;
+  margin-top: var(--space-lg);
+}
+
+/* --------------------------------------------------------------------------
+ * Feature sections (copy blocks over the fixed 3D backdrop)
+ * ------------------------------------------------------------------------ */
+
+/* Copy alignment per section, driven by where the laptop keyframe parks the
+   device: order management hugs the top-right, courier the top-left, metrix
+   sits top-center, inventory and reports the top-right, smart features
+   top-center. The glow position (--glow-x) tracks each section. */
+.section--features-order {
+  justify-items: end;
+  --glow-x: 84%;
+}
+
+.section--features-inventory {
+  justify-items: end;
+  --glow-x: 84%;
+}
+
+.section--features-reports {
+  justify-items: end;
+  --glow-x: 84%;
+}
+
+.section--features-courier {
+  justify-items: start;
+  --glow-x: 16%;
+}
+
+/* Reviews: the laptop parks right (yaw −26° in the timeline), so the quote
+   column hugs the top-left — mirroring the courier section. */
+.section--reviews {
+  justify-items: start;
+  --glow-x: 16%;
+}
+
+.section--features-metrix {
+  justify-items: center;
+  --glow-x: 50%;
+}
+
+/* Smart features: title top-center with the five feature groups arranged
+   around the parked laptop — three in a centered top row, then one group on
+   the left and one on the right below it, leaving the device between them. */
+.section--features-smart {
+  justify-items: center;
+  --glow-x: 50%;
+}
+
+/* Full width between the section gutters, so the flanking groups on the
+   second row actually touch the left/right margins on wide screens. */
+.section--features-smart .features {
+  max-width: none;
+  justify-self: center;
+}
+
+.section--features-smart .features__title {
+  text-align: center;
+}
+
+.section--features-smart .features__groups {
+  margin-top: var(--space-lg);
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2rem var(--space-lg);
+}
+
+/* Second row: the AI Assistant group hugs the left, Smart Automation the
+   right (grid rows auto-place the first three groups into the top row). */
+.section--features-smart .features__group:nth-child(4) {
+  grid-column: 1;
+}
+
+.section--features-smart .features__group:nth-child(5) {
+  grid-column: 3;
+}
+
+.section--features-smart .features__actions {
+  justify-content: flex-start;
+}
+
+/* Tablet (768–1023px — the 3D engine's tablet breakpoint): Smart Features
+   restacks from the desktop 3-column card grid into one full-width row per
+   feature — title + description on the left, bullets on the right — with a
+   hairline divider between each feature. Desktop (≥1024px) and mobile
+   (≤767px) keep the card grid untouched. */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .section--features-smart .features__groups {
+    grid-template-columns: 1fr;
+    gap: 0;
+    max-width: 56rem;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  /* One row per feature: heading + description stacked in the left column,
+     bullet list in the right column (explicit grid areas — auto-placement
+     would scatter the three children across the row). */
+  .section--features-smart .features__group {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-areas:
+      "heading list"
+      "desc list";
+    column-gap: var(--space-lg);
+    align-items: start;
+    padding: var(--space-md) 0;
+    /* Divider under each feature except the last. */
+    border-bottom: 1px solid var(--border-subtle);
+  }
+
+  .section--features-smart .features__group-heading {
+    grid-area: heading;
+  }
+
+  .section--features-smart .features__group-desc {
+    grid-area: desc;
+  }
+
+  .section--features-smart .features__group-list {
+    grid-area: list;
+    /* Align the bullets flush with the heading (the card base adds a 1rem
+       top margin that would push the column down). */
+    margin-top: 0;
+  }
+
+  .section--features-smart .features__group:last-child {
+    border-bottom: none;
+  }
+
+  /* The desktop flanking placement (4th left, 5th right) only makes sense
+     in the 3-column grid — in the single-column stack every row flows in
+     order. */
+  .section--features-smart .features__group:nth-child(4),
+  .section--features-smart .features__group:nth-child(5) {
+    grid-column: auto;
+  }
+}
+
+@media (max-width: 640px) {
+  .section--features-smart .features__groups {
+    grid-template-columns: 1fr;
+  }
+
+  .section--features-smart .features__group:nth-child(4),
+  .section--features-smart .features__group:nth-child(5) {
+    grid-column: auto;
+  }
+}
+
+/* Pricing: title + CTA top-center, like the metrics section, so the copy
+   sits just below the navbar with the laptop centered beneath it. */
+.section--pricing {
+  justify-items: center;
+  --glow-x: 50%;
+}
+
+.section--pricing .features {
+  max-width: 52rem;
+  justify-self: center;
+}
+
+.section--pricing .features__title,
+.section--pricing .features__desc {
+  text-align: center;
+}
+
+.section--pricing .features__actions {
+  justify-content: center;
+}
+
+/* FAQ: copy hugs the left like the courier/reviews sections — the accordion
+   reads best as a left column, and the glow follows it (the laptop still
+   parks dead-center, yaw 0). */
+.section--faq {
+  justify-items: start;
+  --glow-x: 16%;
+}
+
+/* Final CTA: a compact closing block after the last animated section. The
+   laptop has already finished its scroll animation (it holds the FAQ pose
+   here), so this is deliberately NOT a full viewport — just a centered
+   content block with room to breathe. It closes the page as an inverted
+   band (foreground fill, background text) so it reads as a distinct final
+   panel — its solid background also covers the fixed 3D backdrop entirely.
+   The accent makes the closing band the brand's moment: a soft green glow
+   behind the copy (echoing the scene's ambient blobs) and an accent-filled
+   primary button. */
+.section--cta {
+  position: relative;
+  overflow: hidden; /* keep the accent glow inside the band */
+  min-height: 0;
+  justify-items: center;
+  align-items: center;
+  text-align: center;
+  padding: clamp(4rem, 12vh, 8rem) var(--section-gutter);
+  background-color: var(--fill-strong);
+  color: var(--on-strong);
+}
+
+/* Soft accent glow behind the closing copy — the CTA's own light, not the
+   laptop's. Rides under the content (the .cta block sits at z-index 1). */
+.section--cta::before {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  top: -16rem;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 46rem;
+  height: 34rem;
+  border-radius: 50%;
+  background: radial-gradient(
+    closest-side,
+    color-mix(in srgb, var(--accent) 24%, transparent),
+    transparent 72%
+  );
+  filter: blur(18px);
+  pointer-events: none;
+}
+
+.cta {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 44rem;
+}
+
+.cta__title {
+  font-family: var(--font-display);
+  font-size: clamp(2.5rem, 5vw, 4rem);
+  font-weight: 400;
+  line-height: var(--leading-tight);
+  letter-spacing: var(--tracking-wide);
+  text-wrap: balance;
+}
+
+.cta__desc {
+  margin: var(--space-md) auto 0;
+  max-width: 32rem;
+  font-size: clamp(1rem, 1.4vw, 1.125rem);
+  line-height: var(--leading-relaxed);
+  color: color-mix(in srgb, var(--on-strong) 62%, transparent);
+  text-wrap: pretty;
+}
+
+.cta__actions {
+  display: flex;
+  justify-content: center;
+  margin-top: var(--space-lg);
+}
+
+/* The closing CTA's primary button flips to the brand accent (ink text on
+   green) so the final action stands out from the monochrome band; hover
+   deepens the green toward ink. */
+.section--cta .btn--primary {
+  background-color: var(--accent);
+  color: var(--on-accent);
+}
+
+.section--cta .btn--primary:hover {
+  background-color: color-mix(in srgb, var(--accent) 84%, var(--primary));
+}
+
+.section--cta .btn:focus-visible {
+  outline-color: var(--accent);
+}
+
+/* --------------------------------------------------------------------------
+ * Footer (five columns — brand block + four link groups)
+ * ------------------------------------------------------------------------ */
+
+/* Matches the page background so the page closes on the same surface it
+   opened on (the CTA band above keeps its inverted panel); the hairline
+   separates the footer from the CTA copy above. Stacks above the fixed 3D
+   backdrop (z-index 1, like .section) so the footer and its copy always
+   paint over the scene canvas. */
+.footer {
+  position: relative;
+  z-index: 1;
+  background-color: var(--background);
+  color: var(--foreground);
+  padding: clamp(3rem, 7vh, 4.5rem) var(--section-gutter) clamp(2.25rem, 5vh, 3rem);
+  border-top: 1px solid var(--border-subtle);
+}
+
+.footer__inner {
+  max-width: 1120px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr 1fr;
+  gap: 2.5rem;
+}
+
+.footer__brand {
+  display: grid;
+  align-content: start;
+  gap: 1rem;
+  max-width: 26rem;
+}
+
+.footer__brand-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 1.1rem;
+  color: var(--foreground);
+}
+
+.footer__logo {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  background: var(--foreground);
+}
+
+.footer__tagline {
+  font-family: var(--font-display);
+  font-size: 1.375rem;
+  font-weight: 400;
+  line-height: var(--leading-tight);
+  letter-spacing: var(--tracking-wide);
+  color: var(--foreground);
+}
+
+.footer__line {
+  font-size: var(--text-sm);
+  line-height: var(--leading-relaxed);
+  color: var(--text-secondary);
+  text-wrap: pretty;
+}
+
+.footer__socials {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-top: 0.5rem;
+}
+
+.footer__social {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.55rem;
+  border: 1px solid var(--border-strong);
+  border-radius: 9999px;
+  color: var(--foreground);
+  cursor: pointer;
+  transition:
+    background-color var(--transition-duration) ease,
+    border-color var(--transition-duration) ease;
+}
+
+.footer__social-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.footer__social:hover {
+  background-color: var(--fill-hover);
+  border-color: color-mix(in srgb, var(--foreground) 46%, transparent);
+}
+
+.footer__social svg {
+  width: 15px;
+  height: 15px;
+  flex: none;
+  fill: currentColor;
+}
+
+.footer__col {
+  display: grid;
+  align-content: start;
+  gap: 1rem;
+}
+
+.footer__heading {
+  font-family: var(--font-display);
+  font-size: 1.125rem;
+  font-weight: 400;
+  letter-spacing: var(--tracking-wide);
+  color: var(--foreground);
+}
+
+.footer__col ul {
+  list-style: none;
+  display: grid;
+  gap: 0.65rem;
+}
+
+.footer__link {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: color var(--transition-duration) ease;
+}
+
+.footer__link:hover {
+  color: var(--foreground);
+}
+
+/* Centered copyright bar below the link columns, separated by the same
+   hairline that tops the footer. */
+.footer__bar {
+  margin-top: clamp(2.5rem, 6vh, 3.5rem);
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border-subtle);
+  text-align: center;
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+/* Brand spans the full width on tablet; the link columns drop to a 2×2 grid.
+   Phones keep the same 2×2 link grid (only the gap tightens). */
+@media (max-width: 900px) {
+  .footer__inner {
+    grid-template-columns: 1fr 1fr;
+    gap: 2.25rem 2rem;
+  }
+
+  .footer__brand {
+    grid-column: 1 / -1;
+    max-width: none;
+  }
+}
+
+@media (max-width: 560px) {
+  .footer__inner {
+    gap: 2rem;
+  }
+}
+
+/* Mobile (the 3D engine's mobile breakpoint): center the full-width brand
+   block above the 2×2 link grid. */
+@media (max-width: 767px) {
+  .footer__brand {
+    text-align: center;
+    justify-items: center;
+  }
+
+  .footer__socials {
+    justify-content: center;
+  }
+}
+
+/* Tablet (768–1023px — the 3D engine's tablet breakpoint): the brand block
+   spans the full width, centered, with the four link groups laid out in a
+   single row of four columns underneath. Desktop (≥1024px) keeps the inline
+   5-column row and mobile (≤767px) keeps the centered brand above the 2×2
+   link grid. */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .footer__inner {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .footer__brand {
+    /* Spans the row in the whole tablet range — the 2-column rule's
+       full-width brand only applies ≤900px. */
+    grid-column: 1 / -1;
+    text-align: center;
+    justify-items: center;
+  }
+
+  .footer__socials {
+    justify-content: center;
+  }
+}
+
+/* --------------------------------------------------------------------------
+ * FAQ (accordion — click a question to reveal its answer)
+ * ------------------------------------------------------------------------ */
+
+/* Left column under the title; hairline-divided rows like the reviews
+   quotes, so the accordion speaks the page's own visual language. */
+.faq__list {
+  list-style: none;
+  margin: var(--space-lg) 0 0;
+  max-width: 40rem;
+}
+
+.faq__item {
+  border-top: 1px solid var(--border-subtle);
+}
+
+.faq__item:last-child {
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.faq__heading {
+  margin: 0;
+}
+
+/* The whole row is the hit target: display-face question on the left, the
+   circular + toggle on the right. */
+.faq__question {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.25rem 0;
+  border: none;
+  background: transparent;
+  font: inherit;
+  font-family: var(--font-display);
+  font-size: clamp(1.25rem, 2vw, 1.5rem);
+  font-weight: 400;
+  line-height: var(--leading-tight);
+  letter-spacing: var(--tracking-wide);
+  text-align: left;
+  color: var(--foreground);
+  cursor: pointer;
+  transition: color var(--transition-duration) ease;
+}
+
+.faq__question:hover {
+  color: var(--text-secondary);
+}
+
+.faq__question:focus-visible {
+  outline: 2px solid var(--foreground);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+.faq__question-text {
+  text-wrap: balance;
+}
+
+/* Circular + that rotates into × while open and fills like the primary
+   button, so the toggle state reads at a glance. */
+.faq__toggle {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border-strong);
+  border-radius: 9999px;
+  font-family: var(--font-body);
+  font-size: 1.05rem;
+  font-weight: 400;
+  line-height: 1;
+  color: var(--foreground);
+  transition:
+    transform var(--transition-duration) ease,
+    background-color var(--transition-duration) ease,
+    color var(--transition-duration) ease;
+}
+
+.faq__item.is-open .faq__toggle {
+  transform: rotate(45deg);
+  background-color: var(--accent);
+  color: var(--on-accent);
+}
+
+/* Smooth open/close via the grid-template-rows trick (no JS measuring).
+   Closed answers are clipped AND removed from the accessibility tree:
+   visibility flips back with a delay matching the collapse animation. */
+.faq__answer-wrap {
+  display: grid;
+  grid-template-rows: 0fr;
+  visibility: hidden;
+  transition:
+    grid-template-rows var(--transition-duration) ease,
+    visibility 0s linear var(--transition-duration);
+}
+
+.faq__item.is-open .faq__answer-wrap {
+  grid-template-rows: 1fr;
+  visibility: visible;
+  transition:
+    grid-template-rows var(--transition-duration) ease,
+    visibility 0s;
+}
+
+.faq__answer {
+  overflow: hidden;
+  min-height: 0;
+}
+
+.faq__answer p {
+  padding: 0 0 1.5rem;
+  max-width: 36rem;
+  font-size: var(--text-base);
+  line-height: var(--leading-relaxed);
+  color: var(--text-secondary);
+  text-wrap: pretty;
+}
+
+/* The metrics section widens its content block so the description and the
+   three bullet columns have more room to breathe. */
+.section--features-metrix .features {
+  max-width: 56rem;
+  justify-self: center;
+}
+
+/* The metrics section lays its six bullets out in three columns; collapse to
+   a single column on narrow screens so lines don't wrap awkwardly. */
+.section--features-metrix .features__list {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.section--features-metrix .features__title,
+.section--features-metrix .features__desc {
+  text-align: center;
+}
+
+.section--features-metrix .features__actions {
+  justify-content: center;
+}
+
+@media (max-width: 640px) {
+  .section--features-metrix .features__list {
+    grid-template-columns: 1fr;
+  }
+}
+
+.features {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 40rem;
+  /* Extra breathing room below the sticky navbar before the copy starts. */
+  margin-top: clamp(2rem, 6vh, 4rem);
+  text-align: left;
+}
+
+/* Tablet & mobile (the 3D engine's non-desktop breakpoints — <1024px): pull
+   the copy up so the laptop animation, composed to sit below the text on
+   these screens, gets more of the viewport. Standard fixed margins — tablet
+   uses the base small step halved, mobile tightens further. Desktop
+   (≥1024px) keeps the full margin — the CSS above is the desktop rule, these
+   only override it below. */
+@media (max-width: 1023px) {
+  /* Match the hero's 3.5rem text top margin on tablet: the .features block
+     keeps its 0.5rem margin, so the section pad-top drops to 3rem. The hero
+     and the closing CTA band keep their own padding. */
+  .section:not(.section--hero):not(.section--cta) {
+    padding-top: 3rem;
+  }
+
+  .features {
+    margin-top: 0.5rem;
+  }
+}
+
+@media (max-width: 767px) {
+  /* Mobile: same 3.5rem text top as the hero — 3.25rem pad-top plus the
+     0.25rem .features margin. */
+  .section:not(.section--hero):not(.section--cta) {
+    padding-top: 3.25rem;
+  }
+
+  .features {
+    margin-top: 0.25rem;
+  }
+
+  /* Mobile-only: pin the courier and inventory copy to the bottom of the
+     section, so the laptop sits above the text on these screens. */
+  .section--features-courier,
+  .section--features-inventory {
+    align-items: end;
+  }
+}
+
+/* Mobile-only: frost the copy panels so the text stays readable over the
+   fixed 3D laptop (the scene sits behind every section). Same frosted
+   treatment as the navbar; the closing CTA already has its own solid band.
+   The hero keeps its clean full-bleed look — no panel behind it. */
+@media (max-width: 767px) {
+  .features {
+    background-color: color-mix(in srgb, var(--background) 80%, transparent);
+    -webkit-backdrop-filter: blur(14px);
+    backdrop-filter: blur(14px);
+    border: 1px solid var(--border-subtle);
+    border-radius: 16px;
+    padding: 1.5rem;
+  }
+}
+
+.features__title {
+  font-family: var(--font-display);
+  font-size: clamp(2.25rem, 4vw, 3.5rem);
+  font-weight: 400;
+  line-height: var(--leading-tight);
+  letter-spacing: var(--tracking-wide);
+  text-wrap: balance;
+}
+
+.features__desc {
+  margin-top: var(--space-md);
+  font-size: clamp(1rem, 1.4vw, 1.125rem);
+  line-height: var(--leading-relaxed);
+  color: var(--text-secondary);
+  text-wrap: pretty;
+}
+
+.features__list {
+  list-style: none;
+  margin-top: var(--space-lg);
+  display: grid;
+  gap: 0.8rem;
+}
+
+.features__list li {
+  display: flex;
+  align-items: baseline;
+  gap: 0.65rem;
+  color: var(--text-secondary);
+  line-height: var(--leading-normal);
+}
+
+.features__list li::before {
+  content: "✓";
+  flex: none;
+  color: var(--accent);
+  font-weight: 600;
+  font-size: 0.85em;
+}
+
+.features__actions {
+  display: flex;
+  margin-top: var(--space-lg);
+}
+
+/* Sub-feature group cards (Smart Features): display-font heading, secondary
+   description, checkmarked bullets — same language as the flat feature
+   block, sized down a step so three fit side by side. */
+.features__group-heading {
+  font-family: var(--font-display);
+  font-size: clamp(1.375rem, 2vw, 1.75rem);
+  font-weight: 400;
+  line-height: var(--leading-tight);
+  letter-spacing: var(--tracking-wide);
+}
+
+.features__group-desc {
+  margin-top: 0.75rem;
+  font-size: var(--text-base);
+  line-height: var(--leading-relaxed);
+  color: var(--text-secondary);
+  text-wrap: pretty;
+}
+
+.features__group-list {
+  list-style: none;
+  margin-top: 1rem;
+  display: grid;
+  gap: 0.6rem;
+}
+
+.features__group-list li {
+  display: flex;
+  align-items: baseline;
+  gap: 0.65rem;
+  color: var(--text-secondary);
+  line-height: var(--leading-normal);
+  font-size: 0.95rem;
+}
+
+.features__group-list li::before {
+  content: "✓";
+  flex: none;
+  color: var(--accent);
+  font-weight: 600;
+  font-size: 0.85em;
+}
+
+/* --------------------------------------------------------------------------
+ * Reviews ("Word of mouth" — owners' quotes over the fixed 3D backdrop)
+ * ------------------------------------------------------------------------ */
+
+/* Quote column: hairline-divided entries, quotes set in the display face so
+   the owners' words carry the same voice as the page's titles. */
+.reviews__list {
+  list-style: none;
+  margin-top: var(--space-lg);
+}
+
+.reviews__item {
+  padding: 1.75rem 0;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.reviews__figure {
+  margin: 0;
+}
+
+.reviews__quote {
+  font-family: var(--font-display);
+  font-size: clamp(1.375rem, 2.2vw, 1.75rem);
+  font-weight: 400;
+  line-height: var(--leading-normal);
+  letter-spacing: var(--tracking-wide);
+  color: var(--foreground);
+  text-wrap: balance;
+  quotes: "“" "”";
+}
+
+.reviews__quote::before {
+  content: open-quote;
+}
+
+.reviews__quote::after {
+  content: close-quote;
+}
+
+.reviews__author {
+  margin-top: 0.75rem;
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+/* --------------------------------------------------------------------------
+ * Buttons
+ * ------------------------------------------------------------------------ */
+
+/* Base button — a self-contained control that inverts with the theme
+   (primary) or stays outlined (secondary). It rests at a medium weight
+   (var(--font-weight-medium)); on hover the label bolds and the whole
+   control lifts a pixel, and the press snaps it back down. */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 48px;
+  padding: 0.8rem 1.75rem;
+  border-radius: 12px;
+  border: 1px solid transparent;
+  font-family: inherit;
+  font-size: var(--text-base);
+  font-weight: var(--font-weight-medium);
+  letter-spacing: var(--tracking-tight);
+  line-height: 1.2;
+  text-decoration: none;
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    background-color var(--transition-duration) ease,
+    color var(--transition-duration) ease,
+    border-color var(--transition-duration) ease,
+    box-shadow var(--transition-duration) ease,
+    font-weight var(--transition-duration) ease,
+    transform 150ms ease;
+}
+
+/* Compact pill control for navbars/toolbars (e.g. the navbar's Login
+   button) — the standard button scaled down to sit beside the icon
+   controls. */
+.btn--sm {
+  min-height: 38px;
+  padding: 0.35rem 1.15rem;
+  border-radius: 9999px;
+  font-size: 0.925rem;
+}
+
+/* Hover — the label bolds (var(--font-weight-bold); Quicksand is a variable
+   font so the weight animates smoothly) and the control lifts a pixel, with
+   the per-variant shadow deepening below it. */
+.btn:hover {
+  font-weight: var(--font-weight-bold);
+  transform: translateY(-1px);
+}
+
+/* Pressed — the lift collapses into a 1px press. Declared after :hover with
+   equal specificity, so it wins while the button is held. */
+.btn:active {
+  transform: translateY(1px);
+}
+
+.btn:focus-visible {
+  outline: 2px solid var(--foreground);
+  outline-offset: 3px;
+}
+
+/* Solid foreground fill — the button inverts with the theme (black on white,
+   white on black). A layered shadow is the only thing standing it off the
+   page; it deepens on hover as the button lifts. */
+.btn--primary {
+  background-color: var(--fill-strong);
+  color: var(--on-strong);
+  box-shadow:
+    0 1px 2px color-mix(in srgb, var(--background) 24%, transparent),
+    0 12px 28px -16px color-mix(in srgb, var(--foreground) 45%, transparent);
+}
+
+.btn--primary:hover {
+  background-color: color-mix(in srgb, var(--foreground) 80%, var(--background));
+  box-shadow:
+    0 2px 4px color-mix(in srgb, var(--background) 20%, transparent),
+    0 18px 36px -16px color-mix(in srgb, var(--foreground) 55%, transparent);
+}
+
+/* Outlined ghost — transparent fill so the page shows through; the border
+   carries the shape, and a faint hover fill (plus a stronger border) marks
+   the interactive state. */
+.btn--secondary {
+  border-color: var(--border-strong);
+  background-color: transparent;
+  color: var(--foreground);
+}
+
+.btn--secondary:hover {
+  background-color: var(--fill-hover);
+  border-color: color-mix(in srgb, var(--foreground) 45%, transparent);
+}
+
+/* Disabled — faded and inert (e.g. a submit button while a request is in
+   flight). pointer-events also stops the hover lift/bold from applying. */
+.btn:disabled {
+  opacity: 0.5;
+  pointer-events: none;
+  transform: none;
+}
+
+/* On narrow screens the CTAs stack full-width for an easy tap target. */
+@media (max-width: 480px) {
+  .hero__actions {
+    flex-direction: column;
+    width: 100%;
+    max-width: 320px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .btn {
+    width: 100%;
+  }
+}
+
+/* --------------------------------------------------------------------------
+ * Dev gizmo (dev-only — never ships in production UI)
+ * ------------------------------------------------------------------------ */
+
+/* Floating button that opens the gizmo from any URL (dev tool). */
+.gizmo-fab {
+  position: fixed;
+  right: 1rem;
+  bottom: 1rem;
+  z-index: 100;
+  width: 44px;
+  height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(24, 24, 27, 0.92);
+  color: #f4f4f5;
+  font-size: 1.2rem;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+}
+
+.gizmo-fab:hover {
+  background: #6366f1;
+  border-color: #6366f1;
+}
+
+.gizmo {
+  position: fixed;
+  top: 76px;
+  right: 1rem;
+  z-index: 100;
+  width: 248px;
+  max-height: calc(100vh - 92px);
+  overflow-y: auto;
+  padding: 0.85rem;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(24, 24, 27, 0.92);
+  color: #f4f4f5;
+  font-size: 0.8rem;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+}
+
+.gizmo__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.6rem;
+}
+
+.gizmo__title {
+  font-weight: 600;
+  font-size: 0.85rem;
+  letter-spacing: 0.02em;
+}
+
+.gizmo__close {
+  border: none;
+  background: transparent;
+  color: inherit;
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0.1rem 0.35rem;
+  border-radius: 6px;
+}
+
+.gizmo__close:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.gizmo__hint {
+  margin: 0 0 0.7rem;
+  line-height: 1.45;
+  color: rgba(244, 244, 245, 0.72);
+}
+
+.gizmo__group {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.35rem;
+  margin-bottom: 0.7rem;
+}
+
+/* Collapsible numeric value editor (position / rotation / scale inputs). */
+.gizmo__values {
+  margin-bottom: 0.7rem;
+}
+
+.gizmo__values-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.4rem 0.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.06);
+  color: inherit;
+  font: inherit;
+  font-size: 0.72rem;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  cursor: pointer;
+  border-radius: 8px;
+}
+
+.gizmo__values-toggle:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.gizmo__values-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin-top: 0.35rem;
+}
+
+.gizmo__value-row {
+  display: grid;
+  grid-template-columns: 30px 1fr 1fr 1fr;
+  gap: 0.3rem;
+  align-items: center;
+}
+
+.gizmo__value-label {
+  font-size: 0.65rem;
+  letter-spacing: 0.03em;
+  color: rgba(244, 244, 245, 0.72);
+  text-transform: uppercase;
+}
+
+.gizmo__value-input {
+  width: 100%;
+  min-width: 0;
+  padding: 0.3rem 0.35rem;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.35);
+  color: inherit;
+  font: inherit;
+  font-size: 0.72rem;
+  text-align: right;
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+.gizmo__value-input::-webkit-outer-spin-button,
+.gizmo__value-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.gizmo__value-input:focus {
+  outline: none;
+  border-color: #6366f1;
+}
+
+.gizmo__value-input:disabled {
+  opacity: 0.4;
+}
+
+/* Scale is a single uniform value — span the remaining columns. */
+.gizmo__value-row--scale .gizmo__value-input {
+  grid-column: 2 / -1;
+}
+
+.gizmo__mode,
+.gizmo__device,
+.gizmo__section,
+.gizmo__btn {
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.06);
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  border-radius: 8px;
+  padding: 0.4rem 0.5rem;
+}
+
+.gizmo__device {
+  text-transform: capitalize;
+  letter-spacing: 0.02em;
+  font-size: 0.72rem;
+}
+
+.gizmo__mode:hover,
+.gizmo__device:hover,
+.gizmo__section:hover,
+.gizmo__btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.gizmo__mode.is-active,
+.gizmo__device.is-active,
+.gizmo__section.is-active {
+  background: #6366f1;
+  border-color: #6366f1;
+}
+
+.gizmo__sections {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin: 0 0 0.7rem;
+  padding: 0;
+}
+
+.gizmo__section-row {
+  display: flex;
+  gap: 0.3rem;
+}
+
+.gizmo__section {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  font-size: 0.72rem;
+}
+
+/* A pinned section gets a small dot so stale pins are visible at a glance. */
+.gizmo__section.is-pinned::after {
+  content: "●";
+  float: right;
+  color: #34d399;
+  font-size: 0.55rem;
+  line-height: 1.4;
+}
+
+.gizmo__section-reset {
+  width: 26px;
+  flex: none;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.06);
+  color: inherit;
+  font: inherit;
+  font-size: 0.8rem;
+  line-height: 1;
+  cursor: pointer;
+  border-radius: 8px;
+  padding: 0;
+}
+
+.gizmo__section-reset:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.gizmo__section-reset:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.gizmo__section:disabled {
+  opacity: 0.4;
+  cursor: wait;
+}
+
+.gizmo__pin {
+  display: block;
+  width: 100%;
+  margin: 0 0 0.7rem;
+  padding: 0.55rem 0.5rem;
+  border: none;
+  border-radius: 8px;
+  background: #6366f1;
+  color: #ffffff;
+  font: inherit;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+}
+
+.gizmo__pin:hover:not(:disabled) {
+  background: #4f46e5;
+}
+
+.gizmo__pin:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.gizmo__actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.35rem;
+  margin-bottom: 0.35rem;
+}
+
+.gizmo__btn--danger {
+  grid-column: 1 / -1;
+  color: #fca5a5;
+}
+
+.gizmo__btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* --------------------------------------------------------------------------
+ * About page (editorial — no 3D backdrop, no snap scroll)
+ * ------------------------------------------------------------------------ */
+
+/* Scroll reveals. The `js-reveal` class is added to <html> by the Reveal
+   component only when JS + motion are available, so no-JS visitors and
+   prefers-reduced-motion users see everything unhidden. */
+.js-reveal .reveal {
+  opacity: 0;
+  transform: translateY(26px);
+  transition:
+    opacity 0.7s ease,
+    transform 0.7s ease;
+  will-change: opacity, transform;
+}
+
+.js-reveal .reveal.is-visible {
+  opacity: 1;
+  transform: none;
+}
+
+/* Editorial section scaffold: full-width bands separated by hairlines, with
+   the same 1120px inner measure as the navbar/footer. Lifts above the fixed
+   blob layer (z-index 0) so the copy always reads over the backdrop. */
+.about-section {
+  position: relative;
+  z-index: 1;
+  padding: clamp(4.5rem, 9vh, 7rem) var(--section-gutter);
+  border-top: 1px solid var(--border-subtle);
+}
+
+.about-section__inner {
+  max-width: 1120px;
+  margin: 0 auto;
+}
+
+/* Centered bands (story, mission, beliefs, Sri Lanka, future). */
+.about-section__inner--center {
+  max-width: 52rem;
+  text-align: center;
+}
+
+/* Features page ops section: the heading block stays centered (the
+   --center modifier) but the inner widens to the site measure (1120px) so
+   the feature card grid lines up with the footer below it. */
+.about-section__inner--wide {
+  max-width: 1120px;
+}
+
+/* Split bands (hero, problem, philosophy): copy + visual side by side. */
+.about-section__inner--split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: clamp(2.5rem, 5vw, 4.5rem);
+  align-items: center;
+}
+
+/* Small uppercase label above every section's lead. */
+.about-eyebrow {
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+
+/* Display-font section lead. */
+.about-lead {
+  margin-top: 1rem;
+  font-family: var(--font-display);
+  font-size: clamp(2.25rem, 4vw, 3.5rem);
+  font-weight: 400;
+  line-height: var(--leading-tight);
+  letter-spacing: var(--tracking-wide);
+  text-wrap: balance;
+}
+
+/* Body copy — same voice as the landing page's feature descriptions. */
+.about-body {
+  margin-top: 1.25rem;
+  font-size: clamp(1rem, 1.4vw, 1.125rem);
+  line-height: var(--leading-relaxed);
+  color: var(--text-secondary);
+  text-wrap: pretty;
+}
+
+/* Centered bands keep the body column comfortable. */
+.about-section__inner--center .about-body {
+  margin-left: auto;
+  margin-right: auto;
+  max-width: 40rem;
+}
+
+/* Checkmarked list — same bullet language as the home feature sections. */
+.about-checks {
+  list-style: none;
+  margin-top: 1.5rem;
+  display: grid;
+  gap: 0.9rem;
+}
+
+.about-checks li {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  font-size: clamp(1rem, 1.4vw, 1.125rem);
+  line-height: var(--leading-normal);
+  color: var(--text-secondary);
+}
+
+.about-checks li::before {
+  content: "\2713";
+  flex: none;
+  color: var(--accent);
+  font-weight: 600;
+  font-size: 0.85em;
+}
+
+/* --------------------------------------------------------------------------
+ * About hero — statement left, cinematic product shot right
+ * ------------------------------------------------------------------------ */
+
+.about-hero {
+  position: relative;
+  z-index: 1;
+  padding: clamp(4rem, 10vh, 6.5rem) var(--section-gutter) clamp(3.5rem, 8vh, 5.5rem);
+}
+
+.about-hero__inner {
+  max-width: 1120px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 1.05fr 0.95fr;
+  gap: clamp(2.5rem, 5vw, 4.5rem);
+  align-items: center;
+}
+
+.about-hero__title {
+  margin-top: 1.25rem;
+  font-family: var(--font-display);
+  font-size: clamp(3rem, 6.5vw, 5.5rem);
+  font-weight: 400;
+  line-height: 1.05;
+  letter-spacing: var(--tracking-wide);
+  text-wrap: balance;
+}
+
+.about-hero__desc {
+  margin-top: 1.5rem;
+  max-width: 34rem;
+  font-size: clamp(1.0625rem, 1.5vw, 1.25rem);
+  line-height: var(--leading-relaxed);
+  color: var(--text-secondary);
+  text-wrap: pretty;
+}
+
+.about-hero__visual {
+  position: relative;
+}
+
+/* The product itself, framed like a browser — the real dashboard screenshot,
+   not a stock photo. The slow float keeps it cinematic and alive. */
+.about-browser {
+  border: 1px solid var(--border-strong);
+  border-radius: 14px;
+  overflow: hidden;
+  background: var(--background);
+  box-shadow:
+    0 1px 0 color-mix(in srgb, var(--foreground) 10%, transparent),
+    0 24px 60px -20px color-mix(in srgb, var(--foreground) 28%, transparent);
+  animation: about-float 7s ease-in-out infinite;
+}
+
+.about-browser__bar {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.65rem 0.85rem;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.about-browser__dots {
+  display: inline-flex;
+  gap: 0.35rem;
+}
+
+.about-browser__dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 9999px;
+  background: var(--border-strong);
+}
+
+.about-browser__url {
+  margin-left: 0.25rem;
+  font-size: 0.75rem;
+  letter-spacing: 0.02em;
+  color: var(--text-tertiary);
+}
+
+.about-browser__screen {
+  aspect-ratio: 2559 / 1706;
+  background: color-mix(in srgb, var(--foreground) 6%, var(--background));
+}
+
+.about-browser__screen img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+@keyframes about-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+/* Floating activity chips over the browser — live business, tiny details. */
+.about-hero__chip {
+  position: absolute;
+  display: grid;
+  gap: 0.2rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--border-strong);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--background) 88%, transparent);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 12px 32px -12px color-mix(in srgb, var(--foreground) 35%, transparent);
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.about-hero__chip strong {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.about-hero__chip--order {
+  top: 10%;
+  left: -1.75rem;
+  animation: about-chip-order 6.5s ease-in-out infinite;
+}
+
+.about-hero__chip--paid {
+  bottom: 8%;
+  right: -1.25rem;
+  animation: about-chip-paid 7.5s ease-in-out infinite;
+}
+
+@keyframes about-chip-order {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-1deg);
+  }
+  50% {
+    transform: translateY(-8px) rotate(-1deg);
+  }
+}
+
+@keyframes about-chip-paid {
+  0%,
+  100% {
+    transform: translateY(0) rotate(1deg);
+  }
+  50% {
+    transform: translateY(6px) rotate(1deg);
+  }
+}
+
+/* --------------------------------------------------------------------------
+ * The Story — centered narrative, domain chips, closing statement
+ * ------------------------------------------------------------------------ */
+
+/* The domains a small business juggles — pill chips under the lead. */
+.about-story__domains {
+  list-style: none;
+  margin-top: 2.25rem;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.6rem;
+}
+
+.about-story__domains li {
+  padding: 0.55rem 1.1rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: 9999px;
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+  background: color-mix(in srgb, var(--background) 70%, transparent);
+}
+
+.about-story__closing {
+  margin-top: 2.5rem;
+  font-family: var(--font-display);
+  font-size: clamp(1.75rem, 3vw, 2.5rem);
+  font-weight: 400;
+  line-height: var(--leading-tight);
+  letter-spacing: var(--tracking-wide);
+  text-wrap: balance;
+}
+
+/* --------------------------------------------------------------------------
+ * Diagrams — the Problem's sources→BizRavana flow and the Philosophy's
+ * animated order flow share one vertical-spine visual language.
+ * ------------------------------------------------------------------------ */
+
+.about-flow {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+/* Scattered tools, stacked with + separators. */
+.about-sources {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.about-sources__row {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.about-sources__pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.6rem 1.3rem;
+  border: 1px solid var(--border-strong);
+  border-radius: 9999px;
+  font-size: 0.95rem;
+  color: var(--foreground);
+  background: color-mix(in srgb, var(--background) 70%, transparent);
+}
+
+.about-sources__plus {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 9999px;
+  font-size: 0.9rem;
+  line-height: 1;
+  color: var(--text-tertiary);
+}
+
+/* Vertical connector with a small down-chevron at its foot. */
+.about-flow__connector {
+  position: relative;
+  width: 2px;
+  height: 2.75rem;
+  background: linear-gradient(to bottom, var(--border-strong), var(--border-subtle));
+}
+
+.about-flow__connector::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -6px;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top-color: var(--border-strong);
+}
+
+/* The destination — a solid inverted block, like the page's primary button. */
+.about-flow__brand {
+  padding: 1.1rem 2.2rem;
+  border: 1px solid var(--fill-strong);
+  border-radius: 14px;
+  background: var(--fill-strong);
+  color: var(--on-strong);
+  font-family: var(--font-display);
+  font-size: clamp(1.75rem, 3vw, 2.5rem);
+  font-weight: 400;
+  letter-spacing: 0.22em;
+  line-height: 1;
+  text-indent: 0.22em; /* optically center the letterspaced caps */
+  box-shadow: 0 18px 44px -18px color-mix(in srgb, var(--foreground) 40%, transparent);
+}
+
+.about-flow__result {
+  font-family: var(--font-display);
+  font-size: clamp(1.25rem, 2vw, 1.6rem);
+  font-weight: 400;
+  letter-spacing: var(--tracking-wide);
+  line-height: var(--leading-tight);
+  text-wrap: balance;
+}
+
+/* The Philosophy's order flow: step chips joined by animated connectors. */
+.about-flow--steps {
+  gap: 0;
+}
+
+.about-flow__row {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.about-flow__link {
+  position: relative;
+  width: 2px;
+  height: 2.75rem;
+  background: var(--border-strong);
+}
+
+/* A pulse travels down each connector — the data's journey through the
+   business, visible. Delays stagger the chain into one continuous wave. */
+.about-flow__link::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: -6px;
+  width: 9px;
+  height: 9px;
+  border-radius: 9999px;
+  background: var(--accent);
+  transform: translateX(-50%);
+  opacity: 0;
+  animation: about-flow-pulse 1.5s linear infinite;
+}
+
+.about-flow__row:nth-child(2) .about-flow__link::after {
+  animation-delay: 0s;
+}
+
+.about-flow__row:nth-child(3) .about-flow__link::after {
+  animation-delay: 0.25s;
+}
+
+.about-flow__row:nth-child(4) .about-flow__link::after {
+  animation-delay: 0.5s;
+}
+
+.about-flow__row:nth-child(5) .about-flow__link::after {
+  animation-delay: 0.75s;
+}
+
+.about-flow__row:nth-child(6) .about-flow__link::after {
+  animation-delay: 1s;
+}
+
+@keyframes about-flow-pulse {
+  0% {
+    top: -6px;
+    opacity: 0;
+  }
+  12% {
+    opacity: 1;
+  }
+  88% {
+    opacity: 1;
+  }
+  100% {
+    top: calc(100% - 2px);
+    opacity: 0;
+  }
+}
+
+.about-flow__step {
+  padding: 0.85rem 1.75rem;
+  border: 1px solid var(--border-strong);
+  border-radius: 12px;
+  font-family: var(--font-display);
+  font-size: clamp(1.25rem, 2vw, 1.5rem);
+  font-weight: 400;
+  letter-spacing: 0.18em;
+  text-indent: 0.18em; /* optically center the letterspaced caps */
+  color: var(--foreground);
+  background: color-mix(in srgb, var(--background) 72%, transparent);
+  box-shadow: 0 10px 28px -14px color-mix(in srgb, var(--foreground) 30%, transparent);
+}
+
+/* PROFIT lands as the solid terminal node, mirroring the BIZRAVANA block. */
+.about-flow--steps .about-flow__row:last-child .about-flow__step {
+  background: var(--fill-strong);
+  color: var(--on-strong);
+  border-color: var(--fill-strong);
+}
+
+/* --------------------------------------------------------------------------
+ * What We Believe — statement cards
+ * ------------------------------------------------------------------------ */
+
+.about-beliefs__grid {
+  list-style: none;
+  margin-top: 2.5rem;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
+  text-align: left;
+}
+
+/* Reveal wrapper inside a grid cell — stretch so the card fills the cell
+   (equal-height cards across the row, like the features page). */
+.about-beliefs__cell {
+  height: 100%;
+}
+
+/* The Card component owns the shell (glass, glow, sweep); this class only
+   sizes the card to fill its grid cell. */
+.about-beliefs__card {
+  height: 100%;
+  padding: 1.75rem 1.75rem 1.9rem;
+}
+
+/* Hovering one card softly dims its siblings, so the focused card reads as
+   the spotlight — same trick as the features and pricing pages. */
+.about-beliefs__grid:hover .about-beliefs__card:not(:hover) {
+  opacity: 0.55;
+  transform: none;
+}
+
+/* The fifth belief spans the full width — "Built to grow." closes the row. */
+.about-beliefs__grid li:nth-child(5) {
+  grid-column: 1 / -1;
+}
+
+/* --------------------------------------------------------------------------
+ * Built for Sri Lanka — local-first capability badges
+ * ------------------------------------------------------------------------ */
+
+.about-badges {
+  list-style: none;
+  margin-top: 2.5rem;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.9rem;
+}
+
+/* Stretch each list item so the tiles stay equal-height across the row. */
+.about-badges li {
+  display: flex;
+}
+
+/* Badge tiles are compact cards — the shared Card shell (glass, glow, sweep)
+   with the code/label stack centered inside a fixed-width tile. */
+.about-badges__card {
+  min-width: 170px;
+  padding: 1.1rem 1.4rem;
+  align-items: center;
+  text-align: center;
+}
+
+/* --------------------------------------------------------------------------
+ * Future / Vision — closing statements
+ * ------------------------------------------------------------------------ */
+
+.about-future__closing {
+  margin-top: 2rem;
+  font-family: var(--font-display);
+  font-size: clamp(1.6rem, 2.8vw, 2.25rem);
+  font-weight: 400;
+  line-height: var(--leading-tight);
+  letter-spacing: var(--tracking-wide);
+  text-wrap: balance;
+}
+
+/* The payoff line lands one size bigger. */
+.about-future__closing--payoff {
+  margin-top: 0.5rem;
+  font-size: clamp(2rem, 3.6vw, 2.9rem);
+}
+
+/* --------------------------------------------------------------------------
+ * Final CTA — rides the landing page's inverted closing band
+ * ------------------------------------------------------------------------ */
+
+.cta__fineprint {
+  margin-top: 1rem;
+  font-size: var(--text-sm);
+  color: color-mix(in srgb, var(--on-strong) 55%, transparent);
+}
+
+/* --------------------------------------------------------------------------
+ * About page — motion & responsive polish
+ * ------------------------------------------------------------------------ */
+
+/* Reduced motion: kill the float, pulse and reveal transitions entirely. */
+@media (prefers-reduced-motion: reduce) {
+  .js-reveal .reveal,
+  .js-reveal .reveal.is-visible {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+
+  .about-browser,
+  .about-hero__chip {
+    animation: none;
+  }
+
+  .about-flow__link::after {
+    animation: none;
+    opacity: 0;
+  }
+}
+
+/* Split layouts stack below tablet width. */
+@media (max-width: 900px) {
+  .about-hero__inner,
+  .about-section__inner--split {
+    grid-template-columns: 1fr;
+  }
+
+  /* Keep the message first on small screens: the shot drops below the copy. */
+  .about-hero__visual {
+    order: 2;
+  }
+}
+
+@media (max-width: 640px) {
+  .about-beliefs__grid {
+    grid-template-columns: 1fr;
+  }
+
+  .about-beliefs__grid li:nth-child(5) {
+    grid-column: auto;
+  }
+
+  /* Keep the floating chips inside the frame on phones. */
+  .about-hero__chip--order {
+    top: 8%;
+    left: 0.6rem;
+  }
+
+  .about-hero__chip--paid {
+    bottom: 8%;
+    right: 0.6rem;
+  }
+}
+
+/* --------------------------------------------------------------------------
+ * Features page (editorial statement — nav, hero, footer over the landing
+ * page's ambient blob backdrop; no 3D laptop)
+ * ------------------------------------------------------------------------ */
+
+/* Hero — the opening statement, sharing the About page hero's padding
+   rhythm (same top/bottom clamps and section gutter) so both editorial
+   pages keep identical margins. Content-sized, not a full viewport — the
+   next section follows the same cadence as About's. Lifts above the fixed
+   blob layer (z-index 0) so the copy always reads over the backdrop. */
+.feat-hero {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  align-items: start;
+  justify-items: center;
+  padding: clamp(4rem, 10vh, 6.5rem) var(--section-gutter) clamp(3.5rem, 8vh, 5.5rem);
+  text-align: center;
+}
+
+.feat-hero__inner {
+  width: 100%;
+  max-width: 52rem;
+}
+
+.feat-hero__title {
+  margin-top: 1.25rem;
+  font-family: var(--font-display);
+  font-size: clamp(3rem, 6.5vw, 5.5rem);
+  font-weight: 400;
+  line-height: 1.05;
+  letter-spacing: var(--tracking-wide);
+  text-wrap: balance;
+}
+
+.feat-hero__desc {
+  margin: 1.5rem auto 0;
+  max-width: 40rem;
+  font-size: clamp(1.0625rem, 1.5vw, 1.25rem);
+  line-height: var(--leading-relaxed);
+  color: var(--text-secondary);
+  text-wrap: pretty;
+}
+
+.feat-hero__actions {
+  margin-top: 2.25rem;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.9rem;
+}
+
+/* Phones: the hero CTA stacks full-width like the landing hero's. */
+@media (max-width: 480px) {
+  .feat-hero__actions {
+    flex-direction: column;
+    width: 100%;
+    max-width: 320px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+}
+
+/* Core Business Operations — the feature groups as a 2×2 card grid, same
+   editorial voice as the landing page's feature cards. */
+.feat-ops__grid {
+  list-style: none;
+  margin-top: 2.5rem;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
+  text-align: left;
+}
+
+/* The Card component owns the shell (glass, glow, sweep); this class only
+   sizes the card to fill its grid cell. */
+.feat-ops__card {
+  height: 100%;
+  padding: 1.75rem 1.75rem 1.9rem;
+}
+
+/* Reveal wrapper inside a grid cell — stretch so the card fills the cell
+   (equal-height cards across the row). */
+.feat-ops__cell {
+  height: 100%;
+}
+
+/* Checkmarks inside a card run denser than the standalone list. The card's
+   own flex gap handles the spacing from the description above. */
+.feat-ops__list {
+  margin-top: 0;
+  gap: 0.6rem;
+}
+
+.feat-ops__list li {
+  font-size: 0.95rem;
+}
+
+/* Hovering one card softly dims its siblings, so the focused card reads as
+   the spotlight. Pure CSS — no JS state, no animation library. */
+.feat-ops__grid:hover .feat-ops__card:not(:hover) {
+  opacity: 0.55;
+  transform: none;
+}
+
+/* Financial section — three groups sit in a single 3-column row (the other
+   sections use the default 2-column grid). */
+.feat-ops__grid--3 {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+@media (max-width: 640px) {
+  .feat-ops__grid,
+  .feat-ops__grid--3 {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* --------------------------------------------------------------------------
+ * Contact page (hero + two-column info/form — reuses the Features hero, the
+ * About split grid and the shared Card, so the page is pure composition)
+ * ------------------------------------------------------------------------ */
+
+/* Equal-height panels: both columns are Cards inside the split grid, each
+   filling its track like the feature cards do. */
+.contact-col {
+  height: 100%;
+}
+
+.contact-col__card {
+  height: 100%;
+  padding: 2rem 2rem 2.25rem;
+}
+
+/* Channel rows — an accent icon badge (mirroring .card__badge) over
+   label/value copy, the whole row a link. */
+.contact-channels {
+  list-style: none;
+  display: grid;
+  gap: 0.4rem;
+}
+
+.contact-channels__link {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.6rem 0.4rem;
+  border-radius: 12px;
+  color: var(--foreground);
+  text-decoration: none;
+  transition: background-color var(--transition-duration) ease;
+}
+
+.contact-channels__link:hover,
+.contact-channels__link:focus-visible {
+  background-color: var(--fill-hover);
+}
+
+.contact-channels__link:focus-visible {
+  outline: 2px solid var(--foreground);
+  outline-offset: -2px;
+}
+
+.contact-channels__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  flex: none;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 30%, transparent);
+  color: var(--accent);
+}
+
+.contact-channels__text {
+  display: grid;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.contact-channels__label {
+  font-size: var(--text-sm);
+  color: var(--text-tertiary);
+}
+
+.contact-channels__value {
+  font-size: 1.05rem;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.contact-channels__link:hover .contact-channels__value,
+.contact-channels__link:focus-visible .contact-channels__value {
+  color: var(--accent);
+}
+
+/* Footnote under each panel, separated from the content by the card's
+   hairline. */
+.contact-note {
+  margin-top: 0.25rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--border-subtle);
+  font-size: var(--text-sm);
+  line-height: var(--leading-relaxed);
+  color: var(--text-tertiary);
+}
+
+/* Form — stacked fields with labeled controls in the shared control
+   language (hairline border, soft surface, accent focus ring). */
+.contact-form__fields {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.field {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.field__label {
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.field__control {
+  width: 100%;
+  padding: 0.8rem 1rem;
+  border: 1px solid var(--border-strong);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--background) 55%, transparent);
+  color: var(--foreground);
+  font: inherit;
+  font-size: var(--text-base);
+  line-height: var(--leading-normal);
+  transition:
+    border-color var(--transition-duration) ease,
+    box-shadow var(--transition-duration) ease;
+}
+
+.field__control::placeholder {
+  color: var(--text-tertiary);
+}
+
+.field__control:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+
+.field__control--textarea {
+  min-height: 9rem;
+  resize: vertical;
+  line-height: var(--leading-relaxed);
+}
+
+.contact-form__actions {
+  margin-top: 1.5rem;
+}
+
+/* --------------------------------------------------------------------------
+ * Pricing page (hero + plan cards — the four standard plans in a card grid,
+ * then the enterprise band; same editorial voice as Features and Contact)
+ * ------------------------------------------------------------------------ */
+
+/* Billing toggle — Monthly | Yearly segmented pill above the grid. The
+   active fill is a thumb that glides between the tabs; the "Save 20%" pill
+   lives inside the Yearly option itself. The toggle is an equal-width
+   two-column grid and the thumb just toggles a translateX transform, so the
+   slide is compositor-driven: no JS measurement, starts same-frame. */
+.pricing-billing {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 2.5rem;
+}
+
+.pricing-billing__toggle {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.25rem;
+  padding: 0.25rem;
+  width: min(100%, 21rem);
+  border-radius: 9999px;
+  border: 1px solid var(--border-subtle);
+  background: color-mix(in srgb, var(--foreground) 6%, transparent);
+}
+
+/* The sliding active indicator — filled like the primary button. Spans one
+   grid column (half the padding box minus half the gap); the --yearly
+   modifier slides it over the second column with translateX (GPU-friendly,
+   no layout). */
+.pricing-billing__thumb {
+  position: absolute;
+  top: 0.25rem;
+  bottom: 0.25rem;
+  left: 0.25rem;
+  width: calc(50% - 0.375rem);
+  border-radius: 9999px;
+  background: var(--fill-strong);
+  pointer-events: none;
+  will-change: transform;
+  /* Fast-start ease-out: the slide feels immediate and settles quickly. */
+  transition: transform 200ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.pricing-billing__thumb--yearly {
+  transform: translateX(calc(100% + 0.25rem));
+}
+
+.pricing-billing__option {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-width: 0;
+  min-height: 40px;
+  padding: 0.4rem 1.25rem;
+  border-radius: 9999px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: inherit;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition:
+    color var(--transition-duration) ease,
+    font-weight var(--transition-duration) ease;
+}
+
+.pricing-billing__option:hover {
+  color: var(--foreground);
+}
+
+.pricing-billing__option.is-active {
+  color: var(--on-strong);
+  font-weight: 600;
+}
+
+.pricing-billing__option:focus-visible {
+  outline: 2px solid var(--foreground);
+  outline-offset: 2px;
+}
+
+/* "Save 20%" pill in the Yearly tab — accent when the tab is active (sitting
+   on the cream thumb), muted outline otherwise. */
+.pricing-billing__save {
+  padding: 0.2rem 0.55rem;
+  border-radius: 9999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  transition:
+    background-color var(--transition-duration) ease,
+    color var(--transition-duration) ease;
+}
+
+.pricing-billing__save.is-active {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+/* Annual commitment banner — the "sell the habit, not just the discount"
+   band shown in yearly mode. Tinted like the enterprise band: the Best
+   value badge + headline on the left, the benefit points on the right. */
+.pricing-annual {
+  margin-top: 1.25rem;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 1.25rem 2.5rem;
+  align-items: center;
+  padding: 1.5rem 2.25rem;
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 10%, transparent);
+  animation: pricing-fade 320ms ease;
+}
+
+.pricing-annual__head {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+/* "Best value" pill — same accent-filled label as the plan badges. */
+.pricing-annual__badge {
+  padding: 0.3rem 0.85rem;
+  border-radius: 9999px;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.pricing-annual__title {
+  font-family: var(--font-display);
+  font-size: clamp(1.25rem, 2vw, 1.5rem);
+  font-weight: 400;
+  letter-spacing: var(--tracking-wide);
+}
+
+.pricing-annual__lead {
+  margin-top: 0.35rem;
+  max-width: 42ch;
+  font-size: 0.95rem;
+  line-height: var(--leading-normal);
+  color: var(--text-secondary);
+}
+
+.pricing-annual__points {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.25rem;
+}
+
+.pricing-annual__points li {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+}
+
+.pricing-annual__points li::before {
+  content: "\2713";
+  flex: none;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+/* Plan cards — a 2×2 grid sharing the feature-card rhythm (equal-height
+   cells, soft hover dim). The featured card gets the accent treatment. */
+.pricing-grid {
+  list-style: none;
+  margin-top: 1.25rem;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
+  text-align: left;
+}
+
+/* Reveal wrapper inside a grid cell — stretch so the card fills the cell
+   (equal-height cards across the row, like the features page). */
+.pricing-grid__cell {
+  height: 100%;
+}
+
+.pricing-card {
+  height: 100%;
+  padding: 1.75rem 1.75rem 1.9rem;
+}
+
+/* The featured plan — solid accent border and a strong glow so it clearly
+   reads as the pick; its corner wash stays lit even when siblings dim. */
+.pricing-card--featured {
+  border-color: var(--accent);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--accent) 28%, transparent),
+    0 20px 48px -16px color-mix(in srgb, var(--accent) 55%, transparent);
+}
+
+/* The featured card's accent wash is always on (not just on hover). */
+.pricing-card--featured .card__glow {
+  opacity: 1;
+  background: radial-gradient(
+    ellipse at 18% 12%,
+    color-mix(in srgb, var(--accent) 26%, transparent),
+    transparent 62%
+  );
+}
+
+/* "Most Popular" pill — the one accent-filled label in the grid. */
+.pricing-card__badge {
+  align-self: flex-start;
+  padding: 0.3rem 0.85rem;
+  border-radius: 9999px;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.pricing-card__name {
+  font-family: var(--font-display);
+  font-size: clamp(1.5rem, 2.4vw, 1.85rem);
+  font-weight: 400;
+  line-height: var(--leading-tight);
+  letter-spacing: var(--tracking-wide);
+  text-wrap: balance;
+}
+
+.pricing-card__price {
+  font-family: var(--font-display);
+  font-size: clamp(1.85rem, 3vw, 2.4rem);
+  font-weight: 400;
+  line-height: 1.1;
+  letter-spacing: var(--tracking-wide);
+}
+
+.pricing-card__billing {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 400;
+  color: var(--text-tertiary);
+}
+
+/* The price block groups the headline, the annual saving and the monthly
+   equivalent. Remounts (via key) when the billing mode swaps, re-running
+   the fade. */
+.pricing-card__price-block {
+  display: grid;
+  gap: 0.35rem;
+  animation: pricing-fade 220ms ease;
+}
+
+/* "Save Rs. 3,000" — the discount in rupees, not a percentage badge. */
+.pricing-card__save {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+/* "Rs. 1,000/month equivalent" — frames the annual commitment. */
+.pricing-card__equiv {
+  font-size: var(--text-sm);
+  color: var(--text-tertiary);
+}
+
+/* The shared fade for the billing swap and the annual banner. */
+@keyframes pricing-fade {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Features — the checkmark list, denser inside the card. */
+.pricing-card__features {
+  list-style: none;
+  display: grid;
+  gap: 0.6rem;
+}
+
+.pricing-card__features li {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  font-size: 0.95rem;
+  line-height: var(--leading-normal);
+  color: var(--text-secondary);
+}
+
+.pricing-card__features li::before {
+  content: "\2713";
+  flex: none;
+  color: var(--accent);
+  font-weight: 600;
+  font-size: 0.85em;
+}
+
+/* CTA pinned to the bottom of the card so buttons align across the row. */
+.pricing-card__cta {
+  margin-top: auto;
+  padding-top: 1.5rem;
+}
+
+/* Small reassurance line right above the CTA (e.g. "No credit card
+   required" on the Trial card). */
+.pricing-card__note {
+  margin-bottom: 0.75rem;
+  font-size: var(--text-sm);
+  color: var(--text-tertiary);
+}
+
+/* Hovering one card softly dims its siblings, so the focused card reads as
+   the spotlight — same trick as the features page. The featured card is
+   exempt: it stays bright no matter which card is hovered. */
+.pricing-grid:hover .pricing-card:not(:hover):not(.pricing-card--featured) {
+  opacity: 0.55;
+  transform: none;
+}
+
+/* Enterprise — a full-width band below the grid: name + price left, the
+   feature chips center, the CTA right. Tinted with the accent so it closes
+   the plan list as the "beyond the grid" option. */
+.pricing-enterprise {
+  margin-top: 1.25rem;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 1.5rem 2.5rem;
+  align-items: center;
+  padding: 2rem 2.25rem;
+  border: 1px solid var(--border-strong);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--accent) 7%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 10%, transparent);
+}
+
+.pricing-enterprise__name {
+  font-family: var(--font-display);
+  font-size: clamp(1.5rem, 2.4vw, 1.85rem);
+  font-weight: 400;
+  letter-spacing: var(--tracking-wide);
+}
+
+.pricing-enterprise__price {
+  margin-top: 0.25rem;
+  font-size: var(--text-sm);
+  color: var(--text-tertiary);
+}
+
+.pricing-enterprise__features {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.25rem;
+}
+
+.pricing-enterprise__features li {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+}
+
+.pricing-enterprise__features li::before {
+  content: "\2713";
+  flex: none;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.pricing-enterprise__cta {
+  flex: none;
+}
+
+/* Footnote under the grid. */
+.pricing-fineprint {
+  margin-top: 1.5rem;
+  font-size: var(--text-sm);
+  color: var(--text-tertiary);
+  text-align: center;
+}
+
+/* On narrow screens the equal-width tabs shrink: tighten the option padding
+   and the Save 20% pill so the Yearly tab still fits its column. */
+@media (max-width: 480px) {
+  .pricing-billing__option {
+    padding: 0.4rem 0.85rem;
+    gap: 0.4rem;
+    font-size: 0.9rem;
+  }
+
+  .pricing-billing__save {
+    font-size: 0.66rem;
+    padding: 0.15rem 0.45rem;
+    letter-spacing: 0.03em;
+  }
+}
+
+@media (max-width: 900px) {
+  .pricing-annual {
+    grid-template-columns: 1fr;
+    justify-items: start;
+  }
+
+  .pricing-enterprise {
+    grid-template-columns: 1fr;
+    justify-items: start;
+  }
+}
+
+/* No decorative motion for reduced-motion users — prices still swap and the
+   thumb still moves, just instantly. */
+@media (prefers-reduced-motion: reduce) {
+  .pricing-annual,
+  .pricing-card__price-block {
+    animation: none;
+  }
+
+  .pricing-billing__thumb {
+    transition: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .pricing-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* --------------------------------------------------------------------------
+ * Plan comparison — two tables (usage limits + feature availability) that
+ * put all four plans side by side, below the plan grid.
+ * ------------------------------------------------------------------------ */
+
+/* Heading block — centered like the About bands, over the wide inner. */
+.pricing-compare__head {
+  max-width: 44rem;
+  margin: 0 auto 2.75rem;
+  text-align: center;
+}
+
+.pricing-compare__desc {
+  margin-left: auto;
+  margin-right: auto;
+  max-width: 40rem;
+}
+
+/* Small display-font label above each table. */
+.pricing-compare__label {
+  margin: 2rem 0 0.75rem;
+  font-family: var(--font-display);
+  font-size: clamp(1.25rem, 2vw, 1.5rem);
+  font-weight: 400;
+  letter-spacing: var(--tracking-wide);
+}
+
+.pricing-compare__label:first-of-type {
+  margin-top: 0;
+}
+
+/* Scroll wrapper so the 5-column table stays usable on phones. */
+.pricing-compare__table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--border-subtle);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--background) 45%, transparent);
+}
+
+.pricing-compare__table {
+  width: 100%;
+  min-width: 40rem;
+  border-collapse: collapse;
+  font-size: 0.95rem;
+}
+
+.pricing-compare__table th,
+.pricing-compare__table td {
+  padding: 0.85rem 1rem;
+  text-align: center;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.pricing-compare__table thead th {
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  font-weight: 400;
+  letter-spacing: var(--tracking-wide);
+  color: var(--foreground);
+  border-bottom: 1px solid var(--border-strong);
+}
+
+/* Standard is the featured plan on the cards — its column header echoes the
+   accent so the "Most Popular" pick stands out here too. */
+.pricing-compare__table thead th.pricing-compare__plan--popular {
+  color: var(--accent);
+}
+
+.pricing-compare__table th:first-child,
+.pricing-compare__table td:first-child {
+  text-align: left;
+  font-weight: 500;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.pricing-compare__table tbody tr:last-child th,
+.pricing-compare__table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* "Unlimited" — the same benefit language as the checkmarks, in accent. */
+.pricing-compare__unlimited {
+  color: var(--accent);
+  font-weight: 500;
+}
+
+/* Checkmark / cross cells. */
+.pricing-compare__yes {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.pricing-compare__no {
+  color: var(--text-tertiary);
+}
+
+/* --------------------------------------------------------------------------
+ * Card (reusable glass panel with accent glow, shimmer sweep & bottom line)
+ * ------------------------------------------------------------------------ */
+
+/* Frosted glass shell: translucent surface, backdrop blur, hairline border.
+   Content stacks in a column — icon badge, optional title/description, then
+   children. A soft accent glow washes the corner behind the copy; on
+   hover/focus a shimmer sweep crosses the surface and an accent line grows
+   along the bottom edge. Hover lifts the card a hair and brightens the
+   glow. */
+.card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--background) 74%, transparent);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  border: 1px solid var(--border-subtle);
+  overflow: hidden;
+  transition:
+    border-color var(--transition-duration) ease,
+    transform var(--transition-duration) ease,
+    opacity var(--transition-duration) ease;
+}
+
+.card:hover,
+.card:focus-within {
+  border-color: var(--border-strong);
+}
+
+.card:hover {
+  transform: translateY(-2px);
+}
+
+/* Stacking: badge/text at z-index 1, the glow and shimmer at 0, the accent
+   line on top (z-index 2). Children stay in flow, under the glow's wash. */
+.card__badge,
+.card__text {
+  position: relative;
+  z-index: 1;
+}
+
+/* Corner accent wash — the spotlight, in the brand's single accent. Rests
+   subtle, then lights up with the sweep on hover/focus. Sits behind the
+   copy so text stays crisp. */
+.card__glow {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  background: radial-gradient(
+    ellipse at 18% 12%,
+    color-mix(in srgb, var(--accent) 16%, transparent),
+    transparent 62%
+  );
+  opacity: 0.55;
+  transition: opacity var(--transition-duration) ease;
+}
+
+.card:hover .card__glow,
+.card:focus-within .card__glow {
+  opacity: 1;
+}
+
+/* Icon badge — a rounded square tinted with the accent: soft fill, hairline
+   ring, and the icon itself stroked in the accent. */
+.card__badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  flex: none;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 30%, transparent);
+  color: var(--accent);
+}
+
+/* Header text under the badge: display-face title over secondary copy. */
+.card__text {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.card__title {
+  font-family: var(--font-display);
+  font-size: clamp(1.35rem, 2.2vw, 1.6rem);
+  font-weight: 400;
+  line-height: var(--leading-tight);
+  letter-spacing: var(--tracking-wide);
+  text-wrap: balance;
+}
+
+.card__desc {
+  font-size: var(--text-base);
+  line-height: var(--leading-relaxed);
+  color: var(--text-secondary);
+  text-wrap: pretty;
+}
+
+/* Shimmer sweep — a soft band in the theme foreground that sweeps across
+   the card once on hover/focus, like light glinting off the glass. Starts
+   fully off-screen left, skewed, and rides across to the right; the card's
+   `overflow: hidden` clips it. Sits behind the copy so text stays crisp.
+   Uses a single tint (no multi-color pass) — the brand accent never mixes
+   with other hues here. */
+.card__shimmer {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 55%;
+  z-index: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    to right,
+    transparent,
+    color-mix(in srgb, var(--foreground) 5%, transparent),
+    transparent
+  );
+  transform: translateX(-100%) skewX(-12deg);
+  transition: transform 700ms ease-out;
+}
+
+.card:hover .card__shimmer,
+.card:focus-within .card__shimmer {
+  transform: translateX(280%) skewX(-12deg);
+}
+
+/* Accent bottom line — a 2px hairline in the brand accent that grows from
+   the card's left edge to full width on hover/focus. The single accent
+   gradients out to transparent, matching the corner glow. */
+.card__line {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 2px;
+  width: 0;
+  z-index: 2;
+  pointer-events: none;
+  border-radius: 999px;
+  background: linear-gradient(
+    to right,
+    color-mix(in srgb, var(--accent) 50%, transparent),
+    transparent
+  );
+  transition: width 500ms ease;
+}
+
+.card:hover .card__line,
+.card:focus-within .card__line {
+  width: 100%;
+}
+
+/* Reduced motion: the sweep is decorative motion — hide it entirely; the
+   accent line appears instantly, without the grow. */
+@media (prefers-reduced-motion: reduce) {
+  .card__shimmer {
+    display: none;
+  }
+
+  .card__line {
+    transition: none;
+  }
+}
+
+/* --------------------------------------------------------------------------
+ * Auth pages (login) — landing-consistent UI over the ambient blobs
+ * ------------------------------------------------------------------------ */
+
+/* Centered column: brand top, statement, then the glass form card. */
+.auth {
+  position: relative;
+  z-index: 1;
+  min-height: 100vh;
+  display: grid;
+  justify-items: center;
+  align-content: start;
+  padding: clamp(2rem, 5vh, 3.5rem) var(--section-gutter) clamp(3rem, 7vh, 5rem);
+}
+
+/* Brand row — reuses the navbar's brand/logo classes in the JSX. */
+.auth__brand {
+  justify-self: start;
+}
+
+/* Centered statement — same rhythm as the Features/Contact heroes. */
+.auth__hero {
+  margin-top: clamp(2.5rem, 7vh, 4.5rem);
+  text-align: center;
+}
+
+.auth__title {
+  margin-top: 1.25rem;
+  font-family: var(--font-display);
+  font-size: clamp(2.5rem, 5.5vw, 4.25rem);
+  font-weight: 400;
+  line-height: 1.05;
+  letter-spacing: var(--tracking-wide);
+  text-wrap: balance;
+}
+
+.auth__desc {
+  margin: 1.25rem auto 0;
+  max-width: 34rem;
+  font-size: clamp(1rem, 1.4vw, 1.125rem);
+  line-height: var(--leading-relaxed);
+  color: var(--text-secondary);
+  text-wrap: pretty;
+}
+
+/* The glass form card. */
+.auth__card {
+  width: 100%;
+  max-width: 440px;
+  margin-top: clamp(2rem, 5vh, 3rem);
+  padding: clamp(1.75rem, 3.5vw, 2.25rem);
+  gap: 1.25rem;
+}
+
+.auth__card-title {
+  font-family: var(--font-display);
+  font-size: clamp(1.5rem, 2.6vw, 1.9rem);
+  font-weight: 400;
+  line-height: var(--leading-tight);
+  letter-spacing: var(--tracking-wide);
+  text-wrap: balance;
+}
+
+.auth__fields {
+  display: grid;
+  gap: 1.25rem;
+}
+
+/* Icon-prefixed input: the icon sits inside the input's relative wrapper,
+   over the left padding the control gets here. */
+.auth-input {
+  position: relative;
+}
+
+.auth-input__icon {
+  position: absolute;
+  left: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-tertiary);
+  pointer-events: none;
+}
+
+.auth-input .field__control {
+  padding-left: 2.8rem;
+}
+
+.auth-input--password .field__control {
+  padding-right: 3rem;
+}
+
+/* Show/hide password toggle inside the control. */
+.auth-input__toggle {
+  position: absolute;
+  right: 0.3rem;
+  top: 50%;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.4rem;
+  height: 2.4rem;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition:
+    background-color var(--transition-duration) ease,
+    color var(--transition-duration) ease;
+}
+
+.auth-input__toggle:hover {
+  background-color: var(--fill-hover);
+  color: var(--foreground);
+}
+
+.auth-input__toggle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Row above the password input: label left, action link right. */
+.auth__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+/* Inline link (forgot password) — accent, like the navbar's hover state. */
+.auth__link {
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--accent);
+  text-decoration: none;
+  transition: color var(--transition-duration) ease;
+}
+
+.auth__link:hover {
+  color: color-mix(in srgb, var(--accent) 78%, var(--primary));
+}
+
+.auth__link:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+/* Error alert. */
+.auth-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  padding: 0.8rem 1rem;
+  border: 1px solid color-mix(in srgb, var(--alert) 32%, transparent);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--alert) 10%, transparent);
+  color: color-mix(in srgb, var(--foreground) 92%, var(--alert));
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  text-align: left;
+}
+
+.auth-alert__dot {
+  flex: none;
+  width: 6px;
+  height: 6px;
+  margin-top: 0.45rem;
+  border-radius: 9999px;
+  background: var(--alert);
+}
+
+/* "New here?" divider — hairlines either side, like the page's own borders. */
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--border-subtle);
+}
+
+/* Full-width actions. */
+.auth-submit {
+  width: 100%;
+  margin-top: 0.5rem;
+}
+
+.auth-register {
+  width: 100%;
+}
+
+.auth__security {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-top: 1.75rem;
+  font-size: var(--text-sm);
+  color: var(--text-tertiary);
+}
+
+/* --------------------------------------------------------------------------
+ * Desktop z-index overrides — MUST come after all base rules so source
+ * order wins. The pricing section, the closing CTA and the footer sit
+ * above the fixed 3D laptop on desktop (≥1024px).
+ * ------------------------------------------------------------------------ */
+@media (min-width: 1024px) {
+  .section--pricing,
+  .section--cta,
+  .footer {
+    z-index: 3;
+  }
+}
+
+/* --------------------------------------------------------------------------
+ * Legal pages (terms, privacy, refund) — landing-consistent documents
+ * ------------------------------------------------------------------------ */
+
+/* "Last updated" line under the hero description. */
+.legal__updated {
+  margin-top: 1rem;
+  font-size: var(--text-sm);
+  color: var(--text-tertiary);
+}
+
+/* The document column — narrower than the site measure for readability. */
+.legal__list {
+  max-width: 44rem;
+}
+
+/* One numbered section per hairline-divided row, like the FAQ/reviews
+   lists — the page's own visual language. */
+.legal__item {
+  padding: var(--space-md) 0;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.legal__item:last-child {
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.legal__heading {
+  font-family: var(--font-display);
+  font-size: clamp(1.375rem, 2.2vw, 1.75rem);
+  font-weight: 400;
+  line-height: var(--leading-tight);
+  letter-spacing: var(--tracking-wide);
+  color: var(--foreground);
+  text-wrap: balance;
+}
+
+.legal__content {
+  margin-top: 0.75rem;
+  display: grid;
+  gap: 0.65rem;
+}
+
+.legal__content p {
+  font-size: var(--text-base);
+  line-height: var(--leading-relaxed);
+  color: var(--text-secondary);
+  text-wrap: pretty;
+}

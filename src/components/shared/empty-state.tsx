@@ -13,7 +13,7 @@ interface EmptyStateColumn {
 
 export interface EmptyStateProps {
   /** Optional icon component */
-  icon?: React.ElementType;
+  icon?: React.ComponentType<{ className?: string }>;
   /** Main heading text */
   title: string;
   /** Optional supporting description */

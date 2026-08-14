@@ -37,7 +37,8 @@ export async function updateSession(request: NextRequest) {
 
   // ── Landing page ──────────────────────────────────────────────
   // The root path (/) now serves the public landing page (Hero section).
-  // Auth callback hash handling is done client-side in page.tsx.
+  // Auth callback hash handling is done client-side in the landing site's
+  // layout (AuthCallbackHandler).
   // Keep only routes that need an early server-side check here.
   const protectedPaths = ["/admin", "/dashboard"];
   const isProtected = protectedPaths.some((path) =>

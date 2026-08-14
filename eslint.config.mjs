@@ -13,6 +13,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Dev-only keyframe gizmo ported from the landing project — never
+    // mounted or shipped; skipped so the project lint stays green.
+    "src/components/dev/**",
   ]),
 ]);
 
