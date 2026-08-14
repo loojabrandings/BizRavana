@@ -2024,3 +2024,57 @@ Status: **read-only drift audit complete; deployment blocked by missing backup**
   from the browser or printed.
 - A pgAdmin client-tool installation stalled without installing and its exact
   package-manager process was stopped. No PostgreSQL server was installed.
+
+## Milestone 29 — Production deployment of 027 and 040–051
+
+Status: **applied and verified in production (2026-08-14)**
+
+### Prerequisite repair discovered during deployment
+
+- The read-only drift audit (Milestone 28) checked only `040–051` markers and
+  therefore did not reveal that **migration 027 was never applied to
+  production**. Migration 040 fails without `public.team_invitations`.
+- Production has no `supabase_migrations` schema (no CLI history), consistent
+  with historical SQL Editor deployments.
+- A full production table inventory showed every other migration-created table
+  already present; `team_invitations` was the single missing object.
+- Migration `027_add_team_invitations.sql` was reviewed (self-contained:
+  table, indexes, RLS, policies, two RPCs) and applied first. Its policy
+  dependencies (`get_user_business_id`, `is_super_admin`) were confirmed
+  present before running.
+
+### Deployment facts
+
+- Connected through the IPv4 session pooler
+  (`aws-0-ap-southeast-2.pooler.supabase.com:5432`, user
+  `postgres.<ref>`). The direct `db.<ref>.supabase.co` host still resolves to
+  no record from this workstation (IPv6-only).
+- The user-supplied production database password authenticated successfully;
+  the password embedded in `.env.local` remains stale (13-char value fails).
+- A pre-migration logical data backup was created and verified at
+  `~/bizravana-backups/bizravana-prod-20260814-pre-migration.sql`
+  (154 INSERTs, 34 tables, 0.22 MB, valid BEGIN/COMMIT structure).
+- Applied, each wrapped in an explicit transaction (except 048, already
+  present): **027**, then **040, 041, 042, 043, 044, 045, 046, 047, 049,
+  050, 051**.
+- **048 was already fully applied in production** (table, RLS, both rate-limit
+  functions, and the hourly `cleanup-request-rate-limits` cron job), so it was
+  skipped; 049 and 050 were still applied to guarantee the final function
+  definition.
+
+### Verification
+
+- Object-marker audit (13 markers incl. content-level checks for 041, 042,
+  045, 046, 050, 051): all **APPLIED**.
+- Functional smoke tests as `postgres`:
+  - `consume_request_rate_limit` returned `allowed=true, remaining=2` (limit 3)
+  - `soft_delete_message_template` callable, returned `false` for a bogus UUID
+  - `deliver_scheduled_broadcasts` ran and delivered 0 (no due broadcasts)
+  - `get_pending_invitations` and `accept_invitation` exist
+  - Anonymous call of `get_pending_invitations` was rejected with
+    `Authentication required`
+  - Direct-write Storage policies are gone; only read policies remain
+  - `payment-proofs` bucket: private, 5 MB limit, JPEG/PNG/WEBP/PDF allowlist
+- Smoke-test rate-limit row was deleted after the test.
+- Production data was not otherwise modified; the logical backup is the
+  recovery point.

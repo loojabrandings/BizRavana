@@ -7,8 +7,13 @@ Audit mode: read-only
 ## Backup gate
 
 The Supabase production dashboard reports **No backups**. The organization is
-on the Free plan, which does not include scheduled project backups. No migration
-was applied because a recoverable database copy is a mandatory precondition.
+on the Free plan, which does not include scheduled project backups.
+
+**2026-08-14:** A recoverable logical backup was created and verified at
+`~/bizravana-backups/bizravana-prod-20260814-pre-migration.sql` (data only,
+154 INSERTs across 34 tables, valid BEGIN/COMMIT structure). Scheduled
+Supabase backups or a full `pg_dump`-style backup would still be stronger;
+see the options below.
 
 Safe options:
 
@@ -62,6 +67,11 @@ later reconcile the remote migration-history table.
 
 Do not apply only `040–046`. The current application also depends on `047–051`
 for Message Template deletion, distributed rate limiting, verified uploads,
-and Storage write restrictions. After backup verification, deploy `040–051` in
-order, verify every marker again, run production-safe authorization checks, and
-record the deployment without creating disposable customer-facing data.
+and Storage write restrictions.
+
+**EXECUTED 2026-08-14:** Migration `027` (missing `team_invitations` table,
+discovered during deployment) plus `040–047` and `049–051` were applied to
+production in order through the session pooler; `048` was already present.
+Every marker was re-verified and functional smoke checks passed (see Milestone
+29 in `RELEASE_FIXING_LOG.md`). `.env.local` still embeds the stale database
+password; the current password was supplied directly for this deployment.

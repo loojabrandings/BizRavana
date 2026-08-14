@@ -11,7 +11,7 @@ open work remains as a checkbox. Detailed evidence is recorded in
 - [x] ~~Audit findings and release-fixing scope documented~~
 - [x] ~~Existing working-tree changes preserved~~
 - [x] ~~Separate staging Supabase project created and verified~~
-- [ ] Obtain a recoverable production database backup
+- [x] ~~Obtain a recoverable production database backup~~ (logical data backup 2026-08-14; scheduled/pg_dump-style backup still recommended)
 - [ ] Verify the Storage backup and restore process
 - [x] ~~Produce a production migration-drift report for `040–051`~~
 - [ ] Reconcile SQL Editor deployment with CLI migration history for `001–051`
@@ -32,7 +32,7 @@ open work remains as a checkbox. Detailed evidence is recorded in
 - [x] ~~Pass the 13-check PayHere callback security/concurrency matrix in staging~~
 - [x] ~~Add distributed rate limiting for login and the PayHere callback~~
 - [x] ~~Complete upload MIME/signature and CSRF/Origin verification~~
-- [ ] Apply approved migrations `040–051` to production
+- [x] ~~Apply approved migrations `040–051` to production~~ (2026-08-14, incl. prerequisite 027; see Milestone 29)
 
 ## Phase 2 — Quality gates
 
