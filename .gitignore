@@ -35,6 +35,12 @@ yarn-error.log*
 # accidental files
 nul
 *.log
+
+# local tools (portable postgres binaries, etc.)
+.tools/
+
+# machine-specific agent skill symlinks (regenerate with `npx skills add`)
+.claude/
 dev-output.log
 dev_output.log
 
