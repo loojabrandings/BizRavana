@@ -18,6 +18,7 @@ import {
   Settings,
   ShoppingCart,
   Truck,
+  Users,
   type LucideIcon,
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -63,6 +64,7 @@ const navSections: NavSection[] = [
     label: "Sales",
     items: [
       { label: "Orders", href: "/dashboard/orders", icon: ShoppingCart },
+      { label: "Customers", href: "/dashboard/customers", icon: Users },
       { label: "Quotations", href: "/dashboard/quotations", icon: FileText },
       { label: "Products", href: "/dashboard/products", icon: Package },
     ],

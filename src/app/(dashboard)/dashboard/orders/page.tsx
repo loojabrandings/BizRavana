@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import {
   Check,
@@ -1494,7 +1495,13 @@ const handleStatusChange = useCallback(async (orderId: string, newStatus: string
           <div className="mt-4 space-y-3">
             {/* Customer */}
             <div className="flex items-center justify-between gap-2">
-              <p className="text-base font-medium text-foreground leading-snug truncate">{order.customer_name}</p>
+              <Link
+                href={`/dashboard/customers?search=${encodeURIComponent(order.customer_whatsapp || order.customer_phone || order.customer_name)}`}
+                className="text-base font-medium text-foreground leading-snug truncate hover:underline"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {order.customer_name}
+              </Link>
               <RepeatBadge order={order} counts={repeatCustomerCounts} />
             </div>
 
@@ -1931,7 +1938,13 @@ const handleStatusChange = useCallback(async (orderId: string, newStatus: string
         className: "min-w-[140px]",
         renderCell: (order) => (
           <div className="flex items-center gap-2">
-            <span className="truncate text-sm text-foreground">{order.customer_name}</span>
+            <Link
+              href={`/dashboard/customers?search=${encodeURIComponent(order.customer_whatsapp || order.customer_phone || order.customer_name)}`}
+              className="truncate text-sm text-foreground hover:underline"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {order.customer_name}
+            </Link>
             <RepeatBadge order={order} counts={repeatCustomerCounts} />
           </div>
         ),
