@@ -149,7 +149,7 @@ export async function POST(request: Request) {
   const { data: payment, error: paymentError } = await admin
     .from("payhere_payments")
     .select(
-      "id, business_id, plan_id, merchant_id, amount, currency, status, activated_at",
+      "id, business_id, plan_id, merchant_id, amount, currency, status, activated_at, billing_period",
     )
     .eq("order_id", values.orderId)
     .maybeSingle();
@@ -220,6 +220,7 @@ export async function POST(request: Request) {
       p_card_no: values.cardNo,
       p_card_expiry: values.cardExpiry,
       p_notification_payload: notificationPayload,
+      p_billing_period: payment.billing_period ?? "monthly",
     });
 
     if (error) {

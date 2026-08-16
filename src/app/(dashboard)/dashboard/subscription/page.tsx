@@ -19,7 +19,6 @@ import {
   Crown,
   FileText,
   Gift,
-  HeartHandshake,
   HelpCircle,
   Hourglass,
   Image as ImageIcon,
@@ -33,7 +32,6 @@ import {
   Star,
   Trash2,
   Upload,
-  X,
   XCircle,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
@@ -41,7 +39,6 @@ import { cn } from "@/lib/utils";
 import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { Separator } from "@/components/ui/separator";
 import {
   Dialog,
   DialogContent,
@@ -50,15 +47,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-} from "@/components/ui/sheet";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { useIsMobile } from "@/hooks/use-media-query";
 import { toast } from "sonner";
 import type { Database } from "@/types/database";
 
@@ -80,6 +68,7 @@ type PayHereHistoryPayment = Pick<
   | "order_id"
   | "payhere_payment_id"
   | "status_message"
+  | "billing_period"
   | "created_at"
 >;
 
@@ -93,6 +82,7 @@ interface PaymentHistoryItem {
   paymentId: string | null;
   note: string | null;
   createdAt: string;
+  billingPeriod: "monthly" | "yearly" | null;
   successful: boolean;
   failed: boolean;
 }
@@ -107,26 +97,6 @@ interface UsageCounts {
   team_members: number;
   courier_accounts: number;
   whatsapp_templates: number;
-}
-
-interface PlanFeature {
-  label: string;
-  key: keyof Pick<
-    SubscriptionPlan,
-    | "order_limit" | "expense_limit" | "product_limit" | "quotation_limit"
-    | "inventory_limit" | "courier_accounts" | "whatsapp_templates"
-    | "team_members" | "storage_limit_mb"
-  >;
-  suffix?: string;
-  icon?: typeof ShoppingCart;
-}
-
-interface BoolFeature {
-  label: string;
-  key: keyof Pick<
-    SubscriptionPlan,
-    "bulk_import" | "activity_log" | "smart_automation" | "ai_assistant"
-  >;
 }
 
 // ══════════════════════════════════════════════════════════════════════
@@ -190,66 +160,19 @@ function formatDate(dateStr: string | null): string {
   });
 }
 
-const planFeatures: PlanFeature[] = [
-  { label: "Orders", key: "order_limit", icon: ShoppingCart },
-  { label: "Expenses", key: "expense_limit", icon: Package },
-  { label: "Products", key: "product_limit", icon: FileText },
-  { label: "Quotations", key: "quotation_limit", icon: FileText },
-  { label: "Inventory Items", key: "inventory_limit", icon: Package },
-  { label: "Courier Accounts", key: "courier_accounts", icon: HeartHandshake },
-  { label: "WhatsApp Templates", key: "whatsapp_templates", icon: MessageCircle },
-  { label: "File Storage", key: "storage_limit_mb", suffix: "MB" },
-  { label: "Team Members", key: "team_members", icon: Building2 },
-];
+/** Price for the given plan + billing period. */
+function planPrice(plan: SubscriptionPlan, period: "monthly" | "yearly") {
+  if (period === "yearly" && plan.yearly_price > 0) return plan.yearly_price;
+  return plan.monthly_price;
+}
 
-const boolFeatures: BoolFeature[] = [
-  { label: "Bulk Import", key: "bulk_import" },
-  { label: "Activity Log", key: "activity_log" },
-  { label: "Smart Automation", key: "smart_automation" },
-  { label: "AI Assistant", key: "ai_assistant" },
-];
+function billingSuffix(period: "monthly" | "yearly") {
+  return period === "yearly" ? "/year" : "/month";
+}
 
-const featureGroups: {
-  label: string;
-  items: (
-    | { type: "numeric"; key: string; label: string; suffix?: string; icon?: typeof ShoppingCart }
-    | { type: "boolean"; key: string; label: string }
-  )[];
-}[] = [
-  {
-    label: "Usage Limits",
-    items: [
-      { type: "numeric", key: "order_limit", label: "Orders", icon: ShoppingCart },
-      { type: "numeric", key: "expense_limit", label: "Expenses", icon: Package },
-      { type: "numeric", key: "product_limit", label: "Products", icon: FileText },
-      { type: "numeric", key: "quotation_limit", label: "Quotations", icon: FileText },
-      { type: "numeric", key: "inventory_limit", label: "Inventory Items", icon: Package },
-      { type: "numeric", key: "storage_limit_mb", label: "File Storage", suffix: "MB" },
-    ],
-  },
-  {
-    label: "Integrations",
-    items: [
-      { type: "numeric", key: "courier_accounts", label: "Courier Accounts", icon: HeartHandshake },
-      { type: "numeric", key: "whatsapp_templates", label: "WhatsApp Templates", icon: MessageCircle },
-    ],
-  },
-  {
-    label: "Collaboration",
-    items: [
-      { type: "numeric", key: "team_members", label: "Team Members", icon: Building2 },
-      { type: "boolean", key: "activity_log", label: "Activity Log" },
-    ],
-  },
-  {
-    label: "Advanced",
-    items: [
-      { type: "boolean", key: "bulk_import", label: "Bulk Import" },
-      { type: "boolean", key: "smart_automation", label: "Smart Automation" },
-      { type: "boolean", key: "ai_assistant", label: "AI Assistant" },
-    ],
-  },
-];
+function billingLabel(period: "monthly" | "yearly") {
+  return period === "yearly" ? "Yearly" : "Monthly";
+}
 
 // ══════════════════════════════════════════════════════════════════════
 // ADMIN SETTINGS TYPE
@@ -306,6 +229,9 @@ export default function SubscriptionPage() {
   // Payment proof upload
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [selectedPlanId, setSelectedPlanId] = useState<string>("");
+  const [uploadBillingPeriod, setUploadBillingPeriod] = useState<
+    "monthly" | "yearly"
+  >("monthly");
   const [notes, setNotes] = useState("");
   const [proofFile, setProofFile] = useState<File | null>(null);
   const [proofPreview, setProofPreview] = useState<string | null>(null);
@@ -322,17 +248,15 @@ export default function SubscriptionPage() {
   const [whatsappPlanName, setWhatsappPlanName] = useState("");
   const [whatsappAmount, setWhatsappAmount] = useState(0);
 
-  // Mobile comparison sheet
-  const [comparisonSheetOpen, setComparisonSheetOpen] = useState(false);
-
-  // Mobile card scroll tracking
-  const [activeCardIndex, setActiveCardIndex] = useState(0);
-  const cardsContainerRef = useRef<HTMLDivElement>(null);
+  // Billing period chosen in the Pricing Plans section — travels to the
+  // payment page so the checkout matches this selection.
+  const [pricingBillingPeriod, setPricingBillingPeriod] = useState<
+    "monthly" | "yearly"
+  >("monthly");
 
   // Copy feedback
   const [copied, setCopied] = useState(false);
 
-  const isMobile = useIsMobile();
   const supabase = useMemo(() => createClient(), []);
   const selectedPaymentPlan = useMemo(
     () => plans.find((plan) => plan.id === selectedPlanId) || null,
@@ -354,6 +278,7 @@ export default function SubscriptionPage() {
       paymentId: null,
       note: proof.admin_note,
       createdAt: proof.created_at,
+      billingPeriod: proof.billing_period ?? null,
       successful: proof.status === "approved",
       failed: proof.status === "rejected",
     }));
@@ -377,6 +302,7 @@ export default function SubscriptionPage() {
         paymentId: payment.payhere_payment_id,
         note: payment.status_message,
         createdAt: payment.created_at,
+        billingPeriod: payment.billing_period ?? null,
         successful: payment.status === "success",
         failed: [
           "canceled",
@@ -394,22 +320,14 @@ export default function SubscriptionPage() {
   }, [payHerePayments, proofs]);
 
   const openPaymentPage = useCallback(
-    (planId?: string) => {
-      const query = planId ? `?plan=${encodeURIComponent(planId)}` : "";
+    (planId?: string, billingPeriod: "monthly" | "yearly" = "monthly") => {
+      const query = planId
+        ? `?plan=${encodeURIComponent(planId)}&billing=${billingPeriod}`
+        : "";
       router.push(`/dashboard/subscription/payment${query}`);
     },
     [router],
   );
-
-  // ── Handle card scroll snap tracking ──
-  const handleCardsScroll = useCallback(() => {
-    const container = cardsContainerRef.current;
-    if (!container) return;
-    const scrollLeft = container.scrollLeft;
-    const cardWidth = container.clientWidth;
-    const idx = Math.round(scrollLeft / cardWidth);
-    setActiveCardIndex(Math.min(idx, plans.filter((p) => p.name !== "Trial").length - 1));
-  }, [plans]);
 
   const fetchUsage = useCallback(async (businessId: string) => {
     try {
@@ -507,7 +425,7 @@ export default function SubscriptionPage() {
         supabase
           .from("payhere_payments")
           .select(
-            "id, plan_id, amount, status, payment_method, order_id, payhere_payment_id, status_message, created_at",
+            "id, plan_id, amount, status, payment_method, order_id, payhere_payment_id, status_message, billing_period, created_at",
           )
           .eq("business_id", profile.business_id)
           .order("created_at", { ascending: false })
@@ -537,6 +455,7 @@ export default function SubscriptionPage() {
     setProofPreview(null);
     setNotes("");
     setSelectedPlanId("");
+    setUploadBillingPeriod("monthly");
     if (fileInputRef.current) fileInputRef.current.value = "";
   }, []);
 
@@ -578,6 +497,7 @@ export default function SubscriptionPage() {
     try {
       const payload = new FormData();
       payload.set("planId", selectedPlanId);
+      payload.set("billingPeriod", uploadBillingPeriod);
       payload.set("notes", notes);
       payload.set("receipt", proofFile);
 
@@ -609,7 +529,7 @@ export default function SubscriptionPage() {
     } finally {
       setUploading(false);
     }
-  }, [proofFile, selectedPlanId, selectedPaymentPlan, pendingPaymentProof, notes, fetchData, resetUploadForm]);
+  }, [proofFile, selectedPlanId, selectedPaymentPlan, pendingPaymentProof, uploadBillingPeriod, notes, fetchData, resetUploadForm]);
 
   const handleAdminWhatsApp = useCallback(() => {
     if (whatsappPlanName && whatsappAmount > 0) {
@@ -676,6 +596,8 @@ export default function SubscriptionPage() {
   const isExpired = business?.account_status === "trial_expired" || business?.account_status === "expired";
   const isPendingPayment = business?.account_status === "pending_payment";
   const currentPlanName = currentPlan?.name || "Trial";
+  const currentBillingPeriod: "monthly" | "yearly" =
+    business?.billing_period ?? "monthly";
   const color = currentPlan ? getPlanColor(currentPlanName) : getPlanColor("trial");
 
   const trialProgress = isTrial && business?.trial_ends_at
@@ -769,6 +691,14 @@ export default function SubscriptionPage() {
                       {statusInfo.label}
                     </span>
                   )}
+                  {/* Billing period badge — annual plans get a Yearly pill. */}
+                  {business?.account_status === "active" &&
+                    business.billing_period && (
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 text-sm font-semibold text-primary">
+                        <Calendar className="size-3.5" />
+                        {billingLabel(business.billing_period)} plan
+                      </span>
+                    )}
                 </div>
 
                 {/* Plan details */}
@@ -776,8 +706,8 @@ export default function SubscriptionPage() {
                   {currentPlan && currentPlan.monthly_price > 0 && (
                     <span className="flex items-center gap-1.5 tabular-nums">
                       <Coins className="size-3.5 text-muted-foreground/70" />
-                      <span className="font-medium text-foreground">Rs. {currentPlan.monthly_price.toLocaleString()}</span>
-                      <span className="text-muted-foreground/80">/month</span>
+                      <span className="font-medium text-foreground">Rs. {planPrice(currentPlan, currentBillingPeriod).toLocaleString()}</span>
+                      <span className="text-muted-foreground/80">{billingSuffix(currentBillingPeriod)}</span>
                     </span>
                   )}
 
@@ -804,7 +734,8 @@ export default function SubscriptionPage() {
                   variant="default"
                   onClick={() => {
                     const firstPaid = paidPlans[0];
-                    if (firstPaid) openPaymentPage(firstPaid.id);
+                    if (firstPaid)
+                      openPaymentPage(firstPaid.id, pricingBillingPeriod);
                   }}
                 >
                   <Sparkles className="size-3.5 mr-1.5" />
@@ -974,6 +905,9 @@ export default function SubscriptionPage() {
                       <p className="text-sm font-semibold text-foreground">{plan?.name || "Subscription"} plan</p>
                       <p className="mt-0.5 text-xs text-muted-foreground">
                         {formatDate(payment.createdAt)} · {payment.methodLabel}
+                        {payment.billingPeriod
+                          ? ` · ${billingLabel(payment.billingPeriod)}`
+                          : ""}
                       </p>
                       {payment.reference && (
                         <p className="mt-1 font-mono text-xs text-muted-foreground">
@@ -1016,493 +950,195 @@ export default function SubscriptionPage() {
           3. PRICING SECTION
          ═══════════════════════════════════════════════════════════════ */}
 
-      {/* ── Section Label ── */}
-      <div className="flex items-center justify-between">
+      {/* ── Section header + billing toggle ── */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h3 className="text-sm font-semibold uppercase tracking-widest text-muted-foreground/70">
             Pricing Plans
           </h3>
           <p className="mt-0.5 text-sm text-muted-foreground/60">
-            {isMobile ? "Swipe through plans to compare" : "Compare features across all plans"}
+            Choose a billing period and a plan to continue.
           </p>
+        </div>
+
+        {/* Billing period toggle — monthly | yearly. The selected period
+            travels to the payment page so the checkout matches this choice. */}
+        <div
+          className="grid grid-cols-2 gap-1 rounded-xl border border-border/30 bg-muted/10 p-1"
+          role="group"
+          aria-label="Billing period"
+        >
+          {(
+            [
+              ["monthly", "Monthly"],
+              ["yearly", "Yearly"],
+            ] as Array<["monthly" | "yearly", string]>
+          ).map(([value, label]) => (
+            <button
+              key={value}
+              type="button"
+              onClick={() => setPricingBillingPeriod(value)}
+              aria-pressed={pricingBillingPeriod === value}
+              className={cn(
+                "rounded-lg px-3 py-2 text-sm font-medium transition-all",
+                pricingBillingPeriod === value
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              {label}
+              {value === "yearly" && (
+                <span
+                  className={cn(
+                    "ml-1.5 text-xs font-semibold",
+                    pricingBillingPeriod === value
+                      ? "text-primary"
+                      : "text-muted-foreground/70",
+                  )}
+                >
+                  Save 20%
+                </span>
+              )}
+            </button>
+          ))}
         </div>
       </div>
 
-      {/* ── DESKTOP: Comparison Table ── */}
-      {!isMobile && (
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="relative"
-        >
-          <div className="rounded-xl glass-card overflow-hidden">
-            {/* Fixed Header */}
-            <div className="min-w-[820px]">
-              <div className="grid grid-cols-[220px_repeat(4,1fr)] divide-x divide-border/20 border-b border-border/20 bg-card/95 backdrop-blur-sm">
-                <div className="flex items-center px-5 py-5">
-                  <span className="text-sm font-semibold uppercase tracking-widest text-muted-foreground/70">Feature</span>
-                </div>
-                {paidPlans.map((plan) => {
-                  const isCurrent = currentPlan?.id === plan.id;
-                  return (
-                    <div
-                      key={plan.id}
-                      className={cn(
-                        "flex flex-col items-center justify-center px-4 py-5 text-center",
-                        isCurrent && "bg-primary/[0.03]",
-                        plan.name === "Standard" && "bg-primary/[0.10] ring-2 ring-primary/25 ring-inset",
-                      )}
-                    >
-                      {/* Plan Name — Primary */}
-                      <span className={cn(
-                        "text-xl font-bold tracking-tight text-foreground",
-                        isCurrent && "text-primary",
-                      )}>
-                        {plan.name}
-                      </span>
-                      {/* Price — Secondary */}
-                      {plan.monthly_price > 0 ? (
-                        <div className="mt-2 flex items-baseline gap-0.5">
-                          <span className="text-lg font-semibold text-foreground tabular-nums">
-                            Rs. {plan.monthly_price.toLocaleString()}
-                          </span>
-                          <span className="text-sm text-muted-foreground">/mo</span>
-                        </div>
-                      ) : (
-                        <span className="mt-2 text-lg font-semibold text-foreground/80">Custom</span>
-                      )}
-                      {/* Badge — Tertiary */}
-                      {plan.name === "Standard" && !isCurrent && (
-                        <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-0.5 text-sm font-semibold text-primary">
-                          <Sparkles className="size-3" />
-                          Most Popular
-                        </span>
-                      )}
-                      {isCurrent && (
-                        <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-success/10 px-2.5 py-0.5 text-sm font-semibold text-success">
-                          <BadgeCheck className="size-3" />
-                          Current
-                        </span>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
+      {/* ── The four plans — name + price only. Full feature comparison
+          lives on the marketing /pricing page (link below the grid). ── */}
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {paidPlans.map((plan) => {
+          const isCurrent = currentPlan?.id === plan.id;
+          const planColor = getPlanColor(plan.name);
+          const isUpgrade =
+            !isCurrent && plan.sort_order > (currentPlan?.sort_order || 0);
+          const price = planPrice(plan, pricingBillingPeriod);
 
-            {/* Sticky CTA Row */}
-            <div className="sticky top-0 z-20 bg-card/95 backdrop-blur-sm border-y border-border/20">
-              <div className="min-w-[820px]">
-                <div className="grid grid-cols-[220px_repeat(4,1fr)] divide-x divide-border/20">
-                  <div className="px-5 py-4" />
-                  {paidPlans.map((plan) => {
-                    const isCurrent = currentPlan?.id === plan.id;
-                    const isUpgrade = !isCurrent && (plan.sort_order > (currentPlan?.sort_order || 0));
-                    return (
-                      <div key={plan.id} className="flex items-center justify-center px-4 py-4">
-                        {isCurrent ? (
-                          <Button
-                            variant="outline"
-                            className="w-full max-w-[160px]"
-                            onClick={() => plan.name === "Enterprise"
-                              ? router.push("/contact")
-                              : openPaymentPage(plan.id)}
-                          >
-                            <CreditCard className="size-3.5 mr-1.5" />
-                            {plan.name === "Enterprise" ? "Contact Sales" : "Renew"}
-                          </Button>
-                        ) : plan.name === "Enterprise" ? (
-                          <Button
-                            variant="outline"
-                            className="w-full max-w-[160px]"
-                            onClick={() => router.push("/contact")}
-                        >
-                            <MessageCircle className="size-3.5 mr-1.5" />
-                            Contact Sales
-                          </Button>
-                        ) : plan.name === "Standard" ? (
-                          <Button
-                            variant="default"
-                            className="w-full max-w-[160px] shadow-sm shadow-primary/20 ring-1 ring-primary/30"
-                            onClick={() => openPaymentPage(plan.id)}
-                          >
-                            <Sparkles className="size-3.5 mr-1.5" />
-                            {isUpgrade ? "Upgrade" : "Choose Plan"}
-                          </Button>
-                        ) : (
-                          <Button
-                            variant="outline"
-                            className="w-full max-w-[160px]"
-                            onClick={() => openPaymentPage(plan.id)}
-                          >
-                            {isUpgrade ? "Upgrade" : "Choose Plan"}
-                          </Button>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-
-            <div className="max-h-[calc(100dvh_-_22rem)] overflow-y-auto">
-              <div className="min-w-[820px]">
-                {featureGroups.map((group, gIdx) => (
-                  <div key={group.label}>
-                    {/* Group header */}
-                    <div className={cn(
-                      "bg-muted/8 px-5 py-2.5 border-b border-border/20",
-                      gIdx > 0 && "border-t border-border/5 mt-1",
-                    )}>
-                      <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/50">
-                        {group.label}
-                      </span>
-                    </div>
-
-                    {group.items.map((item) => (
-                      <div
-                        key={item.key}
-                        className="grid grid-cols-[220px_repeat(4,1fr)] divide-x divide-border/20 border-b border-border/90 hover:bg-muted/5 transition-colors"
-                      >
-                        <div className="sticky left-0 z-10 flex items-center gap-2.5 px-5 py-3.5 border-r border-border/10">
-                          {item.type === "numeric" && item.icon && (
-                            <item.icon className="size-3.5 text-muted-foreground/60 shrink-0" />
-                          )}
-                          <span className="text-sm text-foreground/80">{item.label}</span>
-                        </div>
-                        {paidPlans.map((plan) => {
-                          const isCurrent = currentPlan?.id === plan.id;
-                          return (
-                            <div
-                              key={plan.id}
-                              className={cn(
-                                "flex items-center justify-center px-4 py-3.5",
-                                isCurrent && "bg-primary/[0.02]",
-                                plan.name === "Standard" && "bg-primary/[0.08]",
-                              )}
-                            >
-                              {item.type === "numeric" ? (
-                                (() => {
-                                  const val = plan[item.key as keyof typeof plan] as number;
-                                  const isUnlimited = val >= 999999;
-                                  return isUnlimited ? (
-                                    <Infinity className="size-4 text-muted-foreground/60" />
-                                  ) : (
-                                    <span className="text-sm font-semibold tabular-nums text-foreground/90">
-                                      {val.toLocaleString()}{item.suffix ? ` ${item.suffix}` : ""}
-                                    </span>
-                                  );
-                                })()
-                              ) : (
-                                (plan[item.key as keyof typeof plan] as boolean) ? (
-                                  <CheckCircle2 className="size-4 text-success" />
-                                ) : (
-                                  <X className="size-4 text-muted-foreground/50" />
-                                )
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    ))}
-                  </div>
-                ))}
-
-
-              </div>
-            </div>
-          </div>
-        </motion.div>
-      )}
-
-      {/* ── MOBILE: Swipeable Pricing Cards ── */}
-      {isMobile && (
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-        >
-          {/* Cards container */}
-          <div
-            ref={cardsContainerRef}
-            onScroll={handleCardsScroll}
-            className="flex gap-4 overflow-x-auto snap-x snap-mandatory scrollbar-none -mx-4 px-4 pb-2"
-            style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
-          >
-            {paidPlans.map((plan) => {
-              const isCurrent = currentPlan?.id === plan.id;
-              const planColor = getPlanColor(plan.name);
-              const isUpgrade = !isCurrent && (plan.sort_order > (currentPlan?.sort_order || 0));
-
-              return (
-                <div
-                  key={plan.id}
-                  className={cn(
-                    "relative flex flex-col min-w-[85vw] max-w-[320px] snap-start rounded-2xl border transition-all duration-200 shrink-0",
-                    isCurrent
-                      ? "border-primary/40 bg-primary/[0.04] shadow-md shadow-primary/5 ring-1 ring-primary/10"
-                      : "glass-card",
-                  )}
-                >
-                  {/* Popular badge */}
-                  {plan.name === "Standard" && !isCurrent && (
-                    <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 z-10">
-                      <span className="inline-flex items-center gap-1 rounded-full bg-primary px-3 py-0.5 text-sm font-semibold uppercase tracking-wider text-primary-foreground shadow-sm">
-                        <Sparkles className="size-3" />
-                        Most Popular
-                      </span>
-                    </div>
-                  )}
-
-                  {/* Current badge */}
-                  {isCurrent && (
-                    <div className="absolute top-3 right-3 z-10">
-                      <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-sm font-semibold text-primary">
-                        <BadgeCheck className="size-3" />
-                        Current
-                      </span>
-                    </div>
-                  )}
-
-                  {/* Header */}
-                  <div className={cn("p-5 rounded-t-2xl", planColor.light)}>
-                    <div className={cn("inline-flex size-10 items-center justify-center rounded-xl mb-3", planColor.bg)}>
-                      <PlanIcon name={plan.name} className="size-5" />
-                    </div>
-                    <h3 className="text-lg font-bold text-foreground">{plan.name}</h3>
-                    <div className="mt-1.5 flex items-baseline gap-1">
-                      <span className="text-2xl font-bold tracking-tight text-foreground">
-                        {plan.monthly_price > 0 ? `Rs. ${plan.monthly_price.toLocaleString()}` : "Custom"}
-                      </span>
-                      {plan.monthly_price > 0 && (
-                        <span className="text-sm text-muted-foreground/80">/mo</span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Features */}
-                  <div className="flex-1 p-5 space-y-3">
-                    {planFeatures.map((feat) => {
-                      const val = plan[feat.key] as number;
-                      const isUnlimited = val >= 999999;
-                      return (
-                        <div key={feat.key} className="flex items-center justify-between gap-2">
-                          <span className="text-sm text-foreground/80">{feat.label}</span>
-                          <span className="text-sm font-semibold text-foreground tabular-nums">
-                            {isUnlimited ? "Unlimited" : `${val.toLocaleString()}${feat.suffix ? ` ${feat.suffix}` : ""}`}
-                          </span>
-                        </div>
-                      );
-                    })}
-
-                    <Separator className="my-2" />
-
-                    {boolFeatures.map((feat) => {
-                      const enabled = plan[feat.key] as boolean;
-                      return (
-                        <div key={feat.key} className="flex items-center justify-between gap-2">
-                          <span className="text-sm text-foreground/80">{feat.label}</span>
-                          {enabled ? (
-                            <CheckCircle2 className="size-4 text-success" />
-                          ) : (
-                            <X className="size-3.5 text-muted-foreground/50" />
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-
-                  {/* Action */}
-                  <div className="px-5 pb-5">
-                    {isCurrent ? (
-                      <Button
-                        variant="outline"
-                        className="w-full"
-                        onClick={() => plan.name === "Enterprise"
-                          ? router.push("/contact")
-                          : openPaymentPage(plan.id)}
-                      >
-                        <CreditCard className="size-3.5 mr-1.5" />
-                        {plan.name === "Enterprise" ? "Contact Sales" : "Renew Plan"}
-                      </Button>
-                    ) : (
-                      <Button
-                        variant={["Basic", "Enterprise"].includes(plan.name) ? "outline" : "default"}
-                        className="w-full"
-                        onClick={() => plan.name === "Enterprise"
-                          ? router.push("/contact")
-                          : openPaymentPage(plan.id)}
-                      >
-                        {plan.name === "Enterprise" ? (
-                          <>
-                            <MessageCircle className="size-3.5 mr-1.5" />
-                            Contact Sales
-                          </>
-                        ) : (
-                          isUpgrade ? "Upgrade" : "Choose Plan"
-                        )}
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Dot Indicators */}
-          {paidPlans.length > 1 && (
-            <div className="flex items-center justify-center gap-1.5 mt-3">
-              {paidPlans.map((_, idx) => (
-                <button
-                  key={idx}
-                  type="button"
-                  onClick={() => {
-                    const container = cardsContainerRef.current;
-                    if (container) {
-                      container.scrollTo({
-                        left: idx * container.clientWidth,
-                        behavior: "smooth",
-                      });
-                    }
-                  }}
-                  className={cn(
-                    "rounded-full transition-all duration-300",
-                    idx === activeCardIndex
-                      ? "size-2 bg-primary"
-                      : "size-1.5 bg-muted-foreground/30 hover:bg-muted-foreground/50",
-                  )}
-                  aria-label={`View ${paidPlans[idx]?.name} plan`}
-                />
-              ))}
-            </div>
-          )}
-
-          {/* Compare Plans Button */}
-          <div className="mt-3 flex justify-center">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setComparisonSheetOpen(true)}
+          return (
+            <div
+              key={plan.id}
+              className={cn(
+                "relative flex flex-col rounded-2xl border p-5 transition-all duration-200",
+                isCurrent
+                  ? "border-primary/40 bg-primary/[0.04] shadow-md shadow-primary/5 ring-1 ring-primary/10"
+                  : "glass-card",
+                plan.name === "Standard" &&
+                  !isCurrent &&
+                  "border-primary/25",
+              )}
             >
-              <LayoutList className="size-3.5 mr-1.5" />
-              Compare Plans
-            </Button>
-          </div>
-
-          {/* ── MOBILE COMPARISON SHEET ── */}
-          <Sheet open={comparisonSheetOpen} onOpenChange={setComparisonSheetOpen}>
-            <SheetContent side="bottom" className="h-[85dvh] p-0 rounded-t-2xl">
-              <SheetHeader className="px-5 pt-5 pb-3 border-b border-border/20">
-                <SheetTitle>Compare Plans</SheetTitle>
-                <SheetDescription>Side-by-side feature comparison</SheetDescription>
-              </SheetHeader>
-
-              <ScrollArea className="flex-1 h-full">
-                <div className="min-w-[600px] p-5 pt-3">
-                  {/* Header row */}
-                  <div className="grid grid-cols-[160px_repeat(4,1fr)] divide-x divide-border/20 gap-px bg-border/10 rounded-xl overflow-hidden mb-4">
-                    <div className="bg-card p-3" />
-                    {paidPlans.map((plan) => {
-                      const isCurrent = currentPlan?.id === plan.id;
-                      return (
-                        <div
-                          key={plan.id}
-                          className={cn(
-                            "flex flex-col items-center justify-center p-3 text-center",
-                            isCurrent ? "bg-primary/[0.04]" : "bg-card",
-                            plan.name === "Standard" && "bg-primary/[0.10] ring-2 ring-primary/25 ring-inset",
-                          )}
-                        >
-                          {/* Plan Name */}
-                          <span className={cn(
-                            "text-base font-bold tracking-tight text-foreground",
-                            isCurrent && "text-primary",
-                          )}>
-                            {plan.name}
-                          </span>
-                          {/* Price */}
-                          <div className="mt-1 flex items-baseline gap-0.5">
-                            <span className="text-sm font-semibold text-foreground tabular-nums">
-                              Rs. {plan.monthly_price.toLocaleString()}
-                            </span>
-                            <span className="text-xs text-muted-foreground">/mo</span>
-                          </div>
-                          {/* Badge */}
-                          {isCurrent && (
-                            <span className="mt-1.5 inline-flex items-center gap-0.5 rounded-full bg-success/10 px-1.5 py-0.5 text-xs font-semibold text-success">
-                              Current
-                            </span>
-                          )}
-                          {plan.name === "Standard" && !isCurrent && (
-                            <span className="mt-1.5 inline-flex items-center gap-0.5 rounded-full bg-primary/10 px-1.5 py-0.5 text-xs font-semibold text-primary">
-                              Popular
-                            </span>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-
-                  {featureGroups.map((group) => (
-                    <div key={group.label} className="mb-3">
-                      <div className="px-3 py-1.5 mb-1">
-                        <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/50">{group.label}</span>
-                      </div>
-                      <div className="space-y-px">
-                        {group.items.map((item) => (
-                          <div key={item.key} className="grid grid-cols-[160px_repeat(4,1fr)] divide-x divide-border/20 gap-px">
-                            <div className="flex items-center gap-2 bg-muted/10 px-3 py-2.5 rounded-l-lg">
-                              <span className="text-sm text-muted-foreground/70">{item.label}</span>
-                            </div>
-                            {paidPlans.map((plan) => {
-                              const isCurrent = currentPlan?.id === plan.id;
-                              return (
-                                <div
-                                  key={plan.id}
-                                  className={cn(
-                                    "flex items-center justify-center px-2 py-2.5",
-                                    isCurrent ? "bg-primary/[0.02]" : "bg-card",
-                                    plan.name === "Standard" && "bg-primary/[0.5]",
-                                  )}
-                                >
-                                  {item.type === "numeric" ? (
-                                    (() => {
-                                      const val = plan[item.key as keyof typeof plan] as number;
-                                      const isUnlimited = val >= 999999;
-                                      return isUnlimited ? (
-                                        <Infinity className="size-3 text-muted-foreground/60" />
-                                      ) : (
-                                        <span className="text-sm font-semibold tabular-nums text-foreground/90">
-                                          {val.toLocaleString()}
-                                        </span>
-                                      );
-                                    })()
-                                  ) : (
-                                    (plan[item.key as keyof typeof plan] as boolean) ? (
-                                      <CheckCircle2 className="size-3.5 text-success" />
-                                    ) : (
-                                      <X className="size-3.5 text-muted-foreground/50" />
-                                    )
-                                  )}
-                                </div>
-                              );
-                            })}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
+              {/* Popular badge */}
+              {plan.name === "Standard" && !isCurrent && (
+                <div className="absolute -top-2.5 left-1/2 z-10 -translate-x-1/2">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-primary px-3 py-0.5 text-xs font-semibold uppercase tracking-wider text-primary-foreground shadow-sm">
+                    <Sparkles className="size-3" />
+                    Most Popular
+                  </span>
                 </div>
-              </ScrollArea>
-            </SheetContent>
-          </Sheet>
-        </motion.div>
-      )}
+              )}
 
+              {/* Current badge */}
+              {isCurrent && (
+                <div className="absolute right-3 top-3 z-10">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
+                    <BadgeCheck className="size-3" />
+                    Current
+                  </span>
+                </div>
+              )}
 
+              {/* Icon + name */}
+              <div
+                className={cn(
+                  "inline-flex size-10 items-center justify-center rounded-xl",
+                  planColor.bg,
+                )}
+              >
+                <PlanIcon name={plan.name} className="size-5" />
+              </div>
+              <h4 className="mt-3 text-lg font-bold text-foreground">
+                {plan.name}
+              </h4>
 
+              {/* Price for the selected period */}
+              <div className="mt-2">
+                {plan.monthly_price > 0 ? (
+                  <>
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-2xl font-bold tracking-tight text-foreground tabular-nums">
+                        Rs. {price.toLocaleString()}
+                      </span>
+                      <span className="text-sm text-muted-foreground/80">
+                        {billingSuffix(pricingBillingPeriod)}
+                      </span>
+                    </div>
+                    {pricingBillingPeriod === "yearly" &&
+                      plan.yearly_price > 0 && (
+                        <p className="mt-1 text-xs font-semibold text-success">
+                          Save Rs.{" "}
+                          {Math.max(
+                            0,
+                            plan.monthly_price * 12 - plan.yearly_price,
+                          ).toLocaleString()}
+                        </p>
+                      )}
+                  </>
+                ) : (
+                  <span className="text-lg font-semibold text-foreground/80">
+                    Custom pricing
+                  </span>
+                )}
+              </div>
 
+              {/* CTA */}
+              <div className="mt-5 flex flex-1 items-end">
+                {plan.name === "Enterprise" ? (
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => router.push("/contact")}
+                  >
+                    <MessageCircle className="size-3.5 mr-1.5" />
+                    Contact Sales
+                  </Button>
+                ) : isCurrent ? (
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={() =>
+                      openPaymentPage(plan.id, pricingBillingPeriod)
+                    }
+                  >
+                    <CreditCard className="size-3.5 mr-1.5" />
+                    Renew
+                  </Button>
+                ) : (
+                  <Button
+                    variant={
+                      plan.name === "Standard" ? "default" : "outline"
+                    }
+                    className="w-full"
+                    onClick={() =>
+                      openPaymentPage(plan.id, pricingBillingPeriod)
+                    }
+                  >
+                    <CreditCard className="size-3.5 mr-1.5" />
+                    {isUpgrade ? "Upgrade" : "Choose Plan"}
+                  </Button>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* ── See the full comparison on the marketing site ── */}
+      <div className="mt-6 flex justify-center">
+        <Button variant="outline" onClick={() => window.open("/pricing", "_blank")}>
+          <LayoutList className="size-3.5 mr-1.5" />
+          See full plan comparison
+        </Button>
+      </div>
 
       <Dialog open={!!upgradePlan} onOpenChange={(open) => !open && setUpgradePlan(null)}>
         <DialogContent className="sm:max-w-md">
@@ -1512,7 +1148,7 @@ export default function SubscriptionPage() {
             </DialogTitle>
             <DialogDescription>
               {upgradePlan?.monthly_price && upgradePlan.monthly_price > 0
-                ? `Rs. ${upgradePlan.monthly_price.toLocaleString()}/month`
+                ? `Monthly Rs. ${upgradePlan.monthly_price.toLocaleString()} · Yearly Rs. ${upgradePlan.yearly_price > 0 ? upgradePlan.yearly_price.toLocaleString() : "—"}`
                 : "Custom pricing — contact support"}
             </DialogDescription>
           </DialogHeader>
@@ -1539,7 +1175,9 @@ export default function SubscriptionPage() {
             </div>
 
             <p className="text-sm text-muted-foreground">
-              Pay the exact amount by bank transfer and upload the receipt. The plan will be activated for 30 days after admin approval.
+              Pay the exact amount by bank transfer and upload the receipt. The
+              plan will be activated for the selected billing period (30 days
+              or 1 year) after admin approval.
             </p>
           </div>
 
@@ -1590,6 +1228,61 @@ export default function SubscriptionPage() {
               </div>
             )}
 
+            {/* Billing period selection */}
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-foreground/70">
+                Billing period
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                {(
+                  [
+                    ["monthly", "Monthly", "Rs. /month"],
+                    ["yearly", "Yearly", "Save 20%"],
+                  ] as const
+                ).map(([value, label, hint]) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => {
+                      setUploadBillingPeriod(value);
+                      const available = plans.filter(
+                        (p) =>
+                          !["Trial", "Enterprise"].includes(p.name) &&
+                          (value === "yearly"
+                            ? p.yearly_price > 0
+                            : p.monthly_price > 0),
+                      );
+                      if (!available.some((p) => p.id === selectedPlanId)) {
+                        setSelectedPlanId(available[0]?.id ?? "");
+                      }
+                    }}
+                    disabled={!!pendingPaymentProof}
+                    className={cn(
+                      "rounded-xl border px-3 py-2.5 text-left transition-all",
+                      uploadBillingPeriod === value
+                        ? "border-primary/50 bg-primary/5 ring-1 ring-primary/20"
+                        : "border-border/30 hover:border-border/50",
+                      pendingPaymentProof && "cursor-not-allowed opacity-50",
+                    )}
+                  >
+                    <span className="block text-sm font-medium text-foreground">
+                      {label}
+                    </span>
+                    <span
+                      className={cn(
+                        "block text-xs",
+                        uploadBillingPeriod === value
+                          ? "text-primary"
+                          : "text-muted-foreground/70",
+                      )}
+                    >
+                      {hint}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
             {/* Plan Selection */}
             <div className="space-y-1.5">
               <label className="text-sm font-medium text-foreground/70">Select Plan</label>
@@ -1600,11 +1293,21 @@ export default function SubscriptionPage() {
                 className="flex h-10 w-full rounded-xl border border-border/40 bg-transparent px-3 py-2 text-sm text-foreground"
               >
                 <option value="">Select a plan</option>
-                {plans.filter((p) => !["Trial", "Enterprise"].includes(p.name)).map((plan) => (
-                  <option key={plan.id} value={plan.id}>
-                    {plan.name} — Rs. {plan.monthly_price.toLocaleString()}/mo
-                  </option>
-                ))}
+                {plans
+                  .filter(
+                    (p) =>
+                      !["Trial", "Enterprise"].includes(p.name) &&
+                      (uploadBillingPeriod === "yearly"
+                        ? p.yearly_price > 0
+                        : p.monthly_price > 0),
+                  )
+                  .map((plan) => (
+                    <option key={plan.id} value={plan.id}>
+                      {plan.name} — Rs.{" "}
+                      {planPrice(plan, uploadBillingPeriod).toLocaleString()}
+                      {billingSuffix(uploadBillingPeriod)}
+                    </option>
+                  ))}
               </select>
             </div>
 
@@ -1612,10 +1315,19 @@ export default function SubscriptionPage() {
               <div className="flex items-center justify-between rounded-xl border border-primary/20 bg-primary/[0.04] p-4">
                 <div>
                   <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Amount to transfer</p>
-                  <p className="mt-1 text-sm font-semibold text-foreground">{selectedPaymentPlan.name} plan · 30 days</p>
+                  <p className="mt-1 text-sm font-semibold text-foreground">
+                    {selectedPaymentPlan.name} plan ·{" "}
+                    {uploadBillingPeriod === "yearly"
+                      ? "1 year"
+                      : "30 days"}
+                  </p>
                 </div>
                 <p className="text-xl font-bold tabular-nums text-primary">
-                  Rs. {selectedPaymentPlan.monthly_price.toLocaleString()}
+                  Rs.{" "}
+                  {planPrice(
+                    selectedPaymentPlan,
+                    uploadBillingPeriod,
+                  ).toLocaleString()}
                 </p>
               </div>
             )}
@@ -1719,7 +1431,9 @@ export default function SubscriptionPage() {
                 <div>
                   <p className="text-sm font-medium text-foreground/80">What happens next?</p>
                   <p className="text-sm text-muted-foreground/60 mt-0.5">
-                    An admin will verify the receipt. Your selected plan is activated for 30 days after approval.
+                    An admin will verify the receipt. Your selected plan is
+                    activated for the chosen billing period (30 days or 1 year)
+                    after approval.
                   </p>
                 </div>
               </div>

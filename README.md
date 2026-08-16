@@ -1,6 +1,6 @@
 # BizRavana
 
-> Current implementation snapshot: 2026-08-03. Database migrations are tracked through `051_secure_file_upload_boundaries.sql`.
+> Current implementation snapshot: 2026-08-15. Database migrations are tracked through `052_add_annual_subscriptions.sql`.
 
 A modern, multi-tenant business management SaaS platform for Sri Lankan small and medium enterprises. Manage orders, products, inventory, expenses, quotations, deliveries, reports, and notifications — all in one place.
 

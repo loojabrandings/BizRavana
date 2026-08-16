@@ -65,6 +65,8 @@ try {
     "test-auto-notification-worker.mjs",
     "test-message-template-isolation.mjs",
     "test-payhere-callback-security.mjs",
+    "test-annual-subscription.mjs",
+    "test-checkout-initiate.mjs",
     "test-distributed-rate-limits.mjs",
     "test-upload-and-origin-security.mjs",
   ]) {

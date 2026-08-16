@@ -1,7 +1,7 @@
 # Bizravana — Database Schema
 
 > Current-state addendum: 2026-08-03
-> Current migration range: `001` through `051`
+> Current migration range: `001` through `052`
 
 > Last updated: 2026-08-03
 > Database: PostgreSQL (Supabase)

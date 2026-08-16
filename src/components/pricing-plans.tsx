@@ -1,9 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import Button from "@/components/button";
 import Card from "@/components/card";
 import Reveal from "@/components/reveal";
+import { createClient } from "@/lib/supabase/client";
 
 type Billing = "monthly" | "yearly";
 
@@ -112,6 +114,22 @@ const PLANS: Plan[] = [
  */
 export default function PricingPlans() {
   const [billing, setBilling] = useState<Billing>("monthly");
+  const router = useRouter();
+
+  /** Route a plan-selection click: signed-in users land on the dashboard
+      subscription page (where they pick the billing period + plan and
+      proceed to checkout); new users go straight to registration. */
+  const handleChoosePlan = async () => {
+    const supabase = createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (user) {
+      router.push("/dashboard/subscription");
+    } else {
+      router.push("/register");
+    }
+  };
 
   return (
     <>
@@ -228,11 +246,14 @@ export default function PricingPlans() {
                     {plan.note ? (
                       <p className="pricing-card__note">{plan.note}</p>
                     ) : null}
-                    {/* Spread href only when present: without it Button
-                        renders a plain <button> (no dead anchor). */}
+                    {/* Plan CTAs are wired to auth-aware routing: registered
+                        users go to the dashboard subscription page, everyone
+                        else to registration. (href is spread only when a plan
+                        opts out — currently none do.) */}
                     <Button
                       {...(plan.cta.href ? { href: plan.cta.href } : {})}
                       variant={plan.cta.variant}
+                      onClick={() => void handleChoosePlan()}
                     >
                       {plan.cta.label}
                     </Button>

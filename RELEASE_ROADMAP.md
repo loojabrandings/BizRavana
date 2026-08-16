@@ -14,7 +14,7 @@ open work remains as a checkbox. Detailed evidence is recorded in
 - [x] ~~Obtain a recoverable production database backup~~ (logical data backup 2026-08-14; scheduled/pg_dump-style backup still recommended)
 - [ ] Verify the Storage backup and restore process
 - [x] ~~Produce a production migration-drift report for `040–051`~~
-- [ ] Reconcile SQL Editor deployment with CLI migration history for `001–051`
+- [ ] Reconcile SQL Editor deployment with CLI migration history for `001–052`
 
 ## Phase 1 — Critical security
 

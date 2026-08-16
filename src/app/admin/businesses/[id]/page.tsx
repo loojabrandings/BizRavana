@@ -66,6 +66,7 @@ interface BusinessDetail {
   subscription_started_at: string | null;
   subscription_ends_at: string | null;
   data_delete_after: string | null;
+  billing_period: "monthly" | "yearly" | null;
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
@@ -84,6 +85,7 @@ interface PlanInfo {
   id: string;
   name: string;
   monthly_price: number;
+  yearly_price: number;
   order_limit: number;
   expense_limit: number;
   product_limit: number;
@@ -711,7 +713,15 @@ export default function BusinessDetailPage() {
                 <div>
                   <p className="text-sm font-semibold text-foreground">{plan?.name || "No Plan"}</p>
                   {plan && plan.monthly_price > 0 && (
-                    <p className="text-xs text-muted-foreground/70">Rs. {plan.monthly_price.toLocaleString()} / month</p>
+                    <p className="text-xs text-muted-foreground/70">
+                      Rs. {plan.monthly_price.toLocaleString()}/mo
+                      {plan.yearly_price > 0
+                        ? ` · Rs. ${plan.yearly_price.toLocaleString()}/yr`
+                        : ""}
+                      {business.billing_period
+                        ? ` · ${business.billing_period === "yearly" ? "Yearly plan" : "Monthly plan"}`
+                        : ""}
+                    </p>
                   )}
                   {!plan && <p className="text-xs text-muted-foreground/70">No subscription plan assigned</p>}
                 </div>
@@ -934,7 +944,12 @@ export default function BusinessDetailPage() {
               >
                 <div>
                   <p className="text-sm font-medium text-foreground">{p.name}</p>
-                  <p className="text-xs text-muted-foreground/70">Rs. {p.monthly_price.toLocaleString()} / month</p>
+                  <p className="text-xs text-muted-foreground/70">
+                    Rs. {p.monthly_price.toLocaleString()}/mo
+                    {p.yearly_price > 0
+                      ? ` · Rs. ${p.yearly_price.toLocaleString()}/yr`
+                      : ""}
+                  </p>
                 </div>
                 {selectedPlanId === p.id && <CheckCircle2 className="size-4 text-primary" />}
               </button>

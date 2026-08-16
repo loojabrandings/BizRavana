@@ -34,6 +34,8 @@ type SubscriptionPlan =
 
 type PaymentMethod = "card" | "bank";
 
+type BillingPeriod = "monthly" | "yearly";
+
 interface CardCustomerDetails {
   firstName: string;
   lastName: string;
@@ -98,6 +100,20 @@ function formatLimit(value: number) {
   return value >= 999999 ? "Unlimited" : value.toLocaleString();
 }
 
+/** Price for the given plan + billing period (yearly falls back to monthly
+    only when the plan has no annual price configured). */
+function planPrice(
+  plan: SubscriptionPlan,
+  period: BillingPeriod,
+): number {
+  if (period === "yearly" && plan.yearly_price > 0) return plan.yearly_price;
+  return plan.monthly_price;
+}
+
+function periodLabel(period: BillingPeriod) {
+  return period === "yearly" ? "1-year subscription" : "30-day subscription";
+}
+
 function getCardCustomerFieldError(
   field: keyof CardCustomerDetails,
   value: string,
@@ -124,8 +140,10 @@ function getCardCustomerFieldError(
 
 export function PaymentPageClient({
   initialPlanId,
+  initialBillingPeriod = "monthly",
 }: {
   initialPlanId: string;
+  initialBillingPeriod?: BillingPeriod;
 }) {
   const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
@@ -134,6 +152,9 @@ export function PaymentPageClient({
   const [loading, setLoading] = useState(true);
   const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
   const [selectedPlanId, setSelectedPlanId] = useState(initialPlanId);
+  // The billing period is chosen on the subscription page and passed through
+  // the URL — it is fixed here (no toggle on the checkout anymore).
+  const [billingPeriod] = useState<BillingPeriod>(initialBillingPeriod);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("bank");
   const [cardCustomer, setCardCustomer] = useState<CardCustomerDetails>(
     EMPTY_CARD_CUSTOMER_DETAILS,
@@ -159,6 +180,17 @@ export function PaymentPageClient({
   const selectedPlan = useMemo(
     () => plans.find((plan) => plan.id === selectedPlanId) ?? null,
     [plans, selectedPlanId],
+  );
+
+  /** Plans that can be bought for the current billing period. */
+  const availablePlansForPeriod = useMemo(
+    () =>
+      plans.filter((plan) =>
+        billingPeriod === "yearly"
+          ? plan.yearly_price > 0
+          : plan.monthly_price > 0,
+      ),
+    [billingPeriod, plans],
   );
 
   useEffect(
@@ -413,6 +445,7 @@ export function PaymentPageClient({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           planId: selectedPlan.id,
+          billingPeriod,
           customer: cardCustomer,
         }),
       });
@@ -529,6 +562,7 @@ export function PaymentPageClient({
       });
     }
   }, [
+    billingPeriod,
     cardCustomer,
     payHereReady,
     router,
@@ -550,6 +584,7 @@ export function PaymentPageClient({
     try {
       const payload = new FormData();
       payload.set("planId", selectedPlan.id);
+      payload.set("billingPeriod", billingPeriod);
       payload.set("notes", notes);
       payload.set("receipt", receipt);
 
@@ -579,7 +614,7 @@ export function PaymentPageClient({
     } finally {
       setSubmitting(false);
     }
-  }, [clearReceipt, notes, pendingPayment, receipt, selectedPlan]);
+  }, [billingPeriod, clearReceipt, notes, pendingPayment, receipt, selectedPlan]);
 
   const informAdmin = useCallback(() => {
     if (!submittedPayment) return;
@@ -702,18 +737,30 @@ export function PaymentPageClient({
             <div className="mt-5 grid gap-3 sm:grid-cols-2">
               <button
                 type="button"
-                disabled
-                aria-disabled="true"
-                title="Card payments are not available yet"
+                onClick={() => setPaymentMethod("card")}
                 className={cn(
                   "relative rounded-2xl border p-4 text-left transition-all",
-                  "cursor-not-allowed border-border/30 bg-muted/10 opacity-60",
+                  paymentMethod === "card"
+                    ? "border-2 border-primary bg-primary/[0.04] shadow-sm shadow-primary/10"
+                    : "border-border/30 bg-muted/10 hover:border-primary/30 hover:bg-primary/[0.02]",
                 )}
               >
                 <div className="flex items-start justify-between gap-3">
-                  <div className="flex size-10 items-center justify-center rounded-xl bg-muted text-muted-foreground">
+                  <div
+                    className={cn(
+                      "flex size-10 items-center justify-center rounded-xl",
+                      paymentMethod === "card"
+                        ? "bg-primary/10 text-primary"
+                        : "bg-muted text-muted-foreground",
+                    )}
+                  >
                     <CreditCard className="size-5" />
                   </div>
+                  {paymentMethod === "card" && (
+                    <span className="flex size-6 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                      <Check className="size-3.5" />
+                    </span>
+                  )}
                 </div>
                 <p className="mt-4 text-sm font-semibold text-foreground">
                   Card Payment
@@ -721,9 +768,16 @@ export function PaymentPageClient({
                 <p className="mt-1 text-sm text-muted-foreground">
                   Secure online payment with PayHere.
                 </p>
-                <div className="mt-4 flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-                  <Clock className="size-3.5" />
-                  Unavailable
+                <div
+                  className={cn(
+                    "mt-4 flex items-center gap-1.5 text-xs font-medium",
+                    paymentMethod === "card"
+                      ? "text-primary"
+                      : "text-muted-foreground",
+                  )}
+                >
+                  <BadgeCheck className="size-3.5" />
+                  {paymentMethod === "card" ? "Selected" : "Select method"}
                 </div>
               </button>
 
@@ -901,9 +955,10 @@ export function PaymentPageClient({
         </div>
 
         <OrderSummary
-          plans={plans}
+          plans={availablePlansForPeriod}
           selectedPlan={selectedPlan}
           selectedPlanId={selectedPlanId}
+          billingPeriod={billingPeriod}
           paymentMethod={paymentMethod}
           pendingPayment={pendingPayment}
           receipt={receipt}
@@ -1131,6 +1186,7 @@ function OrderSummary({
   plans,
   selectedPlan,
   selectedPlanId,
+  billingPeriod,
   paymentMethod,
   pendingPayment,
   receipt,
@@ -1144,6 +1200,7 @@ function OrderSummary({
   plans: SubscriptionPlan[];
   selectedPlan: SubscriptionPlan | null;
   selectedPlanId: string;
+  billingPeriod: BillingPeriod;
   paymentMethod: PaymentMethod;
   pendingPayment: boolean;
   receipt: File | null;
@@ -1154,9 +1211,26 @@ function OrderSummary({
   onBankSubmit: () => void;
   onCardContinue: () => void;
 }) {
+  const price = selectedPlan ? planPrice(selectedPlan, billingPeriod) : 0;
+  const yearlySaving =
+    billingPeriod === "yearly" && selectedPlan && selectedPlan.yearly_price > 0
+      ? Math.max(0, selectedPlan.monthly_price * 12 - selectedPlan.yearly_price)
+      : 0;
+
   return (
     <aside className="glass-card rounded-xl p-5 lg:sticky lg:top-24 sm:p-6">
       <p className="text-sm font-semibold text-foreground">Order summary</p>
+
+      {/* The billing period is chosen on the subscription page and arrives
+          here via the URL (?billing=monthly|yearly). The summary shows the
+          matching price, term label and saving line. */}
+      <div className="mt-5 flex items-center justify-between rounded-xl border border-border/30 bg-muted/10 px-4 py-3">
+        <span className="text-sm text-muted-foreground">Billing period</span>
+        <span className="text-sm font-semibold text-foreground">
+          {billingPeriod === "yearly" ? "Yearly" : "Monthly"}
+        </span>
+      </div>
+
       <div className="mt-5 space-y-2">
         <p className="text-sm font-medium text-foreground">
           Subscription plan
@@ -1166,7 +1240,7 @@ function OrderSummary({
           onChange={(value) => value && onPlanChange(value)}
           options={plans.map((plan) => ({
             value: plan.id,
-            label: `${plan.name} — Rs. ${plan.monthly_price.toLocaleString()}`,
+            label: `${plan.name} — Rs. ${planPrice(plan, billingPeriod).toLocaleString()}`,
           }))}
           placeholder="Select a subscription plan"
           disabled={pendingPayment || submitting}
@@ -1203,12 +1277,19 @@ function OrderSummary({
               <div>
                 <p className="text-sm text-muted-foreground">Total</p>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  30-day subscription
+                  {periodLabel(billingPeriod)}
                 </p>
               </div>
-              <p className="text-2xl font-bold tabular-nums text-foreground">
-                Rs. {selectedPlan.monthly_price.toLocaleString()}
-              </p>
+              <div className="text-right">
+                <p className="text-2xl font-bold tabular-nums text-foreground">
+                  Rs. {price.toLocaleString()}
+                </p>
+                {yearlySaving > 0 && (
+                  <p className="mt-0.5 text-xs font-semibold text-success">
+                    Save Rs. {yearlySaving.toLocaleString()}
+                  </p>
+                )}
+              </div>
             </div>
           </div>
         </>

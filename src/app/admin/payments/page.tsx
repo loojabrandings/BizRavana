@@ -78,6 +78,7 @@ interface PaymentProofRow {
   order_id: string | null;
   payhere_payment_id: string | null;
   status_message: string | null;
+  billing_period: "monthly" | "yearly" | null;
 }
 
 interface StatsSummary {
@@ -227,6 +228,7 @@ function ReviewDialog({
           {[
             ["Business", payment.business_name],
             ["Plan", payment.plan_name],
+            ["Billing", payment.billing_period ? payment.billing_period.charAt(0).toUpperCase() + payment.billing_period.slice(1) : "—"],
             ["Amount", `Rs. ${payment.amount.toLocaleString()}`],
             ["Method", payment.payment_method.replace("_", " ")],
             ["Submitted", new Date(payment.created_at).toLocaleDateString()],
@@ -332,7 +334,7 @@ export default function AdminPaymentsPage() {
         supabase
           .from("payhere_payments")
           .select(
-            "id, business_id, plan_id, amount, status, payment_method, order_id, payhere_payment_id, status_message, created_at, paid_at",
+            "id, business_id, plan_id, amount, status, payment_method, order_id, payhere_payment_id, status_message, billing_period, created_at, paid_at",
           )
           .order("created_at", { ascending: false })
           .limit(100),
@@ -384,6 +386,7 @@ export default function AdminPaymentsPage() {
         notes: p.notes, admin_note: p.admin_note,
         status: p.status as PaymentStatus, created_at: p.created_at, approved_at: p.approved_at,
         order_id: null, payhere_payment_id: null, status_message: null,
+        billing_period: p.billing_period ?? null,
       }));
       const payHereRows: PaymentProofRow[] = payHerePayments.map((payment) => ({
         id: payment.id,
@@ -412,6 +415,7 @@ export default function AdminPaymentsPage() {
         order_id: payment.order_id,
         payhere_payment_id: payment.payhere_payment_id,
         status_message: payment.status_message,
+        billing_period: payment.billing_period ?? null,
       }));
 
       setPayments(
@@ -548,7 +552,16 @@ export default function AdminPaymentsPage() {
         {p.owner_email}
       </span>
     ) : <span className="text-xs text-muted-foreground/50">—</span> },
-    { header: "Plan", accessor: (p) => <span className="text-sm text-muted-foreground/80">{p.plan_name}</span> },
+    { header: "Plan", accessor: (p) => (
+      <div>
+        <span className="text-sm text-muted-foreground/80">{p.plan_name}</span>
+        {p.billing_period && (
+          <p className="text-xs text-muted-foreground/60 capitalize">
+            {p.billing_period}
+          </p>
+        )}
+      </div>
+    ) },
     { header: "Amount", accessor: (p) => <span className="text-sm font-semibold tabular-nums text-foreground">Rs. {p.amount.toLocaleString()}</span> },
     { header: "Method", hideBelow: "sm", accessor: (p) => <span className="text-sm text-muted-foreground/80 capitalize">{p.payment_method.replace("_", " ")}</span> },
     { header: "Payment ID", hideBelow: "md", accessor: (p) => p.payhere_payment_id ? (
@@ -580,7 +593,7 @@ export default function AdminPaymentsPage() {
       status={<PaymentStatusBadge status={payment.status} />}
       details={[
         ...(payment.owner_email ? [{ label: "Email Address", value: <span>{payment.owner_email}</span> }] : []),
-        { label: "Plan", value: <span className="font-medium">{payment.plan_name}</span> },
+        { label: "Plan", value: <span className="font-medium">{payment.plan_name}{payment.billing_period ? <span className="text-muted-foreground/80"> · {payment.billing_period.charAt(0).toUpperCase() + payment.billing_period.slice(1)}</span> : null}</span> },
         { label: "Amount", value: <span className="font-semibold tabular-nums">Rs. {payment.amount.toLocaleString()}</span> },
         { label: "Method", value: <span className="capitalize">{payment.payment_method.replace("_", " ")}</span> },
         { label: "Submitted", value: <span className="tabular-nums">{new Date(payment.created_at).toLocaleDateString()}</span> },

@@ -5,6 +5,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import SmoothScroll from "@/components/smooth-scroll";
 import AuthCallbackHandler from "@/components/auth-callback-handler";
 import JsonLd from "@/components/json-ld";
+import { Analytics } from "@vercel/analytics/react";
 import { CONTACT, SITE_URL } from "@/config/site";
 
 // Global typography system (self-hosted via next/font — no layout shift, no
@@ -110,6 +111,10 @@ export default function SiteLayout({ children }: LayoutProps<"/">) {
             "/"). Renders nothing otherwise. */}
         <AuthCallbackHandler />
         {children}
+        {/* Vercel Analytics — kept in the site layout (not the root one) so
+            it only tracks the public landing site, never the logged-in
+            dashboard, auth, or admin routes. */}
+        <Analytics />
       </ThemeProvider>
     </div>
   );

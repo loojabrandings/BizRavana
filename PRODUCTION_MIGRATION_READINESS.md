@@ -75,3 +75,14 @@ production in order through the session pooler; `048` was already present.
 Every marker was re-verified and functional smoke checks passed (see Milestone
 29 in `RELEASE_FIXING_LOG.md`). `.env.local` still embeds the stale database
 password; the current password was supplied directly for this deployment.
+
+**2026-08-15:** The session-pooler `DATABASE_URL` in `.env.local` was replaced
+with a working password (verified read-only; both `DATABASE_URL` lines now use
+the pooler endpoint). `scripts/apply-migrations.mjs` was added: it takes a
+pre-migration logical backup into `backups/`, applies pending
+`supabase/migrations/*.sql` files in order inside transactions, and records
+each in `supabase_migrations.schema_migrations`. The schema/table were created
+and baselined with `001–051` on this date (production was marker-verified
+current), so the dashboard now reports migration history. Run `npm run
+migrate:dry-run` to check state and `npm run migrate` to apply pending
+migrations.

@@ -48,6 +48,7 @@ import {
 interface PlanFormData {
   name: string;
   monthly_price: number;
+  yearly_price: number;
   order_limit: number;
   expense_limit: number;
   product_limit: number;
@@ -77,7 +78,7 @@ interface PlanRecord extends PlanFormData {
 // ══════════════════════════════════════════════════════════════════
 
 const defaultPlan: PlanFormData = {
-  name: "", monthly_price: 0, order_limit: 0, expense_limit: 0, product_limit: 0,
+  name: "", monthly_price: 0, yearly_price: 0, order_limit: 0, expense_limit: 0, product_limit: 0,
   quotation_limit: 0, inventory_limit: 0, storage_limit_mb: 500,
   courier_accounts: 1, whatsapp_templates: 1, team_members: 1,
   bulk_import: false, activity_log: false, smart_automation: false, ai_assistant: false,
@@ -126,6 +127,10 @@ function PlanFormDialog({ open, onOpenChange, initialData, onSave, loading }: {
               <div className="space-y-1.5">
                 <Label htmlFor="plan-price">Monthly Price (Rs.)</Label>
                 <Input id="plan-price" type="number" min={0} placeholder="0" value={form.monthly_price} onChange={(e) => updateField("monthly_price", Number(e.target.value))} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="plan-yearly-price">Yearly Price (Rs.)</Label>
+                <Input id="plan-yearly-price" type="number" min={0} placeholder="0 = not offered" value={form.yearly_price} onChange={(e) => updateField("yearly_price", Number(e.target.value))} />
               </div>
             </div>
           </div>
@@ -334,9 +339,16 @@ export default function AdminPlansPage() {
       );
     }},
     { header: "Price", accessor: (plan) => (
-      <span className={cn("text-sm font-semibold tabular-nums", plan.is_active ? "text-foreground" : "text-muted-foreground/60")}>
-        {plan.monthly_price === 0 ? "Free" : `Rs. ${plan.monthly_price.toLocaleString()}`}
-      </span>
+      <div className="text-sm tabular-nums">
+        <span className={cn("font-semibold", plan.is_active ? "text-foreground" : "text-muted-foreground/60")}>
+          {plan.monthly_price === 0 ? "Free" : `Rs. ${plan.monthly_price.toLocaleString()}/mo`}
+        </span>
+        {plan.yearly_price > 0 && (
+          <span className={cn("block text-xs", plan.is_active ? "text-muted-foreground/80" : "text-muted-foreground/50")}>
+            or Rs. {plan.yearly_price.toLocaleString()}/yr
+          </span>
+        )}
+      </div>
     )},
     { header: "Limits", hideBelow: "md", accessor: (plan) => (
       <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-muted-foreground/70">
@@ -386,7 +398,7 @@ export default function AdminPlansPage() {
         primary={<span className={plan.is_active ? "" : "text-muted-foreground/60"}>{plan.name}</span>}
         status={<StatusBadge active={plan.is_active} />}
         details={[
-          { label: "Price", value: <span className="font-semibold">{plan.monthly_price === 0 ? "Free" : `Rs. ${plan.monthly_price.toLocaleString()}`}</span> },
+          { label: "Price", value: <span className="font-semibold">{plan.monthly_price === 0 ? "Free" : `Rs. ${plan.monthly_price.toLocaleString()}/mo`}{plan.yearly_price > 0 ? <span className="text-muted-foreground/80"> · Rs. {plan.yearly_price.toLocaleString()}/yr</span> : null}</span> },
           { label: "Orders", value: <span>{formatLimit(plan.order_limit)}</span> },
           { label: "Expenses", value: <span>{formatLimit(plan.expense_limit)}</span> },
           { label: "Products", value: <span>{formatLimit(plan.product_limit)}</span> },

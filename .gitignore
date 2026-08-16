@@ -44,6 +44,9 @@ nul
 dev-output.log
 dev_output.log
 
+# database backups taken by scripts/apply-migrations.mjs
+/backups/
+
 # env files (can opt-in for committing if needed)
 .env*
 

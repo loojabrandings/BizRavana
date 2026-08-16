@@ -23,6 +23,10 @@ export async function POST(request: Request) {
   const formData = await request.formData();
   const planId = String(formData.get("planId") || "").trim();
   const notes = String(formData.get("notes") || "").trim().slice(0, 500);
+  const billingPeriod =
+    String(formData.get("billingPeriod") || "").trim() === "yearly"
+      ? "yearly"
+      : "monthly";
   const receipt = formData.get("receipt");
 
   if (!planId) return errorResponse("Please select a subscription plan.", 400);
@@ -66,7 +70,7 @@ export async function POST(request: Request) {
       .single(),
     admin
       .from("subscription_plans")
-      .select("id, name, monthly_price, is_active")
+      .select("id, name, monthly_price, yearly_price, is_active")
       .eq("id", planId)
       .single(),
   ]);
@@ -83,6 +87,11 @@ export async function POST(request: Request) {
     plan.monthly_price <= 0 ||
     ["trial", "enterprise"].includes(plan.name.toLowerCase())
   ) {
+    return errorResponse("This plan is not available for bank transfer.", 400);
+  }
+  const requestedPrice =
+    billingPeriod === "yearly" ? plan.yearly_price : plan.monthly_price;
+  if (requestedPrice <= 0) {
     return errorResponse("This plan is not available for bank transfer.", 400);
   }
 
@@ -118,6 +127,7 @@ export async function POST(request: Request) {
       p_proof_image_path: receiptPath,
       p_notes: notes,
       p_submitted_by: user.id,
+      p_billing_period: billingPeriod,
     },
   );
 
@@ -137,7 +147,8 @@ export async function POST(request: Request) {
       payment: {
         id: paymentId,
         planName: plan.name,
-        amount: plan.monthly_price,
+        amount: Number(requestedPrice),
+        billingPeriod,
         status: "pending",
       },
     },

@@ -19,8 +19,11 @@ interface CustomerInput {
   country?: string;
 }
 
+type BillingPeriod = "monthly" | "yearly";
+
 interface InitiateRequest {
   planId?: string;
+  billingPeriod?: BillingPeriod;
   customer?: CustomerInput;
 }
 
@@ -92,6 +95,9 @@ export async function POST(request: Request) {
   const planId = String(body.planId ?? "").trim();
   if (!planId) return errorResponse("Please select a subscription plan.", 400);
 
+  const billingPeriod: BillingPeriod =
+    body.billingPeriod === "yearly" ? "yearly" : "monthly";
+
   let customer: Required<CustomerInput>;
   try {
     customer = normalizeCustomer(body.customer);
@@ -137,7 +143,7 @@ export async function POST(request: Request) {
       .single(),
     admin
       .from("subscription_plans")
-      .select("id, name, monthly_price, is_active")
+      .select("id, name, monthly_price, yearly_price, is_active")
       .eq("id", planId)
       .single(),
   ]);
@@ -162,12 +168,19 @@ export async function POST(request: Request) {
   ) {
     return errorResponse("This plan is not available for card payment.", 400);
   }
+  const requestedPrice =
+    billingPeriod === "yearly" ? plan.yearly_price : plan.monthly_price;
+  if (requestedPrice <= 0) {
+    return errorResponse("This plan is not available for card payment.", 400);
+  }
 
   const paymentId = randomUUID();
   const orderId = createOrderId();
-  const amount = Number(plan.monthly_price).toFixed(2);
+  const amount = Number(requestedPrice).toFixed(2);
   const currency = "LKR";
-  const itemName = `${plan.name} Plan - 30 Days`;
+  const periodLabel =
+    billingPeriod === "yearly" ? "1 Year" : "30 Days";
+  const itemName = `${plan.name} Plan - ${periodLabel}`;
   const returnUrl = `${config.appUrl}/dashboard/subscription/payment?payhere=return&order_id=${encodeURIComponent(orderId)}`;
   const cancelUrl = `${config.appUrl}/dashboard/subscription/payment?payhere=cancel&order_id=${encodeURIComponent(orderId)}`;
   const notifyUrl = `${config.appUrl}/api/payments/payhere/notify`;
@@ -193,6 +206,7 @@ export async function POST(request: Request) {
     previous_account_status: business.account_status,
     previous_subscription_started_at: business.subscription_started_at,
     previous_subscription_ends_at: business.subscription_ends_at,
+    billing_period: billingPeriod,
   });
 
   if (insertError) {
@@ -219,6 +233,7 @@ export async function POST(request: Request) {
         plan_name: plan.name,
         amount: Number(amount),
         currency,
+        billing_period: billingPeriod,
         sandbox: config.sandbox,
       },
     });
@@ -256,6 +271,7 @@ export async function POST(request: Request) {
         country: customer.country,
         custom_1: paymentId,
         custom_2: business.id,
+        billing_period: billingPeriod,
         hash,
       },
     },

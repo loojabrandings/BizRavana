@@ -10,6 +10,8 @@
     "typecheck": "tsc --noEmit",
     "test": "node scripts/quality/run-repository-tests.mjs",
     "test:staging": "node scripts/staging/run-security-regression.mjs",
+    "migrate": "node scripts/apply-migrations.mjs",
+    "migrate:dry-run": "node scripts/apply-migrations.mjs --dry-run",
     "staging:start": "node scripts/staging/start-staging-server.mjs",
     "tts-proxy": "node scripts/tts-proxy.mjs",
     "quality": "npm run lint && npm run typecheck && npm test && npm run build"
@@ -23,6 +25,7 @@
     "@supabase/ssr": "^0.12.0",
     "@supabase/supabase-js": "^2.110.2",
     "@tanstack/react-query": "^5.101.2",
+    "@vercel/analytics": "^2.0.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",

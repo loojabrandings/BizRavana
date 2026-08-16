@@ -56,6 +56,7 @@ interface SubscriptionRow {
   plan_id: string | null;
   plan_name: string | null;
   plan_price: number;
+  billing_period: "monthly" | "yearly" | null;
   account_status: string;
   subscription_started_at: string | null;
   subscription_ends_at: string | null;
@@ -72,6 +73,7 @@ interface PlanOption {
   id: string;
   name: string;
   monthly_price: number;
+  yearly_price: number;
 }
 
 // ══════════════════════════════════════════════════════════════════
@@ -304,7 +306,10 @@ function ChangePlanDialog({
               <div>
                 <p className="text-sm font-medium text-foreground">{p.name}</p>
                 <p className="text-xs text-muted-foreground/70">
-                  Rs. {p.monthly_price.toLocaleString()} / month
+                  Rs. {p.monthly_price.toLocaleString()}/mo
+                  {p.yearly_price > 0
+                    ? ` · Rs. ${p.yearly_price.toLocaleString()}/yr`
+                    : ""}
                 </p>
               </div>
               {selectedPlanId === p.id && <CheckCircle2 className="size-4 text-primary shrink-0" />}
@@ -361,7 +366,7 @@ export default function AdminSubscriptionsPage() {
   useEffect(() => {
     supabase
       .from("subscription_plans")
-      .select("id, name, monthly_price")
+      .select("id, name, monthly_price, yearly_price")
       .eq("is_active", true)
       .order("sort_order")
       .then(({ data }) => {
@@ -376,7 +381,7 @@ export default function AdminSubscriptionsPage() {
 
       const { data, error } = await supabase
         .from("businesses")
-        .select("id, name, owner_id, plan_id, account_status, subscription_started_at, subscription_ends_at, data_delete_after, created_at")
+        .select("id, name, owner_id, plan_id, billing_period, account_status, subscription_started_at, subscription_ends_at, data_delete_after, created_at")
         .in("account_status", ["active", "expired", "pending_payment", "suspended"])
         .is("deleted_at", null)
         .order("subscription_ends_at", { ascending: true, nullsFirst: false })
@@ -390,7 +395,7 @@ export default function AdminSubscriptionsPage() {
 
       const [profilesRes, plansRes, emailMap] = await Promise.all([
         supabase.from("profiles").select("user_id, full_name").in("user_id", ownerIds),
-        supabase.from("subscription_plans").select("id, name, monthly_price").in("id", planIds),
+        supabase.from("subscription_plans").select("id, name, monthly_price, yearly_price").in("id", planIds),
         fetchUserEmails(ownerIds),
       ]);
 
@@ -432,6 +437,7 @@ export default function AdminSubscriptionsPage() {
           plan_id: b.plan_id,
           plan_name: planInfo?.name || null,
           plan_price: planInfo?.monthly_price || 0,
+          billing_period: b.billing_period ?? null,
           account_status: b.account_status,
           subscription_started_at: b.subscription_started_at,
           subscription_ends_at: b.subscription_ends_at,
@@ -687,7 +693,12 @@ export default function AdminSubscriptionsPage() {
         <div>
           <span className="text-sm text-foreground/80">{sub.plan_name || "—"}</span>
           {sub.plan_price > 0 && (
-            <p className="text-xs text-muted-foreground">Rs. {sub.plan_price.toLocaleString()}/mo</p>
+            <p className="text-xs text-muted-foreground">
+              Rs. {sub.plan_price.toLocaleString()}/mo
+              {sub.billing_period
+                ? ` · ${sub.billing_period === "yearly" ? "Yearly" : "Monthly"}`
+                : ""}
+            </p>
           )}
         </div>
       ),
@@ -793,7 +804,7 @@ export default function AdminSubscriptionsPage() {
         details={[
           {
             label: "Plan",
-            value: <span className="font-medium">{sub.plan_name || "—"}{sub.plan_price > 0 ? ` · Rs. ${sub.plan_price.toLocaleString()}/mo` : ""}</span>,
+            value: <span className="font-medium">{sub.plan_name || "—"}{sub.plan_price > 0 ? ` · Rs. ${sub.plan_price.toLocaleString()}/mo` : ""}{sub.billing_period ? ` · ${sub.billing_period === "yearly" ? "Yearly" : "Monthly"}` : ""}</span>,
           },
           {
             label: "End Date",

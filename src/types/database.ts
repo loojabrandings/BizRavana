@@ -20,7 +20,7 @@ export interface Database {
       };
       subscription_plans: {
         Row: {
-          id: string; name: string; monthly_price: number;
+          id: string; name: string; monthly_price: number; yearly_price: number;
           order_limit: number; expense_limit: number; product_limit: number;
           quotation_limit: number; inventory_limit: number;
           storage_limit_mb: number;
@@ -31,7 +31,7 @@ export interface Database {
           sort_order: number; created_at: string; updated_at: string;
         };
         Insert: {
-          id?: string; name: string; monthly_price: number;
+          id?: string; name: string; monthly_price: number; yearly_price?: number;
           order_limit: number; expense_limit: number; product_limit: number;
           quotation_limit?: number; inventory_limit?: number;
           storage_limit_mb?: number;
@@ -42,7 +42,7 @@ export interface Database {
           sort_order?: number; created_at?: string; updated_at?: string;
         };
         Update: {
-          id?: string; name?: string; monthly_price?: number;
+          id?: string; name?: string; monthly_price?: number; yearly_price?: number;
           order_limit?: number; expense_limit?: number; product_limit?: number;
           quotation_limit?: number; inventory_limit?: number;
           storage_limit_mb?: number;
@@ -104,7 +104,7 @@ export interface Database {
           account_status: "trial" | "trial_expired" | "pending_payment" | "active" | "expired" | "suspended" | "archived" | "deleted";
           trial_started_at: string | null; trial_ends_at: string | null;
           subscription_started_at: string | null; subscription_ends_at: string | null;
-          data_delete_after: string | null;
+          data_delete_after: string | null; billing_period: "monthly" | "yearly" | null;
           created_at: string; updated_at: string; deleted_at: string | null;
         };
         Insert: {
@@ -114,7 +114,7 @@ export interface Database {
           account_status?: "trial" | "trial_expired" | "pending_payment" | "active" | "expired" | "suspended" | "archived" | "deleted";
           trial_started_at?: string | null; trial_ends_at?: string | null;
           subscription_started_at?: string | null; subscription_ends_at?: string | null;
-          data_delete_after?: string | null;
+          data_delete_after?: string | null; billing_period?: "monthly" | "yearly" | null;
           created_at?: string; updated_at?: string; deleted_at?: string | null;
         };
         Update: {
@@ -124,7 +124,7 @@ export interface Database {
           account_status?: "trial" | "trial_expired" | "pending_payment" | "active" | "expired" | "suspended" | "archived" | "deleted";
           trial_started_at?: string | null; trial_ends_at?: string | null;
           subscription_started_at?: string | null; subscription_ends_at?: string | null;
-          data_delete_after?: string | null;
+          data_delete_after?: string | null; billing_period?: "monthly" | "yearly" | null;
           created_at?: string; updated_at?: string; deleted_at?: string | null;
         };
         Relationships: [];
@@ -158,7 +158,8 @@ export interface Database {
           previous_account_status: string | null; reviewed_at: string | null;
           notes: string | null; status: "pending" | "approved" | "rejected";
           admin_note: string | null; approved_by: string | null;
-          approved_at: string | null; created_at: string;
+          approved_at: string | null; billing_period: "monthly" | "yearly";
+          created_at: string;
         };
         Insert: {
           id?: string; business_id: string; plan_id?: string | null;
@@ -167,7 +168,8 @@ export interface Database {
           previous_account_status?: string | null; reviewed_at?: string | null;
           notes?: string | null; status?: "pending" | "approved" | "rejected";
           admin_note?: string | null; approved_by?: string | null;
-          approved_at?: string | null; created_at?: string;
+          approved_at?: string | null; billing_period?: "monthly" | "yearly";
+          created_at?: string;
         };
         Update: {
           id?: string; business_id?: string; plan_id?: string | null;
@@ -176,7 +178,8 @@ export interface Database {
           previous_account_status?: string | null; reviewed_at?: string | null;
           notes?: string | null; status?: "pending" | "approved" | "rejected";
           admin_note?: string | null; approved_by?: string | null;
-          approved_at?: string | null; created_at?: string;
+          approved_at?: string | null; billing_period?: "monthly" | "yearly";
+          created_at?: string;
         };
         Relationships: [];
       };
@@ -196,6 +199,7 @@ export interface Database {
           previous_plan_id: string | null; previous_account_status: string | null;
           previous_subscription_started_at: string | null;
           previous_subscription_ends_at: string | null;
+          billing_period: "monthly" | "yearly";
           initiated_at: string; last_notified_at: string | null;
           paid_at: string | null; activated_at: string | null;
           created_at: string; updated_at: string;
@@ -215,6 +219,7 @@ export interface Database {
           previous_plan_id?: string | null; previous_account_status?: string | null;
           previous_subscription_started_at?: string | null;
           previous_subscription_ends_at?: string | null;
+          billing_period?: "monthly" | "yearly";
           initiated_at?: string; last_notified_at?: string | null;
           paid_at?: string | null; activated_at?: string | null;
           created_at?: string; updated_at?: string;
@@ -234,6 +239,7 @@ export interface Database {
           previous_plan_id?: string | null; previous_account_status?: string | null;
           previous_subscription_started_at?: string | null;
           previous_subscription_ends_at?: string | null;
+          billing_period?: "monthly" | "yearly";
           initiated_at?: string; last_notified_at?: string | null;
           paid_at?: string | null; activated_at?: string | null;
           created_at?: string; updated_at?: string;
@@ -825,6 +831,7 @@ export interface Database {
           p_proof_image_path: string;
           p_notes: string;
           p_submitted_by: string;
+          p_billing_period: string;
         };
         Returns: string;
       };
@@ -846,6 +853,7 @@ export interface Database {
           p_card_no: string;
           p_card_expiry: string;
           p_notification_payload: Json;
+          p_billing_period: string;
         };
         Returns: Json;
       };
