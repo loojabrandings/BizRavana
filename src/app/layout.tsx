@@ -5,6 +5,7 @@ import { ThemeProvider } from "@/providers/theme-provider";
 import { PreferencesProvider } from "@/providers/preferences-provider";
 import { QueryProvider } from "@/providers/query-provider";
 import { Toaster } from "@/components/ui/sonner";
+import { Analytics } from "@vercel/analytics/next";
 
 
 const poppins = Poppins({
@@ -105,6 +106,7 @@ export default function RootLayout({
             </QueryProvider>
           </PreferencesProvider>
         </ThemeProvider>
+        <Analytics />
       </body>
     </html>
   );
