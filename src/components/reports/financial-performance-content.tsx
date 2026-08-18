@@ -23,6 +23,7 @@ import { MiniBarChart } from "@/components/charts/mini-bar-chart";
 import { SectionCard } from "@/components/reports/section-card";
 import { DateFilterMenu } from "@/components/shared/date-filter-menu";
 import { DateRangePickerModal } from "@/components/shared/lazy-date-range-picker-modal";
+import { useDashboardSession } from "@/providers/dashboard-session-provider";
 import {
   Table,
   TableBody,
@@ -140,6 +141,7 @@ function MoneyFlowChart({ data }: { data: Array<{ label: string; revenue: number
 // ══════════════════════════════════════════════════════════════════
 
 export function FinancialPerformanceContent() {
+  const session = useDashboardSession();
   const prefersReducedMotion = useReducedMotion();
   const isMobile = useIsMobile();
   const safeContainerVariants = prefersReducedMotion ? undefined : containerVariants;
@@ -160,25 +162,13 @@ export function FinancialPerformanceContent() {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const supabase = createClient();
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
-
-        if (!session?.user) {
-          window.location.replace("/login?redirect=/dashboard/reports");
+        const businessId = session.businessId;
+        if (!businessId) {
+          setLoading(false);
           return;
         }
 
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("business_id")
-          .eq("user_id", session.user.id)
-          .single();
-
-        const businessId = (profile as { business_id: string | null } | null)?.business_id;
-        if (!businessId) throw new Error("No business found for your account.");
-
+        const supabase = createClient();
         const dateRange = getDateRange(dateFilter, dateFrom, dateTo);
 
         let ordersQuery = supabase

@@ -218,6 +218,8 @@ function HeaderAvatarDropdown({
   );
 }
 
+import { useDashboardSession } from "@/providers/dashboard-session-provider";
+
 // ═══════════════════════════════════════════════════════════════
 // MAIN LAYOUT COMPONENT
 // ═══════════════════════════════════════════════════════════════
@@ -225,70 +227,31 @@ function HeaderAvatarDropdown({
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
+  const session = useDashboardSession();
 
-  // ─── User / Business info for avatar dropdown ────────────────
-  const [userAvatar, setUserAvatar] = useState<string | null>(null);
-  const [userFullName, setUserFullName] = useState("User");
-  const [userRole, setUserRole] = useState<string | null>(null);
-  const [businessName, setBusinessName] = useState("");
+  // ─── User / Business info immediately from session ───────────
+  const userAvatar = session.avatarUrl;
+  const userFullName = session.fullName;
+  const userRole = session.role;
+  const businessName = session.businessName;
 
   useEffect(() => {
     let cleanupSync: (() => void) | null = null;
-    let cancelled = false;
 
-    const fetchUserInfo = async () => {
-      try {
-        const supabase = createClient();
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session?.user || cancelled) return;
-
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("full_name, avatar_url, business_id, role")
-          .eq("user_id", session.user.id)
-          .single();
-
-        if (profile) {
-          setUserFullName(profile.full_name || "User");
-          setUserAvatar(profile.avatar_url);
-          setUserRole(profile.role);
-
-          if (profile.business_id) {
-            // ── Load settings from server into Zustand stores ──
-            await hydrateStoresFromServer(supabase, profile.business_id);
-
-            // ── Fetch business name ──
-            const { data: business } = await supabase
-              .from("businesses")
-              .select("name")
-              .eq("id", profile.business_id)
-              .single();
-
-            if (!cancelled) {
-              if (business) {
-                setBusinessName(business.name || "");
-              }
-
-              // ── Set up auto-sync for settings changes ──
-              cleanupSync = setupAutoSync(supabase, profile.business_id);
-            }
-          }
-        }
-      } catch {
-        // Fall back to defaults
-      }
-    };
-
-    fetchUserInfo();
+    if (session.businessId) {
+      const supabase = createClient();
+      // Load settings asynchronously into stores in background without blocking layout
+      void hydrateStoresFromServer(supabase, session.businessId);
+      cleanupSync = setupAutoSync(supabase, session.businessId);
+    }
 
     return () => {
-      cancelled = true;
       if (cleanupSync) {
         cleanupSync();
         cleanupSync = null;
       }
     };
-  }, []);
+  }, [session.businessId]);
 
   const avatarInitials = userFullName
     .split(" ")

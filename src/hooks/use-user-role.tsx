@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { useDashboardSession } from "@/providers/dashboard-session-provider";
 
 export type UserRole = "owner" | "admin" | "member";
 
@@ -19,10 +20,24 @@ export interface UserRoleState {
 const UserRoleContext = createContext<UserRoleState | null>(null);
 
 export function UserRoleProvider({ children }: { children: React.ReactNode }) {
-  const [role, setRole] = useState<UserRole | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  let sessionRole: UserRole | null = null;
+  try {
+    const session = useDashboardSession();
+    sessionRole = session.role;
+  } catch {
+    // Outside DashboardSessionProvider
+  }
+
+  const [role, setRole] = useState<UserRole | null>(sessionRole);
+  const [isLoading, setIsLoading] = useState(sessionRole === null);
 
   useEffect(() => {
+    if (sessionRole !== null) {
+      setRole(sessionRole);
+      setIsLoading(false);
+      return;
+    }
+
     const fetchRole = async () => {
       try {
         const supabase = createClient();
@@ -46,7 +61,7 @@ export function UserRoleProvider({ children }: { children: React.ReactNode }) {
       }
     };
     fetchRole();
-  }, []);
+  }, [sessionRole]);
 
   const value: UserRoleState = {
     role,

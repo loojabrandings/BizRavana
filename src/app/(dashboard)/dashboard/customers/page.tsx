@@ -12,6 +12,7 @@ import {
 import { motion } from "framer-motion";
 import { createClient } from "@/lib/supabase/client";
 import { useReadOnlyMode } from "@/providers/readonly-mode-provider";
+import { useDashboardSession } from "@/providers/dashboard-session-provider";
 import { cn } from "@/lib/utils";
 import { FilterBar } from "@/components/shared/filter-bar";
 import { Button } from "@/components/ui/button";
@@ -197,29 +198,20 @@ function CustomersPageInner() {
   // ─── Data Fetching ──────────────────────────────────────────
   const [fetchTrigger, setFetchTrigger] = useState(0);
 
+  const session = useDashboardSession();
+
   useEffect(() => {
     const fetchCustomers = async () => {
       try {
         setLoading(true);
         setError(null);
-        const supabase = createClient();
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
-        if (!session?.user) {
-          window.location.replace("/login?redirect=/dashboard/customers");
+        const bizId = session.businessId;
+        if (!bizId) {
+          setLoading(false);
           return;
         }
 
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("business_id")
-          .eq("user_id", session.user.id)
-          .single();
-        const bizId = (
-          profile as { business_id: string | null } | null
-        )?.business_id;
-        if (!bizId) throw new Error("No business found for your account.");
+        const supabase = createClient();
 
         const { data, error: fetchError } = await supabase
           .from("customers")

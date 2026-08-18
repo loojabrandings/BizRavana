@@ -19,16 +19,7 @@ import {
   type OrderFinanceInfo,
 } from "@/lib/delivery/courier-utils";
 import type { OrderFormData } from "@/components/orders/types";
-
-
-// ─── Helpers ─────────────────────────────────────────────────────
-
-import { formatDateTime as formatDateTimePref } from "@/lib/formatters";
-
-function formatDateTime(dateStr: string) {
-  if (!dateStr) return "";
-  return formatDateTimePref(dateStr);
-}
+import { formatDateTime } from "@/lib/formatters";
 
 const FINANCE_VARIANTS: Record<string, { bg: string; dot: string; text: string }> = {
   Approved: {
@@ -285,13 +276,13 @@ export function ShipmentStatusPanel({ data }: ShipmentStatusPanelProps) {
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground/60">Invoice Ref</span>
                 <span className="font-medium tabular-nums text-foreground/80">
-                  {financeInfo.invoiceRefNo || "\u2014"}
+                  {financeInfo.invoiceRefNo || "—"}
                 </span>
               </div>
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground/60">Invoice No</span>
                 <span className="font-medium tabular-nums text-foreground/80">
-                  {financeInfo.invoiceNo || "\u2014"}
+                  {financeInfo.invoiceNo || "—"}
                 </span>
               </div>
             </div>

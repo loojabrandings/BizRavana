@@ -14,6 +14,7 @@ import {
 import { motion } from "framer-motion";
 import { createClient } from "@/lib/supabase/client";
 import { useReadOnlyMode } from "@/providers/readonly-mode-provider";
+import { useDashboardSession } from "@/providers/dashboard-session-provider";
 import { cn } from "@/lib/utils";
 import {
   DropdownMenu,
@@ -210,22 +211,22 @@ function ExpensesPageInner() {
     return () => window.clearTimeout(taskId);
   }, [searchParams]);
 
-  // ─── Refetch trigger ──────────────────────────────────────────
   // ─── Data Fetching ─────────────────────────────────────────────
+  const session = useDashboardSession();
+
   useEffect(() => {
     const fetchExpenses = async () => {
       try {
         setLoading(true);
         setError(null);
-        const supabase = createClient();
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session?.user) { window.location.replace("/login?redirect=/dashboard/expenses"); return; }
-
-        const { data: profile } = await supabase.from("profiles").select("business_id").eq("user_id", session.user.id).single();
-        const bizId = (profile as { business_id: string | null } | null)?.business_id;
-        if (!bizId) throw new Error("No business found for your account.");
+        const bizId = session.businessId;
+        if (!bizId) {
+          setLoading(false);
+          return;
+        }
         setBusinessId(bizId);
 
+        const supabase = createClient();
         const dateRange = getDateRange(dateFilter, dateFrom, dateTo);
         let q = supabase
           .from("expenses")
@@ -379,12 +380,9 @@ function ExpensesPageInner() {
     if (f.unit_cost <= 0) { toast.error("Unit cost must be greater than 0"); return; }
 
     const supabase = createClient();
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session?.user) throw new Error("Not authenticated");
-
-    const { data: profile } = await supabase.from("profiles").select("business_id").eq("user_id", session.user.id).single();
-    const businessId = (profile as { business_id: string | null } | null)?.business_id;        if (!businessId) throw new Error("No business found");
-        const bizId = businessId;
+    const businessId = session.businessId;
+    if (!businessId) throw new Error("No business found");
+    const bizId = businessId;
 
     const totalCost = f.quantity * f.unit_cost;
 
@@ -450,7 +448,7 @@ function ExpensesPageInner() {
           payment_status: f.payment_status,
           add_to_inventory: f.add_to_inventory,
           remarks: f.remarks || null,
-          created_by: session.user.id,
+          created_by: session.userId,
         })
         .select("id, total_cost, expense_number, created_at")
         .single();

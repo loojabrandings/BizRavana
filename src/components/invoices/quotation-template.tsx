@@ -8,7 +8,7 @@ import {
   Receipt,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { formatDate as fmtDate } from "@/lib/formatters";
+import { formatDate } from "@/lib/formatters";
 import type { QuotationFormData } from "@/components/quotations/types";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -77,10 +77,6 @@ export async function fetchBusinessProfile(): Promise<BusinessProfile> {
 // ON-SCREEN QUOTATION COMPONENT
 // ═══════════════════════════════════════════════════════════════════
 
-function formatDate(dateStr: string): string {
-  if (!dateStr) return "\u2014";
-  return fmtDate(dateStr);
-}
 
 interface QuotationTemplateProps {
   data: QuotationFormData;

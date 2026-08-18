@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { motion, useReducedMotion } from "framer-motion";
 import { createClient } from "@/lib/supabase/client";
+import { useDashboardSession } from "@/providers/dashboard-session-provider";
 import { cn } from "@/lib/utils";
 import { StatsCard } from "@/components/dashboard/stats-card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -116,6 +117,7 @@ const itemVariants = {
 // ─── Main Page ─────────────────────────────────────────────────────
 export default function DashboardPage() {
   const router = useRouter();
+  const session = useDashboardSession();
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -126,7 +128,7 @@ export default function DashboardPage() {
       router.replace("/dashboard/orders");
     }
   }, [router]);
-  const [dateFilter, setDateFilter] = useState<string>("this_month");
+  const [dateFilter, setDateFilter] = useState("all");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [datePickerOpen, setDatePickerOpen] = useState(false);
@@ -136,33 +138,17 @@ export default function DashboardPage() {
   const safeItemVariants = prefersReducedMotion ? undefined : itemVariants;
 
   useEffect(() => {
+    let cancelled = false;
+
     const fetchDashboard = async () => {
       try {
-        const supabase = createClient();
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
-
-        if (!session?.user) {
-          window.location.replace("/login?redirect=/dashboard");
+        const businessId = session.businessId;
+        if (!businessId) {
+          if (!cancelled) setLoading(false);
           return;
         }
 
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("full_name, business_id, businesses(name)")
-          .eq("user_id", session.user.id)
-          .single();
-
-        const typedProfile = profile as {
-          full_name: string | null;
-          business_id: string | null;
-          businesses: { name: string } | null;
-        } | null;
-
-        const businessId = typedProfile?.business_id;
-        if (!businessId) throw new Error("The signed-in user does not have a business.");
-
+        const supabase = createClient();
         const dateRange = getDateRange(dateFilter, dateFrom, dateTo);
 
         const [ordersRes, allOrdersRes, expensesRes, allExpensesRes, inventoryRes, deliveriesRes, orderItemsRes] =
@@ -389,10 +375,7 @@ export default function DashboardPage() {
         ).length;
 
         setData({
-          userName:
-            typedProfile?.full_name ||
-            session.user.user_metadata?.full_name ||
-            "there",
+          userName: session.fullName || "there",
           stats: {
             newOrders: allOrders.filter((order) => order.status === "new_order").length,
             itemsToDispatch: orders.filter((order) => order.status === "packed").length,
@@ -459,14 +442,28 @@ export default function DashboardPage() {
         icon: ReceiptText,
         trendBadge: data.ordersTrendBadge,
         href: "/dashboard/orders",
-        secondary: formatCurrency(data.stats.totalRevenue),
+        secondary: (
+          <span>
+            Rev:{" "}
+            <span className="font-medium text-hero-foreground/90 tabular-nums">
+              {formatCurrency(data.stats.totalRevenue)}
+            </span>
+          </span>
+        ),
       },
       {
         label: "New Orders",
         value: data.stats.newOrders,
         icon: ShoppingCart,
         href: "/dashboard/orders?status=new_order",
-        secondary: formatCurrency(data.stats.newOrdersValue),
+        secondary: (
+          <span>
+            Val:{" "}
+            <span className="font-medium text-hero-foreground/90 tabular-nums">
+              {formatCurrency(data.stats.newOrdersValue)}
+            </span>
+          </span>
+        ),
       },
       {
         label: "Net Profit",
@@ -474,15 +471,21 @@ export default function DashboardPage() {
         icon: LineChart,
         trendBadge: data.profitTrendBadge,
         secondary: (
-          <>
-            Sales:{" "}
-            <span className="font-medium text-hero-foreground/80">
-              {formatCurrency(data.stats.totalRevenue)}
-            </span>{" "}            - Expenses:{ " " }
-            <span className="font-medium text-hero-foreground/80">
-              {formatCurrency(data.stats.totalExpenses)}
+          <div className="flex flex-col sm:flex-row sm:items-center gap-x-1.5 gap-y-0.5">
+            <span>
+              Sales:{" "}
+              <span className="font-medium text-hero-foreground/90 tabular-nums">
+                {formatCurrency(data.stats.totalRevenue)}
+              </span>
             </span>
-          </>
+            <span className="hidden sm:inline text-hero-foreground/40">-</span>
+            <span>
+              Exp:{" "}
+              <span className="font-medium text-hero-foreground/90 tabular-nums">
+                {formatCurrency(data.stats.totalExpenses)}
+              </span>
+            </span>
+          </div>
         ),
       },
       {
@@ -618,8 +621,8 @@ export default function DashboardPage() {
           </div>
 
 
-          {/* 2×2 metric grid on tablet, stacked on phone */}
-          <div className="mt-4 grid gap-2.5 sm:grid-cols-2">
+          {/* 2×2 metric grid on phone & tablet */}
+          <div className="mt-4 grid grid-cols-2 gap-2 sm:gap-3">
             {heroMetrics.map((metric) => {
               const Icon = metric.icon;
               const href = metric.href;
@@ -628,10 +631,10 @@ export default function DashboardPage() {
               // Trend badge icon
               const trendIcon = badge
                 ? badge.direction === "up"
-                  ? <TrendingUp className="size-[10px]" strokeWidth={2.5} />
+                  ? <TrendingUp className="size-2.5 sm:size-[10px]" strokeWidth={2.5} />
                   : badge.direction === "down"
-                    ? <TrendingDown className="size-[10px]" strokeWidth={2.5} />
-                    : <Minus className="size-[10px]" strokeWidth={2.5} />
+                    ? <TrendingDown className="size-2.5 sm:size-[10px]" strokeWidth={2.5} />
+                    : <Minus className="size-2.5 sm:size-[10px]" strokeWidth={2.5} />
                 : null;
 
               // Trend badge color
@@ -647,7 +650,7 @@ export default function DashboardPage() {
                 <div
                   key={metric.label}
                   className={cn(
-                    "rounded-2xl backdrop-blur-sm border border-hero-foreground/10 bg-hero-foreground/[0.08] p-3.5 transition-all active:scale-[0.97]",
+                    "flex flex-col justify-between rounded-2xl backdrop-blur-sm border border-hero-foreground/10 bg-hero-foreground/[0.08] p-2.5 sm:p-3.5 transition-all active:scale-[0.97]",
                     href && "cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
                   )}
                   onClick={() => href && router.push(href)}
@@ -656,35 +659,37 @@ export default function DashboardPage() {
                   aria-label={href ? metric.label : undefined}
                   onKeyDown={href ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); router.push(href); }} : undefined}
                 >
-                  {/* Top row: icon + label (left) + trend badge (right) */}
-                  <div className="flex items-start justify-between gap-2 mb-1.5">
-                    <div className="flex items-center gap-1.5 min-w-0">
-                      <div className="flex size-7 items-center justify-center rounded-lg bg-hero-foreground/10 shrink-0">
-                        <Icon className="size-3.5 text-hero-foreground/80" />
+                  <div>
+                    {/* Top row: icon + label (left) + trend badge (right) */}
+                    <div className="flex items-start justify-between gap-1.5 sm:gap-2 mb-1 sm:mb-1.5">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <div className="flex size-6 sm:size-7 items-center justify-center rounded-lg bg-hero-foreground/10 shrink-0">
+                          <Icon className="size-3 sm:size-3.5 text-hero-foreground/80" />
+                        </div>
+                        <span className="text-[11px] sm:text-xs font-medium text-hero-foreground/70 truncate">{metric.label}</span>
                       </div>
-                      <span className="text-xs font-medium text-hero-foreground/70 truncate">{metric.label}</span>
+                      {badge && (
+                        <div className="flex flex-col items-end gap-0 shrink-0 -mt-0.5">
+                          <span className={cn("inline-flex items-center gap-0.5 text-[10px] sm:text-xs font-semibold", trendColor)}>
+                            {trendIcon}
+                            {badge.percentage}
+                          </span>
+                          <span className="text-[9px] sm:text-xs leading-none text-hero-foreground/70">{badge.label}</span>
+                        </div>
+                      )}
                     </div>
-                    {badge && (
-                      <div className="flex flex-col items-end gap-0 shrink-0 -mt-0.5">
-                        <span className={cn("inline-flex items-center gap-0.5 text-xs font-semibold", trendColor)}>
-                          {trendIcon}
-                          {badge.percentage}
-                        </span>
-                        <span className="text-xs leading-none text-hero-foreground/70">{badge.label}</span>
-                      </div>
-                    )}
-                  </div>
 
-                  {/* Value row */}
-                  <p className="text-xl font-bold tracking-tight text-hero-foreground tabular-nums leading-tight">
-                    {metric.value}
-                  </p>
+                    {/* Value row */}
+                    <p className="text-base sm:text-xl font-bold tracking-tight text-hero-foreground tabular-nums leading-tight">
+                      {metric.value}
+                    </p>
+                  </div>
 
                   {/* Secondary text */}
                   {metric.secondary && (
-                    <p className="mt-1 text-xs text-hero-foreground/60 truncate leading-snug">
+                    <div className="mt-1 text-[10px] sm:text-xs text-hero-foreground/60 leading-snug">
                       {metric.secondary}
-                    </p>
+                    </div>
                   )}
                 </div>
               );

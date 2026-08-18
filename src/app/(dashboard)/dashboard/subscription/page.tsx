@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
+import { useDashboardSession } from "@/providers/dashboard-session-provider";
 import Image from "next/image";
 import { motion } from "framer-motion";
 import {
@@ -36,6 +37,7 @@ import {
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
+import { formatDate } from "@/lib/formatters";
 import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -151,14 +153,6 @@ function formatLimit(value: number): string {
   return value.toLocaleString();
 }
 
-function formatDate(dateStr: string | null): string {
-  if (!dateStr) return "—";
-  return new Date(dateStr).toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
-}
 
 /** Price for the given plan + billing period. */
 function planPrice(plan: SubscriptionPlan, period: "monthly" | "yearly") {
@@ -216,6 +210,7 @@ const DEFAULT_ADMIN_SETTINGS: AdminSettings = {
 
 export default function SubscriptionPage() {
   const router = useRouter();
+  const session = useDashboardSession();
   const [loading, setLoading] = useState(true);
   const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
   const [business, setBusiness] = useState<Business | null>(null);
@@ -360,21 +355,13 @@ export default function SubscriptionPage() {
     try {
       setLoading(true);
 
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("business_id")
-        .eq("user_id", user.id)
-        .single();
-
-      if (!profile?.business_id) return;
+      const businessId = session.businessId;
+      if (!businessId) return;
 
       const { data: biz } = await supabase
         .from("businesses")
         .select("*")
-        .eq("id", profile.business_id)
+        .eq("id", businessId)
         .single();
 
       if (biz) {
@@ -413,13 +400,13 @@ export default function SubscriptionPage() {
         });
       }
 
-      await fetchUsage(profile.business_id);
+      await fetchUsage(businessId);
 
       const [proofsResult, payHereResult] = await Promise.all([
         supabase
           .from("payment_proofs")
           .select("*")
-          .eq("business_id", profile.business_id)
+          .eq("business_id", businessId)
           .order("created_at", { ascending: false })
           .limit(10),
         supabase
@@ -427,7 +414,7 @@ export default function SubscriptionPage() {
           .select(
             "id, plan_id, amount, status, payment_method, order_id, payhere_payment_id, status_message, billing_period, created_at",
           )
-          .eq("business_id", profile.business_id)
+          .eq("business_id", businessId)
           .order("created_at", { ascending: false })
           .limit(10),
       ]);

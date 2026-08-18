@@ -19,6 +19,7 @@ import {
 import { motion } from "framer-motion";
 import { useIsMobile } from "@/hooks/use-media-query";
 import { useReadOnlyMode } from "@/providers/readonly-mode-provider";
+import { useDashboardSession } from "@/providers/dashboard-session-provider";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 import {
@@ -141,6 +142,7 @@ function ProductsPageInner() {
 
   // ─── Refetch trigger ──────────────────────────────────────────
   const [fetchTrigger, setFetchTrigger] = useState(0);
+  const session = useDashboardSession();
 
   // ─── Data Fetching ─────────────────────────────────────────────
   useEffect(() => {
@@ -148,15 +150,14 @@ function ProductsPageInner() {
       try {
         setLoading(true);
         setError(null);
-        const supabase = createClient();
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session?.user) { window.location.replace("/login?redirect=/dashboard/products"); return; }
-
-        const { data: profile } = await supabase.from("profiles").select("business_id").eq("user_id", session.user.id).single();
-        const bizId = (profile as { business_id: string | null } | null)?.business_id;
-        if (!bizId) throw new Error("No business found for your account.");
+        const bizId = session.businessId;
+        if (!bizId) {
+          setLoading(false);
+          return;
+        }
         setBusinessId(bizId);
 
+        const supabase = createClient();
         const dateRange = getDateRange(dateFilter, dateFrom, dateTo);
         let q = supabase
           .from("products")
@@ -400,15 +401,7 @@ function ProductsPageInner() {
   const handleProductSubmit = useCallback(
     async (data: ProductFormData) => {
       const supabase = createClient();
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.user) throw new Error("Not authenticated");
-
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("business_id")
-        .eq("user_id", session.user.id)
-        .single();
-      const businessId = (profile as { business_id: string | null } | null)?.business_id;
+      const businessId = session.businessId;
       if (!businessId) throw new Error("No business found");
 
       const commonFields = {
@@ -520,7 +513,7 @@ function ProductsPageInner() {
           .insert({
             ...commonFields,
             business_id: businessId,
-            created_by: session.user.id,
+            created_by: session.userId,
             inventory_item_id: inventoryItemId,
           })
           .select("id, profit_margin, created_at")

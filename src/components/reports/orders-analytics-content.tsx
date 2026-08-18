@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { motion, useReducedMotion } from "framer-motion";
 import { createClient } from "@/lib/supabase/client";
+import { useDashboardSession } from "@/providers/dashboard-session-provider";
 import { cn, formatEnumLabel } from "@/lib/utils";
 import { formatCurrency } from "@/lib/formatters";
 import { getDateRange, dateFilterOptions } from "@/lib/date-utils";
@@ -250,6 +251,7 @@ function LogTableRow({ entry }: { entry: LogEntry }) {
 // ══════════════════════════════════════════════════════════════════
 
 export function OrdersAnalyticsContent() {
+  const session = useDashboardSession();
   const prefersReducedMotion = useReducedMotion();
   const safeContainerVariants = prefersReducedMotion ? undefined : containerVariants;
   const safeItemVariants = prefersReducedMotion ? undefined : itemVariants;
@@ -270,25 +272,13 @@ export function OrdersAnalyticsContent() {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const supabase = createClient();
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
-
-        if (!session?.user) {
-          window.location.replace("/login?redirect=/dashboard/reports");
+        const businessId = session.businessId;
+        if (!businessId) {
+          setLoading(false);
           return;
         }
 
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("business_id")
-          .eq("user_id", session.user.id)
-          .single();
-
-        const businessId = (profile as { business_id: string | null } | null)?.business_id;
-        if (!businessId) throw new Error("No business found for your account.");
-
+        const supabase = createClient();
         const dateRange = getDateRange(dateFilter, dateFrom, dateTo);
 
         let ordersQuery = supabase

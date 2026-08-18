@@ -2,7 +2,7 @@
 
 import { Building2, Globe, Mail, MapPin, Phone } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { formatPhoneNumber, formatDate as fmtDate } from "@/lib/formatters";
+import { formatPhoneNumber, formatDate } from "@/lib/formatters";
 import { usePreferences } from "@/stores/preferences-store";
 import type { OrderFormData } from "@/components/orders/types";
 
@@ -26,11 +26,6 @@ interface InvoiceDocumentProps {
 }
 
 // ─── Helpers ───────────────────────────────────────────────────────
-
-function formatDate(dateStr: string): string {
-  if (!dateStr) return "\u2014";
-  return fmtDate(dateStr);
-}
 
 function statusLabel(status: string): string {
   const map: Record<string, string> = {

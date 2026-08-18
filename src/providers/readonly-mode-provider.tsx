@@ -37,14 +37,36 @@ const ReadOnlyContext = createContext<ReadOnlyState | null>(null);
 // PROVIDER
 // ══════════════════════════════════════════════════════════════════
 
+import { useDashboardSession } from "@/providers/dashboard-session-provider";
+
 export function ReadOnlyModeProvider({ children }: { children: React.ReactNode }) {
-  const [isReadOnly, setIsReadOnly] = useState(false);
-  const [accountStatus, setAccountStatus] = useState<string | null>(null);
-  const [dataDeleteAfter, setDataDeleteAfter] = useState<string | null>(null);
-  const [retentionDaysRemaining, setRetentionDaysRemaining] = useState<number | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  let sessionStatus: string | null = null;
+  let sessionDataDeleteAfter: string | null = null;
+  try {
+    const session = useDashboardSession();
+    sessionStatus = session.accountStatus;
+    sessionDataDeleteAfter = session.dataDeleteAfter;
+  } catch {
+    // Outside DashboardSessionProvider
+  }
+
+  const initialReadOnly = sessionStatus === "trial_expired" || sessionStatus === "expired";
+  const initialRetentionDays = sessionDataDeleteAfter
+    ? Math.max(0, Math.ceil((new Date(sessionDataDeleteAfter).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
+    : null;
+
+  const [isReadOnly, setIsReadOnly] = useState(initialReadOnly);
+  const [accountStatus, setAccountStatus] = useState<string | null>(sessionStatus);
+  const [dataDeleteAfter, setDataDeleteAfter] = useState<string | null>(sessionDataDeleteAfter);
+  const [retentionDaysRemaining, setRetentionDaysRemaining] = useState<number | null>(initialRetentionDays);
+  const [isLoading, setIsLoading] = useState(sessionStatus === null);
 
   useEffect(() => {
+    if (sessionStatus !== null) {
+      setIsLoading(false);
+      return;
+    }
+
     const fetchStatus = async () => {
       try {
         const supabase = createClient();
@@ -92,7 +114,7 @@ export function ReadOnlyModeProvider({ children }: { children: React.ReactNode }
     };
 
     fetchStatus();
-  }, []);
+  }, [sessionStatus]);
 
   const guard = useCallback(
     (action?: string): boolean => {

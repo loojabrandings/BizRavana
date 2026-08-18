@@ -74,11 +74,12 @@ export function formatCompact(amount: number): string {
  *   YY-MM-DD    →  24-03-15
  *   DD-MM-YY    →  15-03-24
  */
-export function formatDate(dateStr: string): string {
-  const dateFormat = usePreferences.getState().dateFormat || "YYYY-MM-DD";
-  const date = new Date(dateStr);
-  if (isNaN(date.getTime())) return dateStr;
+export function formatDate(dateInput: string | Date | null | undefined): string {
+  if (!dateInput) return "—";
+  const date = typeof dateInput === "string" ? new Date(dateInput) : dateInput;
+  if (isNaN(date.getTime())) return typeof dateInput === "string" ? dateInput : "—";
 
+  const dateFormat = usePreferences.getState().dateFormat || "YYYY-MM-DD";
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
@@ -98,13 +99,14 @@ export function formatDate(dateStr: string): string {
 }
 
 /**
- * Format a date string with time according to the user's preferred date format.
+ * Format a date string or Date object with time according to the user's preferred date format.
  */
-export function formatDateTime(dateStr: string): string {
-  const date = new Date(dateStr);
-  if (isNaN(date.getTime())) return dateStr;
+export function formatDateTime(dateInput: string | Date | null | undefined): string {
+  if (!dateInput) return "—";
+  const date = typeof dateInput === "string" ? new Date(dateInput) : dateInput;
+  if (isNaN(date.getTime())) return typeof dateInput === "string" ? dateInput : "—";
 
-  const formattedDate = formatDate(dateStr);
+  const formattedDate = formatDate(date);
   const time = date.toLocaleTimeString("en-US", {
     hour: "2-digit",
     minute: "2-digit",

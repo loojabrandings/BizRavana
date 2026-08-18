@@ -389,9 +389,15 @@ function RegisterForm() {
     [step],
   );
 
+  const isGmailAddress = (email: string) => {
+    const clean = email.trim().toLowerCase();
+    return clean.endsWith("@gmail.com") || clean.endsWith("@googlemail.com");
+  };
+
   const isStep1Valid =
     formData.fullName.trim() !== "" &&
     formData.email.trim() !== "" &&
+    isGmailAddress(formData.email) &&
     formData.phone.trim() !== "" &&
     formData.password.length >= 6 &&
     formData.password === formData.confirmPassword;
@@ -405,6 +411,12 @@ function RegisterForm() {
     setLoading(true);
     setError(null);
     setNotice(null);
+
+    if (!isGmailAddress(formData.email)) {
+      setError("Only Gmail addresses (@gmail.com) are accepted for registration.");
+      setLoading(false);
+      return;
+    }
 
     try {
       const supabase = createClient();
@@ -654,7 +666,13 @@ function RegisterForm() {
                   icon={Mail}
                   value={formData.email}
                   onChange={(e) => updateField("email", e.target.value)}
-                  placeholder="you@example.com"
+                  placeholder="you@gmail.com"
+                  error={
+                    formData.email.trim() !== "" &&
+                    !isGmailAddress(formData.email)
+                      ? "Only Gmail addresses (@gmail.com) are accepted"
+                      : undefined
+                  }
                 />
 
                 <InputGroup
@@ -1016,6 +1034,7 @@ interface InputGroupProps {
   value: string;
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   placeholder?: string;
+  error?: string;
   children?: React.ReactNode;
 }
 
@@ -1028,6 +1047,7 @@ function InputGroup({
   value,
   onChange,
   placeholder,
+  error,
   children,
 }: InputGroupProps) {
   return (
@@ -1058,6 +1078,9 @@ function InputGroup({
         />
         {children}
       </div>
+      {error ? (
+        <p className="text-xs font-medium text-destructive">{error}</p>
+      ) : null}
     </div>
   );
 }

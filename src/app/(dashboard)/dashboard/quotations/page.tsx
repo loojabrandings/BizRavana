@@ -16,6 +16,7 @@ import {
 import { motion } from "framer-motion";
 import { createClient } from "@/lib/supabase/client";
 import { useReadOnlyMode } from "@/providers/readonly-mode-provider";
+import { useDashboardSession } from "@/providers/dashboard-session-provider";
 import { cn } from "@/lib/utils";
 import {
   DropdownMenu,
@@ -160,19 +161,21 @@ function QuotationsPageInner() {
   // ─── Refetch trigger ──────────────────────────────────────────
   const [fetchTrigger, setFetchTrigger] = useState(0);
 
+  const session = useDashboardSession();
+
   // ─── Data Fetching ─────────────────────────────────────────────
   useEffect(() => {
     const fetchQuotations = async () => {
       try {
         setLoading(true);
         setError(null);
-        const supabase = createClient();
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session?.user) { window.location.replace("/login?redirect=/dashboard/quotations"); return; }
+        const businessId = session.businessId;
+        if (!businessId) {
+          setLoading(false);
+          return;
+        }
 
-        const { data: profile } = await supabase.from("profiles").select("business_id").eq("user_id", session.user.id).single();
-        const businessId = (profile as { business_id: string | null } | null)?.business_id;
-        if (!businessId) throw new Error("No business found for your account.");
+        const supabase = createClient();
 
         const dateRange = getDateRange(dateFilter, dateFrom, dateTo);
         let q = supabase.from("quotations").select("id, quotation_number, customer_name, customer_phone, customer_address, customer_whatsapp, customer_email, expiry_date, expected_delivery_date, subtotal, discount, discount_type, delivery_charge, grand_total, status, remarks, converted_order_id, created_at").eq("business_id", businessId).order("created_at", { ascending: false }).limit(500);
@@ -231,11 +234,7 @@ function QuotationsPageInner() {
   const handleConvertToOrder = useCallback(async (quotationId: string) => {
     try {
       const supabase = createClient();
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.user) throw new Error("Not authenticated");
-
-      const { data: profile } = await supabase.from("profiles").select("business_id").eq("user_id", session.user.id).single();
-      const businessId = (profile as { business_id: string | null } | null)?.business_id;
+      const businessId = session.businessId;
       if (!businessId) throw new Error("No business found");
 
       const { data: quotation, error: qError } = await supabase
@@ -269,7 +268,7 @@ function QuotationsPageInner() {
           delivery_charge: quotation.delivery_charge,
           payment_status: "pending",
           status: "new_order",
-          created_by: session.user.id,
+          created_by: session.userId,
         })
         .select("id")
         .single();
@@ -481,15 +480,7 @@ function QuotationsPageInner() {
   const handleQuotationSubmit = useCallback(
     async (data: QuotationFormData, preview: boolean) => {
       const supabase = createClient();
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.user) throw new Error("Not authenticated");
-
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("business_id")
-        .eq("user_id", session.user.id)
-        .single();
-      const businessId = (profile as { business_id: string | null } | null)?.business_id;
+      const businessId = session.businessId;
       if (!businessId) throw new Error("No business found");
 
       const commonFields = {
@@ -532,7 +523,7 @@ function QuotationsPageInner() {
             ...commonFields,
             business_id: businessId,
             quotation_number: data.quotation_number,
-            created_by: session.user.id,
+            created_by: session.userId,
           })
           .select("id")
           .single();

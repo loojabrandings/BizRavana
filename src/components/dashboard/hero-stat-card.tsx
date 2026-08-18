@@ -105,7 +105,7 @@ export function HeroStatCard({
         </div>
 
         {secondary && (
-          <p className={cn("mt-auto pt-2 text-sm", style.secondary)}>{secondary}</p>
+          <div className={cn("mt-auto pt-2 text-sm", style.secondary)}>{secondary}</div>
         )}
       </div>
     ) : (
@@ -157,7 +157,7 @@ export function HeroStatCard({
         </div>
 
         {secondary && (
-          <p className={cn("mt-1 text-sm", style.secondary)}>{secondary}</p>
+          <div className={cn("mt-1 text-sm", style.secondary)}>{secondary}</div>
         )}
       </div>
     );

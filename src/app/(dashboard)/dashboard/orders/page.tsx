@@ -53,6 +53,7 @@ import { ContextMenu, type ContextMenuSection, type ContextMenuItem } from "@/co
 import { HoverPopover } from "@/components/shared/hover-popover";
 import { useIsMobile } from "@/hooks/use-media-query";
 import { useReadOnlyMode } from "@/providers/readonly-mode-provider";
+import { useDashboardSession } from "@/providers/dashboard-session-provider";
 import { useWhatsAppAction } from "@/components/whatsapp/use-whatsapp-action";
 import { orderRowToTemplateData } from "@/components/whatsapp/whatsapp-actions";
 import {
@@ -410,8 +411,8 @@ function OrdersPageInner() {
     return () => window.clearTimeout(taskId);
   }, [searchParams, guard]);
 
-  // ─── Refetch trigger ──────────────────────────────────────────
   const [fetchTrigger, setFetchTrigger] = useState(0);
+  const session = useDashboardSession();
 
   // ─── Data Fetching ─────────────────────────────────────────────
   useEffect(() => {
@@ -420,13 +421,12 @@ function OrdersPageInner() {
         setLoading(true);
         setError(null);
         const supabase = createClient();
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session?.user) { window.location.replace("/login?redirect=/dashboard/orders"); return; }
-
-        const { data: profile } = await supabase.from("profiles").select("business_id").eq("user_id", session.user.id).single();
-        const businessId = (profile as { business_id: string | null } | null)?.business_id;
+        const businessId = session.businessId;
         setBusinessId(businessId ?? null);
-        if (!businessId) throw new Error("No business found for your account.");
+        if (!businessId) {
+          setLoading(false);
+          return;
+        }
 
         const dateRange = getDateRange(dateFilter, dateFrom, dateTo);
         let q = supabase.from("orders").select("id, order_number, customer_name, customer_phone, customer_address, customer_district, customer_city, customer_whatsapp, customer_email, advance_paid, total, delivery_charge, subtotal, discount, waybill_id, status, payment_status, payment_method, expected_delivery_date, dispatched_date, created_at, images").eq("business_id", businessId).order("order_number", { ascending: false }).limit(500);
@@ -1011,15 +1011,7 @@ const handleStatusChange = useCallback(async (orderId: string, newStatus: string
         return;
       }
       const supabase = createClient();
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.user) throw new Error("Not authenticated");
-
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("business_id")
-        .eq("user_id", session.user.id)
-        .single();
-      const businessId = (profile as { business_id: string | null } | null)?.business_id;
+      const businessId = session.businessId;
       if (!businessId) throw new Error("No business found");
 
       const commonFields = {
@@ -1084,7 +1076,7 @@ const handleStatusChange = useCallback(async (orderId: string, newStatus: string
           .insert({
             ...commonFields,
             business_id: businessId,
-            created_by: session.user.id,
+            created_by: session.userId,
           })
           .select("id")
           .single();

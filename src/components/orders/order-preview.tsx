@@ -22,7 +22,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn, formatEnumLabel } from "@/lib/utils";
-import { formatPhoneNumber } from "@/lib/formatters";
+import { formatPhoneNumber, formatDate } from "@/lib/formatters";
 import type { OrderFormData } from "./types";
 import { formatCurrency } from "./utils";
 import { ShipmentStatusPanel } from "./shipment-status-panel";
@@ -39,7 +39,6 @@ import {
   fetchBusinessProfile,
   type BusinessProfile,
 } from "./invoice-template";
-
 
 // ─── Props ─────────────────────────────────────────────────────────
 
@@ -68,19 +67,6 @@ const PAYMENT_STATUS_OPTIONS = [
   "advanced",
   "paid",
 ] as const;
-
-// ─── Helpers ───────────────────────────────────────────────────────
-
-import { formatDate as formatDatePref } from "@/lib/formatters";
-
-function formatDate(dateStr: string) {
-  if (!dateStr) return "—";
-  return formatDatePref(dateStr);
-}
-
-// ─── WhatsApp Share ────────────────────────────────────────────────
-
-// Replaced by useWhatsAppAction hook and orderPreviewToTemplateData mapper
 
 // ═══════════════════════════════════════════════════════════════════
 // SUBCOMPONENTS

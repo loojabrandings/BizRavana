@@ -9,6 +9,7 @@ import {
   useState,
 } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { useDashboardSession } from "@/providers/dashboard-session-provider";
 import type { RealtimePostgresChangesPayload } from "@supabase/supabase-js";
 
 // ══════════════════════════════════════════════════════════════════
@@ -168,6 +169,14 @@ export function NotificationProvider({
   );
 
   // ── Initialize: auth session → fetch → subscribe ──────────
+  let sessionBusinessId: string | null = null;
+  try {
+    const session = useDashboardSession();
+    sessionBusinessId = session.businessId || null;
+  } catch {
+    // Outside DashboardSessionProvider
+  }
+
   useEffect(() => {
     const supabase = createClient();
     supabaseRef.current = supabase;
@@ -176,24 +185,28 @@ export function NotificationProvider({
 
     const init = async () => {
       try {
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
-        if (!session?.user || !mounted) {
-          setLoading(false);
-          return;
-        }
-
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("business_id")
-          .eq("user_id", session.user.id)
-          .single();
-
-        const bizId = (profile as { business_id: string | null } | null)
-          ?.business_id;
+        let bizId = sessionBusinessId;
 
         if (!bizId) {
+          const {
+            data: { session },
+          } = await supabase.auth.getSession();
+          if (!session?.user || !mounted) {
+            setLoading(false);
+            return;
+          }
+
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("business_id")
+            .eq("user_id", session.user.id)
+            .single();
+
+          bizId = (profile as { business_id: string | null } | null)
+            ?.business_id || null;
+        }
+
+        if (!bizId || !mounted) {
           setLoading(false);
           return;
         }
@@ -220,7 +233,7 @@ export function NotificationProvider({
         channelRef.current = null;
       }
     };
-  }, [fetchNotifications, subscribeToRealtime]);
+  }, [sessionBusinessId, fetchNotifications, subscribeToRealtime]);
 
   // ── Refetch on window focus (fallback for stale data) ─────
   useEffect(() => {

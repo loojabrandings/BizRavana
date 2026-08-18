@@ -19,6 +19,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { formatDate, formatDateTime } from "@/lib/formatters";
 import { createClient } from "@/lib/supabase/client";
 import {
   loadCourierConfig,
@@ -35,6 +36,7 @@ import type { CourierDashboardData, CourierStatusBreakdown, CourierRecentActivit
 import { useCourierStore } from "@/stores/courier-store";
 import { CourierFinanceTab } from "@/components/delivery/courier-finance-tab";
 import { LoadingStepList } from "@/components/delivery/loading-step-list";
+import { useDashboardSession } from "@/providers/dashboard-session-provider";
 
 // ─── Status Display Helpers ─────────────────────────────────────────
 // Category-based mapping replaces the fragile keyword guessing.
@@ -222,30 +224,6 @@ function mergeWithStatusDisplayConfig(
   });
 }
 
-// ─── Helpers ─────────────────────────────────────────────────────
-
-function formatDate(dateStr: string): string {
-  try {
-    const d = new Date(dateStr);
-    return d.toLocaleDateString("en-GB", {
-      day: "numeric",
-      month: "short",
-      year: "numeric",
-    });
-  } catch {
-    return dateStr;
-  }
-}
-
-function formatDateTime(date: Date): string {
-  return date.toLocaleString("en-GB", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
 
 const formatCurrency = (amount: number) =>
   "Rs. " + amount.toLocaleString("en-LK");
@@ -551,6 +529,7 @@ async function fetchLocalDeliveryStats(
 // ═══════════════════════════════════════════════════════════════════
 
 export default function CourierPage() {
+  const session = useDashboardSession();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -607,17 +586,8 @@ export default function CourierPage() {
       setProviderId(config.provider);
       setConnected(true);
 
-      const supabase = createClient();
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.user) return;
-
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("business_id")
-        .eq("user_id", session.user.id)
-        .single();
-
-      if (!profile?.business_id) return;
+      const bizId = session.businessId;
+      if (!bizId) return;
 
       // 1. (Optional) Sync delivery statuses from the courier API.
       //    Skipped on auto-mount when the store cache is still fresh.
@@ -625,7 +595,7 @@ export default function CourierPage() {
         setLoadingSteps((prev) => markLoadingStep(prev, "connect", `Connecting to ${config.providerLabel || "your courier"}…`));
         console.log("[CourierPage] allowApiSync=true → calling syncDeliveryStatuses & fetchDashboard");
         await syncDeliveryStatuses(
-          profile.business_id,
+          bizId,
           config.credentials,
           config.provider,
         );
@@ -650,7 +620,7 @@ export default function CourierPage() {
 
       // 3. Always fetch local delivery stats (lightweight DB query)
       setLoadingSteps((prev) => markLoadingStep(prev, "orders", "Loading your order data…"));
-      const localStats = await fetchLocalDeliveryStats(profile.business_id, config.provider);
+      const localStats = await fetchLocalDeliveryStats(bizId, config.provider);
 
       setStatusBreakdown(localStats.breakdown);
 

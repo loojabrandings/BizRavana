@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
+import { useDashboardSession } from "@/providers/dashboard-session-provider";
 import { Button } from "@/components/ui/button";
 import { Dropdown } from "@/components/ui/dropdown";
 import { Input } from "@/components/ui/input";
@@ -146,6 +147,7 @@ export function PaymentPageClient({
   initialBillingPeriod?: BillingPeriod;
 }) {
   const router = useRouter();
+  const session = useDashboardSession();
   const supabase = useMemo(() => createClient(), []);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const receiptPreviewUrlRef = useRef<string | null>(null);
@@ -204,22 +206,8 @@ export function PaymentPageClient({
 
   useEffect(() => {
     const loadPaymentPage = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      if (!user) {
-        router.replace("/login?redirect=/dashboard/subscription/payment");
-        return;
-      }
-
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("business_id, full_name, phone")
-        .eq("user_id", user.id)
-        .single();
-
-      if (!profile?.business_id) {
+      const businessId = session.businessId;
+      if (!businessId) {
         toast.error("Your business account could not be found.");
         router.replace("/dashboard/subscription");
         return;
@@ -241,7 +229,7 @@ export function PaymentPageClient({
           supabase
             .from("businesses")
             .select("name, phone, district, address")
-            .eq("id", profile.business_id)
+            .eq("id", businessId)
             .single(),
           supabase
             .from("admin_settings")
@@ -251,14 +239,14 @@ export function PaymentPageClient({
           supabase
             .from("payment_proofs")
             .select("id")
-            .eq("business_id", profile.business_id)
+            .eq("business_id", businessId)
             .eq("status", "pending")
             .limit(1)
             .maybeSingle(),
           supabase
             .from("business_settings")
             .select("key, value")
-            .eq("business_id", profile.business_id)
+            .eq("business_id", businessId)
             .in("key", ["business_email", "city", "country"]),
         ]);
 
@@ -277,7 +265,7 @@ export function PaymentPageClient({
           String(setting.value ?? ""),
         ]),
       );
-      const fullName = profile.full_name.trim();
+      const fullName = (session.fullName || "").trim();
       const lastSpaceIndex = fullName.lastIndexOf(" ");
       const firstName =
         lastSpaceIndex > 0 ? fullName.slice(0, lastSpaceIndex) : fullName;
@@ -287,9 +275,9 @@ export function PaymentPageClient({
       setCardCustomer({
         firstName,
         lastName,
-        email: user.email ?? businessSettings.business_email ?? "",
-        phone: profile.phone ?? businessResult.data?.phone ?? "",
-        address: businessResult.data?.address ?? "",
+        email: session.email || businessSettings.business_email || "",
+        phone: businessResult.data?.phone || "",
+        address: businessResult.data?.address || "",
         city: businessSettings.city || businessResult.data?.district || "",
         country: businessSettings.country || "Sri Lanka",
       });
