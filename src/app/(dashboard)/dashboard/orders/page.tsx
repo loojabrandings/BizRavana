@@ -40,7 +40,6 @@ import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { DataTable, type ColumnDef } from "@/components/shared/data-table";
 import { OrderForm, type OrderFormData } from "@/components/orders/order-form";
 import { OrderPreview } from "@/components/orders/order-preview";
-import * as XLSX from "xlsx";
 import { toast } from "sonner";
 import { dateFilterOptions, getDateRange } from "@/lib/date-utils";
 import { EditableStatusBadge } from "@/components/shared/editable-status-badge";
@@ -1621,6 +1620,7 @@ const handleStatusChange = useCallback(async (orderId: string, newStatus: string
   // ─── Export to XLSX / Royal Express Template ─────────────────────
   const handleExportXlsx = useCallback(async () => {
     if (filteredOrders.length === 0) return;
+    const XLSX = await import("xlsx");
 
     const isRoyalExpress = courierConfig?.provider === "royal_express";
 

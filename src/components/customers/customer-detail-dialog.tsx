@@ -7,7 +7,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 import { DataTable, type ColumnDef } from "@/components/shared/data-table";
 import { createClient } from "@/lib/supabase/client";
 import { formatCurrency, formatDate } from "@/lib/formatters";
@@ -81,8 +80,9 @@ export function CustomerDetailDialog({
 
   // Fetch orders for this customer when dialog opens
   useEffect(() => {
+    let cancelled = false;
+
     if (!open || !customer) {
-      setOrders([]);
       return;
     }
 
@@ -121,26 +121,31 @@ export function CustomerDetailDialog({
         const { data, error } = await query;
 
         if (error) throw error;
-        setOrders(
-          (data || []).map((o) => ({
-            id: String(o.id),
-            order_number: String(o.order_number),
-            customer_name: String(o.customer_name || ""),
-            total: Number(o.total || 0),
-            advance_paid: Number(o.advance_paid || 0),
-            status: String(o.status || "new_order"),
-            payment_status: String(o.payment_status || "pending"),
-            created_at: String(o.created_at),
-          })),
-        );
+        if (!cancelled) {
+          setOrders(
+            (data || []).map((o) => ({
+              id: String(o.id),
+              order_number: String(o.order_number),
+              customer_name: String(o.customer_name || ""),
+              total: Number(o.total || 0),
+              advance_paid: Number(o.advance_paid || 0),
+              status: String(o.status || "new_order"),
+              payment_status: String(o.payment_status || "pending"),
+              created_at: String(o.created_at),
+            })),
+          );
+        }
       } catch {
-        setOrders([]);
+        if (!cancelled) setOrders([]);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
 
     fetchOrders();
+    return () => {
+      cancelled = true;
+    };
   }, [open, customer]);
 
   const orderColumns = useCallback(

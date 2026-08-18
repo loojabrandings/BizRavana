@@ -40,10 +40,16 @@ export default function DeferredSceneMount() {
     };
 
     const connection = (navigator as NavigatorWithConnection).connection;
-    const waitForInteraction =
+    const isMobile = window.innerWidth <= 768;
+    const isSlowConnection =
       connection?.saveData ||
       connection?.effectiveType === "slow-2g" ||
-      connection?.effectiveType === "2g";
+      connection?.effectiveType === "2g" ||
+      connection?.effectiveType === "3g";
+
+    // On slow connections or mobile screens on non-4G networks, defer 3D scene
+    // loading until the user interacts or scrolls past the hero section.
+    const waitForInteraction = isSlowConnection || (isMobile && connection?.effectiveType !== "4g");
 
     const activate = () => {
       loadScene();
@@ -77,5 +83,11 @@ export default function DeferredSceneMount() {
     };
   }, []);
 
-  return SceneMount ? <SceneMount /> : null;
+  return (
+    <>
+      {/* Ambient glowing gradient blobs render immediately via CSS on first paint */}
+      <div className="scene-blobs" aria-hidden="true" />
+      {SceneMount ? <SceneMount /> : null}
+    </>
+  );
 }

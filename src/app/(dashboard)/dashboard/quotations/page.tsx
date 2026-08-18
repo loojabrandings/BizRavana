@@ -33,7 +33,6 @@ import { DataTable, type ColumnDef } from "@/components/shared/data-table";
 import { EditableStatusBadge } from "@/components/shared/editable-status-badge";
 import { QuotationForm, type QuotationFormData } from "@/components/quotations/quotation-form";
 import { QuotationPreview } from "@/components/quotations/quotation-preview";
-import * as XLSX from "xlsx";
 import { toast } from "sonner";
 import { dateFilterOptions, getDateRange } from "@/lib/date-utils";
 import { HoverPopover } from "@/components/shared/hover-popover";
@@ -721,8 +720,9 @@ function QuotationsPageInner() {
   }, [quotations, activeStatusTab, searchQuery, activeSort]);
 
   // ─── Export to XLSX ──────────────────────────────────────────────
-  const handleExportXlsx = useCallback(() => {
+  const handleExportXlsx = useCallback(async () => {
     if (filteredQuotations.length === 0) return;
+    const XLSX = await import("xlsx");
     const rows = filteredQuotations.map((q) => ({
       "Quotation No": q.quotation_number,
       Customer: q.customer_name,

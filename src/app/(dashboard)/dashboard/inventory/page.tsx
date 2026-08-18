@@ -47,7 +47,6 @@ import {
   formatDate,
   computeStockValues,
 } from "@/components/inventory/utils";
-import * as XLSX from "xlsx";
 import { toast } from "sonner";
 import { dateFilterOptions, getDateRange } from "@/lib/date-utils";
 
@@ -481,8 +480,9 @@ function InventoryPageInner() {
   );
 
   // ─── Export to XLSX ──────────────────────────────────────────────
-  const handleExportXlsx = useCallback(() => {
+  const handleExportXlsx = useCallback(async () => {
     if (filteredItems.length === 0) return;
+    const XLSX = await import("xlsx");
     const rows = filteredItems.map((item) => {
       const status = getStockStatus(item);
       return {

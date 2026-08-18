@@ -38,7 +38,6 @@ import { ProductForm, type ProductFormData } from "@/components/products/product
 import { BulkImportForm } from "@/components/products/bulk-import-form";
 import { CategoryManager, type Category } from "@/components/products/category-manager";
 import { EditableStatusBadge } from "@/components/shared/editable-status-badge";
-import * as XLSX from "xlsx";
 import { toast } from "sonner";
 import { dateFilterOptions, getDateRange } from "@/lib/date-utils";
 
@@ -644,8 +643,9 @@ function ProductsPageInner() {
   }, [products, activeStatusTab, activeCategoryTab, searchQuery, activeSort]);
 
   // ─── Export to XLSX ──────────────────────────────────────────────
-  const handleExportXlsx = useCallback(() => {
+  const handleExportXlsx = useCallback(async () => {
     if (filteredProducts.length === 0) return;
+    const XLSX = await import("xlsx");
     const rows = filteredProducts.map((product) => ({
       "Product Name": product.name,
       "Category": product.category || "—",

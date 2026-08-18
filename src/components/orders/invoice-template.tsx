@@ -12,8 +12,6 @@ import { formatDate as fmtDate } from "@/lib/formatters";
 import type { OrderFormData } from "./types";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import domtoimage from "dom-to-image-more";
-import { jsPDF } from "jspdf";
 import {
   InvoiceDocument,
   type BusinessProfile,
@@ -132,6 +130,11 @@ export function InvoiceTemplate({
     if (!invoiceRef.current) return;
     setGenerating(true);
     try {
+      const [{ default: domtoimage }, { jsPDF }] = await Promise.all([
+        import("dom-to-image-more"),
+        import("jspdf"),
+      ]);
+
       // Capture the invoice DOM node as a PNG image
       // dom-to-image-more auto-detects the node dimensions
       const node = invoiceRef.current;

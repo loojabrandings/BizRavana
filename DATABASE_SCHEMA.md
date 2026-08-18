@@ -1,18 +1,18 @@
 # Bizravana — Database Schema
 
-> Current-state addendum: 2026-08-03
-> Current migration range: `001` through `052`
+> Current-state addendum: 2026-08-18
+> Current migration range: `001` through `054`
 
-> Last updated: 2026-08-03
+> Last updated: 2026-08-18
 > Database: PostgreSQL (Supabase)
 > RLS: Enabled on all business-scoped tables
-> Migrations: 51 total (001 through 051)
+> Migrations: 54 total (001 through 054)
 
 ---
 
 ## Migration History
 
-### Migrations 026–051
+### Migrations 026–054
 
 | # | Name | Purpose |
 |---|------|---------|
@@ -42,6 +42,9 @@
 | 049 | `repair_distributed_request_rate_limit.sql` | Repair limiter timestamp variable resolution |
 | 050 | `repair_rate_limit_greatest_resolution.sql` | Repair PostgreSQL `GREATEST` expression resolution |
 | 051 | `secure_file_upload_boundaries.sql` | Require server-verified uploads and align private receipt MIME policy |
+| 052 | `add_annual_subscriptions.sql` | Annual billing cycles, prorated upgrades, and automated renewal triggers |
+| 053 | `add_customer_sync_trigger.sql` | Auto-sync order customers into centralized customers registry |
+| 054 | `add_performance_indexes.sql` | Composite performance indexes for orders, expenses, inventory, and deliveries |
 
 ### Tables added after migration 025
 

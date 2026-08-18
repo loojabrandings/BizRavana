@@ -9,26 +9,30 @@ import { Toaster } from "@/components/ui/sonner";
 
 const poppins = Poppins({
   subsets: ["latin"],
-  weight: ["300", "400", "500", "600", "700"],
+  weight: ["400", "500", "600", "700"],
   variable: "--font-poppins",
+  display: "swap",
 });
 
 const lora = Lora({
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+  weight: ["400", "600"],
   variable: "--font-lora",
+  display: "swap",
 });
 
 const caveat = Caveat({
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+  weight: ["500", "700"],
   variable: "--font-caveat",
+  display: "swap",
 });
 
 const mohave = Mohave({
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+  weight: ["400", "600"],
   variable: "--font-mohave",
+  display: "swap",
 });
 
 // Runs before first paint: resolve the accent from the persisted preferences

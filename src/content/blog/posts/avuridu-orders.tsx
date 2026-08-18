@@ -30,7 +30,7 @@ export default function AvuriduOrders() {
       <p>
         Reorder the products you know will move, and clear the ones that
         won&rsquo;t. Use low-stock alerts to catch problems before they
-        become "sorry, we&rsquo;re out" messages to customers.
+        become &ldquo;sorry, we&rsquo;re out&rdquo; messages to customers.
       </p>
 
       <h2>2. Make dispatch one action, not a ceremony</h2>

@@ -35,7 +35,6 @@ import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { DataTable, type ColumnDef } from "@/components/shared/data-table";
 import { EditableStatusBadge } from "@/components/shared/editable-status-badge";
 import { CategoryManager, type Category } from "@/components/products/category-manager";
-import * as XLSX from "xlsx";
 import { toast } from "sonner";
 import { dateFilterOptions, getDateRange } from "@/lib/date-utils";
 
@@ -551,8 +550,9 @@ function ExpensesPageInner() {
   }, [expenses, activeCategoryTab, paymentStatusTab, searchQuery, activeSort]);
 
   // ─── Export to XLSX ──────────────────────────────────────────────
-  const handleExportXlsx = useCallback(() => {
+  const handleExportXlsx = useCallback(async () => {
     if (filteredExpenses.length === 0) return;
+    const XLSX = await import("xlsx");
     const rows = filteredExpenses.map((expense) => ({
       "#": expense.expense_number ?? expense.id.slice(0, 8),
       Date: formatDate(expense.expense_date),

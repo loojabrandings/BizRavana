@@ -12,8 +12,6 @@ import { formatDate as fmtDate } from "@/lib/formatters";
 import type { QuotationFormData } from "@/components/quotations/types";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import domtoimage from "dom-to-image-more";
-import { jsPDF } from "jspdf";
 import {
   QuotationDocument,
   type BusinessProfile,
@@ -127,6 +125,11 @@ export function QuotationTemplate({
     if (!quotationRef.current) return;
     setGenerating(true);
     try {
+      const [{ default: domtoimage }, { jsPDF }] = await Promise.all([
+        import("dom-to-image-more"),
+        import("jspdf"),
+      ]);
+
       const node = quotationRef.current;
       const dataUrl = await domtoimage.toPng(node);
 

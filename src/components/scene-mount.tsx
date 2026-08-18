@@ -11,14 +11,5 @@ const SceneCanvas = dynamic(() => import("./three/scene"), { ssr: false });
 // again during development.
 
 export default function SceneMount() {
-  return (
-    <>
-      {/* The ambient accent blobs live on their own fixed layer (below the
-          sections) so they stay behind the text on desktop, where the laptop
-          itself floats in front of the copy. Rendered first so the scene
-          canvas paints above it on tablet/mobile. */}
-      <div className="scene-blobs" aria-hidden="true" />
-      <SceneCanvas />
-    </>
-  );
+  return <SceneCanvas />;
 }
