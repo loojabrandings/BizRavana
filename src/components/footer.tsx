@@ -19,15 +19,25 @@ const SOCIALS = [
 
 /** Footer link columns. Entries with a `href` render as links; the rest stay
  *  placeholders until their routes exist. */
-const FOOTER_LINKS: { heading: string; links: { label: string; href?: string }[] }[] = [
-  { heading: "Product", links: [{ label: "Features", href: "/features" }, { label: "Pricing", href: "/pricing" }, { label: "Changelog", href: "/changelog" }] },
-  { heading: "Company", links: [{ label: "About", href: "/about" }, { label: "Blog", href: "/blog" }, { label: "Contact", href: "/contact" }] },
+const FOOTER_LINKS: { heading: string; links: { label: string; href?: string; target?: string }[] }[] = [
+  {
+    heading: "Services",
+    links: [
+      { label: "Web Design & Dev", href: "/services/web-design", target: "_blank" },
+      { label: "BizRavana OMS", href: "/features" },
+      { label: "AI Chatbots", href: "/services/ai-chatbots", target: "_blank" },
+      { label: "AI Automations", href: "/services/ai-automations", target: "_blank" },
+      { label: "Pricing", href: "/pricing" },
+    ],
+  },
+  { heading: "Company", links: [{ label: "Features", href: "/features" }, { label: "About", href: "/about" }, { label: "Blog", href: "/blog" }, { label: "Contact", href: "/contact" }] },
   {
     heading: "Resources",
     links: [
       { label: "Documentation", href: "/documentation" },
       { label: "Help Center", href: "/help-center" },
       { label: "Getting Started", href: "/getting-started" },
+      { label: "Changelog", href: "/changelog" },
     ],
   },
   {
@@ -92,10 +102,15 @@ export default function Footer() {
           <nav key={col.heading} className="footer__col" aria-label={col.heading}>
             <h3 className="footer__heading">{col.heading}</h3>
             <ul>
-              {col.links.map(({ label, href }) => (
+              {col.links.map(({ label, href, target }) => (
                 <li key={label}>
                   {href ? (
-                    <Link className="footer__link" href={href}>
+                    <Link
+                      className="footer__link"
+                      href={href}
+                      target={target}
+                      rel={target === "_blank" ? "noopener noreferrer" : undefined}
+                    >
                       {label}
                     </Link>
                   ) : (

@@ -1,0 +1,284 @@
+/* ==========================================================================
+   BIZRAVANA BESPOKE WEB DESIGN LANDING STYLESHEET (100% ISOLATED)
+   Theme: Deep Matte Obsidian (#060608) & BizRavana Emerald Mint Glow (#6fc59b)
+   ========================================================================== */
+
+:root {
+  --wd-bg: #060608;
+  --wd-bg-card: #0c0d12;
+  --wd-bg-card-hover: #12141c;
+  --wd-bg-card-light: #ffffff;
+  --wd-border: rgba(255, 255, 255, 0.08);
+  --wd-border-light: rgba(255, 255, 255, 0.14);
+  --wd-border-accent: rgba(111, 197, 155, 0.35);
+  --wd-accent: #6fc59b;
+  --wd-accent-bright: #8be0b7;
+  --wd-accent-glow: rgba(111, 197, 155, 0.25);
+  --wd-accent-glow-strong: rgba(111, 197, 155, 0.6);
+  --wd-text-main: #ffffff;
+  --wd-text-muted: #9496a1;
+  --wd-text-dim: #5e606e;
+  --wd-font-sans: var(--font-poppins, "Poppins", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif);
+  --wd-font-heading: var(--font-poppins, "Poppins", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif);
+  --wd-font-serif: var(--font-lora, "Lora", serif);
+  --wd-font-accent: var(--font-caveat, "Caveat", cursive);
+  --wd-font-condensed: var(--font-mohave, "Mohave", sans-serif);
+  --wd-font-mono: var(--font-poppins, "Poppins", ui-monospace, monospace);
+}
+
+.wd-standalone-root {
+  background-color: var(--wd-bg);
+  color: var(--wd-text-main);
+  min-height: 100vh;
+  position: relative;
+  overflow-x: hidden;
+  font-family: var(--wd-font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Background Atmosphere Grid & Glows */
+.wd-bg-grid {
+  position: absolute;
+  inset: 0;
+  background-image: 
+    linear-gradient(to right, rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+  background-size: 48px 48px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.wd-radial-glow {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(120px);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.wd-radial-glow-hero {
+  top: -100px;
+  right: -50px;
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(circle, rgba(111, 197, 155, 0.18) 0%, rgba(111, 197, 155, 0) 70%);
+}
+
+.wd-radial-glow-center {
+  top: 45%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 700px;
+  height: 700px;
+  background: radial-gradient(circle, rgba(111, 197, 155, 0.12) 0%, rgba(111, 197, 155, 0) 70%);
+}
+
+/* Common Container */
+.wd-container {
+  max-width: 1240px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
+  position: relative;
+  z-index: 1;
+}
+
+/* Monospace Pill Badge */
+.wd-badge-mono {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0.85rem;
+  font-family: var(--wd-font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #8be0b7;
+  background: rgba(111, 197, 155, 0.08);
+  border: 1px solid rgba(111, 197, 155, 0.25);
+  border-radius: 9999px;
+  backdrop-filter: blur(8px);
+}
+
+.wd-badge-mono .wd-dot-pulse {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #6fc59b;
+  box-shadow: 0 0 8px #6fc59b;
+  animation: wdPulse 2s infinite ease-in-out;
+}
+
+@keyframes wdPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.85); }
+}
+
+/* High-Impact BizRavana Accent Button */
+.wd-btn-accent {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  padding: 0.85rem 1.75rem;
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: #08090d;
+  background: linear-gradient(135deg, #8be0b7 0%, #6fc59b 100%);
+  border-radius: 9999px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 0 25px rgba(111, 197, 155, 0.45), 0 4px 12px rgba(0,0,0,0.5);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.wd-btn-accent:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 0 35px rgba(111, 197, 155, 0.7), 0 8px 20px rgba(0,0,0,0.6);
+  background: linear-gradient(135deg, #9ef0c7 0%, #7fd6ab 100%);
+}
+
+.wd-btn-secondary {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  padding: 0.85rem 1.75rem;
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--wd-border-light);
+  border-radius: 9999px;
+  backdrop-filter: blur(12px);
+  transition: all 0.25s ease;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.wd-btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.3);
+  transform: translateY(-2px);
+}
+
+/* Ultra-Smooth Forest Gradient Shift Glass Card */
+.wd-glass-card {
+  background: rgba(10, 11, 16, 0.85);
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--wd-border);
+  border-radius: 1.5rem;
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 0.6s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform, box-shadow;
+}
+
+.wd-glass-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(145deg, rgba(16, 44, 30, 0.9) 0%, rgba(10, 26, 18, 0.55) 45%, rgba(6, 8, 12, 0.95) 100%);
+  opacity: 0;
+  transition: opacity 0.65s cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.wd-glass-card > * {
+  position: relative;
+  z-index: 1;
+}
+
+.wd-glass-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(111, 197, 155, 0.5);
+  box-shadow: 0 20px 45px -10px rgba(0, 0, 0, 0.8),
+              0 0 35px -5px rgba(111, 197, 155, 0.28);
+}
+
+.wd-glass-card:hover::before {
+  opacity: 1;
+}
+
+/* High-Contrast Bento Light Card */
+.wd-bento-light {
+  background: #ffffff;
+  color: #0a0b10;
+  border-radius: 1.5rem;
+  padding: 2.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Floating HUD Nav */
+.wd-hud-nav {
+  position: fixed;
+  top: 1.25rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 0.5rem 0.75rem 0.5rem 1.25rem;
+  background: rgba(10, 11, 16, 0.88);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(20px);
+  border-radius: 9999px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6), 0 0 20px rgba(111, 197, 155, 0.08);
+  max-width: 92vw;
+}
+
+/* Animated Emerald Orb */
+.wd-orb-glow {
+  width: 140px;
+  height: 140px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #6fc59b 0%, #2f7a55 60%, transparent 100%);
+  box-shadow: 0 0 60px #6fc59b, 0 0 120px rgba(111, 197, 155, 0.4);
+  animation: wdOrbFloat 6s ease-in-out infinite alternate;
+}
+
+@keyframes wdOrbFloat {
+  0% { transform: translateY(0) scale(1); filter: drop-shadow(0 0 20px rgba(111,197,155,0.6)); }
+  100% { transform: translateY(-12px) scale(1.05); filter: drop-shadow(0 0 40px rgba(111,197,155,0.9)); }
+}
+
+/* Watermark in Footer */
+.wd-watermark-text {
+  font-size: clamp(3.5rem, 13vw, 14rem);
+  font-weight: 900;
+  letter-spacing: -0.04em;
+  color: rgba(255, 255, 255, 0.025);
+  user-select: none;
+  pointer-events: none;
+  text-transform: uppercase;
+  text-align: center;
+  line-height: 0.9;
+}
+
+/* Micro-Scrollbar */
+.wd-standalone-root::-webkit-scrollbar {
+  width: 6px;
+}
+.wd-standalone-root::-webkit-scrollbar-track {
+  background: #060608;
+}
+.wd-standalone-root::-webkit-scrollbar-thumb {
+  background: #20222e;
+  border-radius: 3px;
+}
+.wd-standalone-root::-webkit-scrollbar-thumb:hover {
+  background: #6fc59b;
+}

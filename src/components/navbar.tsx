@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -14,9 +14,15 @@ import {
   Building2,
   MessageSquare,
   ChevronRight,
+  ChevronDown,
   LogIn,
   ArrowRight,
   ShieldCheck,
+  Layers,
+  Globe,
+  Bot,
+  Workflow,
+  type LucideIcon,
 } from "lucide-react";
 import Button from "@/components/button";
 import ThemeToggle from "./theme-toggle";
@@ -45,11 +51,19 @@ function BrandMark() {
   );
 }
 
-interface NavLinkItem {
+interface NavSubItem {
   label: string;
   href: string;
-  icon: React.ComponentType<{ className?: string; strokeWidth?: number }>;
+  icon: LucideIcon;
   badge?: string;
+}
+
+interface NavLinkItem {
+  label: string;
+  href?: string;
+  icon: LucideIcon;
+  badge?: string;
+  children?: NavSubItem[];
 }
 
 const NAV_LINKS: NavLinkItem[] = [
@@ -57,6 +71,34 @@ const NAV_LINKS: NavLinkItem[] = [
     label: "Home",
     href: "/",
     icon: Home,
+  },
+  {
+    label: "Services",
+    icon: Sparkles,
+    children: [
+      {
+        label: "Web Design & Dev",
+        href: "/services/web-design",
+        icon: Globe,
+      },
+      {
+        label: "BizRavana OMS",
+        href: "/features",
+        icon: Layers,
+      },
+      {
+        label: "AI chatbots",
+        href: "/services/ai-chatbots",
+        icon: Bot,
+        badge: "Coming Soon",
+      },
+      {
+        label: "AI automations",
+        href: "/services/ai-automations",
+        icon: Workflow,
+        badge: "Coming Soon",
+      },
+    ],
   },
   {
     label: "Features",
@@ -86,12 +128,17 @@ const LOGIN_LABEL = "Login";
 export default function Navbar() {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [desktopDropdownOpen, setDesktopDropdownOpen] = useState(false);
+  const [mobileServicesOpen, setMobileServicesOpen] = useState(true);
+  const dropdownTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const dropdownRef = useRef<HTMLLIElement | null>(null);
 
-  // Close mobile menu on route change
+  // Close mobile menu & desktop dropdown on route change
   const [prevPathname, setPrevPathname] = useState(pathname);
   if (prevPathname !== pathname) {
     setPrevPathname(pathname);
     setMenuOpen(false);
+    setDesktopDropdownOpen(false);
   }
 
   // Lock body scroll when mobile menu is open
@@ -105,15 +152,47 @@ export default function Navbar() {
     }
   }, [menuOpen]);
 
-  // Close the mobile menu on Escape key
+  // Close on Escape key
   useEffect(() => {
-    if (!menuOpen) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setMenuOpen(false);
+      if (e.key === "Escape") {
+        setMenuOpen(false);
+        setDesktopDropdownOpen(false);
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [menuOpen]);
+  }, []);
+
+  // Click outside to close desktop dropdown
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(e.target as Node)
+      ) {
+        setDesktopDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const handleMouseEnter = () => {
+    if (dropdownTimerRef.current) {
+      clearTimeout(dropdownTimerRef.current);
+    }
+    setDesktopDropdownOpen(true);
+  };
+
+  const handleMouseLeave = () => {
+    dropdownTimerRef.current = setTimeout(() => {
+      setDesktopDropdownOpen(false);
+    }, 150);
+  };
+
+  const isServicesActive =
+    pathname === "/services" || pathname.startsWith("/services/");
 
   return (
     <header className="navbar">
@@ -125,17 +204,91 @@ export default function Navbar() {
 
         {/* Desktop links — frosted pill group */}
         <ul className="navbar__links">
-          {NAV_LINKS.map(({ label, href }) => {
-            const isActive = href === pathname;
+          {NAV_LINKS.map((item) => {
+            if (item.children) {
+              return (
+                <li
+                  key={item.label}
+                  ref={dropdownRef}
+                  className="navbar__dropdown-wrapper"
+                  onMouseEnter={handleMouseEnter}
+                  onMouseLeave={handleMouseLeave}
+                >
+                  <button
+                    type="button"
+                    className={`navbar__dropdown-trigger${
+                      isServicesActive ? " is-active" : ""
+                    }`}
+                    aria-expanded={desktopDropdownOpen}
+                    aria-haspopup="true"
+                    onClick={() => setDesktopDropdownOpen((v) => !v)}
+                  >
+                    <span
+                      className="navbar__dropdown-label"
+                      data-label={item.label}
+                    >
+                      {item.label}
+                    </span>
+                    <ChevronDown className="navbar__dropdown-arrow w-3.5 h-3.5" />
+                  </button>
+
+                  <AnimatePresence>
+                    {desktopDropdownOpen && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -6, scale: 0.98 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: -4, scale: 0.98 }}
+                        transition={{ duration: 0.18, ease: "easeOut" }}
+                        className="navbar__dropdown-menu"
+                        role="menu"
+                      >
+                        {item.children.map((sub) => {
+                          const isSubActive = sub.href === pathname;
+                          const SubIcon = sub.icon;
+
+                          return (
+                            <Link
+                              key={sub.label}
+                              href={sub.href}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className={`navbar__dropdown-item${
+                                isSubActive ? " is-active" : ""
+                              }`}
+                              role="menuitem"
+                              onClick={() => setDesktopDropdownOpen(false)}
+                            >
+                              <div className="navbar__dropdown-icon-box">
+                                <SubIcon className="w-4 h-4" />
+                              </div>
+                              <span className="navbar__dropdown-title">
+                                {sub.label}
+                              </span>
+                              {sub.badge && (
+                                <span className="navbar__badge-coming-soon ml-auto">
+                                  {sub.badge}
+                                </span>
+                              )}
+                            </Link>
+                          );
+                        })}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </li>
+              );
+            }
+
+            const isActive = item.href === pathname;
             return (
-              <li key={label}>
+              <li key={item.label}>
                 <Link
                   className="navbar__link"
-                  data-label={label}
-                  href={href}
+                  data-label={item.label}
+                  href={item.href || "/"}
                   aria-current={isActive ? "page" : undefined}
                 >
-                  {label}
+                  {item.label}
                 </Link>
               </li>
             );
@@ -192,30 +345,137 @@ export default function Navbar() {
             >
               {/* Navigation Items */}
               <ul className="navbar__mobile-nav">
-                {NAV_LINKS.map(({ label, href, icon: Icon, badge }, index) => {
-                  const isActive = href === pathname;
+                {NAV_LINKS.map((item, index) => {
+                  const Icon = item.icon;
+
+                  if (item.children) {
+                    return (
+                      <motion.li
+                        key={item.label}
+                        className="navbar__mobile-item"
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{
+                          delay: 0.03 * (index + 1),
+                          duration: 0.2,
+                        }}
+                      >
+                        <button
+                          type="button"
+                          className={`navbar__mobile-link w-full text-left${
+                            isServicesActive ? " is-active" : ""
+                          }`}
+                          onClick={() => setMobileServicesOpen((v) => !v)}
+                          aria-expanded={mobileServicesOpen}
+                        >
+                          <div className="navbar__mobile-icon-box">
+                            <Icon
+                              className="w-4 h-4"
+                              strokeWidth={isServicesActive ? 2.5 : 2}
+                            />
+                          </div>
+                          <span className="navbar__mobile-title">
+                            <span>{item.label}</span>
+                            {isServicesActive && (
+                              <span
+                                className="navbar__mobile-active-dot"
+                                aria-hidden="true"
+                              />
+                            )}
+                          </span>
+                          <ChevronDown
+                            className={`navbar__mobile-arrow w-4 h-4 transition-transform duration-200 ${
+                              mobileServicesOpen ? "rotate-180" : ""
+                            }`}
+                          />
+                        </button>
+
+                        {/* Mobile Submenu Accordion */}
+                        <AnimatePresence>
+                          {mobileServicesOpen && (
+                            <motion.ul
+                              initial={{ opacity: 0, height: 0 }}
+                              animate={{ opacity: 1, height: "auto" }}
+                              exit={{ opacity: 0, height: 0 }}
+                              transition={{ duration: 0.2 }}
+                              className="navbar__mobile-sublist"
+                            >
+                              {item.children.map((sub) => {
+                                const isSubActive = sub.href === pathname;
+                                const SubIcon = sub.icon;
+
+                                return (
+                                  <li
+                                    key={sub.label}
+                                    className="navbar__mobile-subitem"
+                                  >
+                                    <Link
+                                      href={sub.href}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className={`navbar__mobile-sublink${
+                                        isSubActive ? " is-active" : ""
+                                      }`}
+                                      onClick={() => setMenuOpen(false)}
+                                    >
+                                      <SubIcon className="w-3.5 h-3.5 opacity-80" />
+                                      <span className="flex-1">
+                                        {sub.label}
+                                      </span>
+                                      {sub.badge && (
+                                        <span className="navbar__badge-coming-soon text-[10px]">
+                                          {sub.badge}
+                                        </span>
+                                      )}
+                                    </Link>
+                                  </li>
+                                );
+                              })}
+                            </motion.ul>
+                          )}
+                        </AnimatePresence>
+                      </motion.li>
+                    );
+                  }
+
+                  const isActive = item.href === pathname;
                   return (
                     <motion.li
-                      key={label}
+                      key={item.label}
                       className="navbar__mobile-item"
                       initial={{ opacity: 0, x: -10 }}
                       animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: 0.03 * (index + 1), duration: 0.2 }}
+                      transition={{
+                        delay: 0.03 * (index + 1),
+                        duration: 0.2,
+                      }}
                     >
                       <Link
-                        className={`navbar__mobile-link${isActive ? " is-active" : ""}`}
-                        href={href}
+                        className={`navbar__mobile-link${
+                          isActive ? " is-active" : ""
+                        }`}
+                        href={item.href || "/"}
                         aria-current={isActive ? "page" : undefined}
                         onClick={() => setMenuOpen(false)}
                       >
                         <div className="navbar__mobile-icon-box">
-                          <Icon className="w-4 h-4" strokeWidth={isActive ? 2.5 : 2} />
+                          <Icon
+                            className="w-4 h-4"
+                            strokeWidth={isActive ? 2.5 : 2}
+                          />
                         </div>
                         <span className="navbar__mobile-title">
-                          <span>{label}</span>
-                          {badge && <span className="navbar__mobile-badge">{badge}</span>}
+                          <span>{item.label}</span>
+                          {item.badge && (
+                            <span className="navbar__mobile-badge">
+                              {item.badge}
+                            </span>
+                          )}
                           {isActive && (
-                            <span className="navbar__mobile-active-dot" aria-hidden="true" />
+                            <span
+                              className="navbar__mobile-active-dot"
+                              aria-hidden="true"
+                            />
                           )}
                         </span>
                         <ChevronRight className="navbar__mobile-arrow w-4 h-4" />
