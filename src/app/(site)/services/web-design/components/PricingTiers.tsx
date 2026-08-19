@@ -6,7 +6,7 @@ import { Check, Sparkles, ArrowRight, Clock } from "lucide-react";
 const TIERS = [
   {
     name: "STARTER",
-    price: "Rs. 35,000",
+    price: "Rs. 15,000",
     badge: "ESSENTIAL",
     desc: "For individuals and small businesses that need a professional online presence.",
     timeline: "5–7 day delivery",
@@ -26,7 +26,7 @@ const TIERS = [
   },
   {
     name: "BUSINESS",
-    price: "Rs. 65,000",
+    price: "Rs. 35,000",
     badge: "MOST POPULAR",
     desc: "For growing businesses that need a complete professional website.",
     timeline: "7–14 day delivery",
@@ -49,7 +49,7 @@ const TIERS = [
   },
   {
     name: "PREMIUM",
-    price: "Rs. 120,000+",
+    price: "Rs. 80,000+",
     badge: "ENTERPRISE",
     desc: "For businesses that need a more advanced digital experience.",
     timeline: "14–21 day delivery",
@@ -101,11 +101,10 @@ export default function PricingTiers() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.5, delay: idx * 0.1 }}
-              className={`wd-glass-card p-8 sm:p-10 flex flex-col justify-between relative transition-all duration-300 ${
-                tier.popular
-                  ? "border-[#6fc59b] shadow-[0_0_50px_rgba(111,197,155,0.35)] bg-gradient-to-b from-[#0e2118] via-[#0d1612] to-[#08090d] scale-100 lg:scale-105 z-10"
-                  : "border-white/[0.08] hover:border-white/20"
-              }`}
+              className={`wd-glass-card p-8 sm:p-10 flex flex-col justify-between relative transition-all duration-300 ${tier.popular
+                ? "border-[#6fc59b] shadow-[0_0_50px_rgba(111,197,155,0.35)] bg-gradient-to-b from-[#0e2118] via-[#0d1612] to-[#08090d] scale-100 lg:scale-105 z-10"
+                : "border-white/[0.08] hover:border-white/20"
+                }`}
             >
               <div>
                 {/* Top Badge & Tier Label */}
@@ -135,9 +134,8 @@ export default function PricingTiers() {
                 {/* Price Display */}
                 <div className="flex items-baseline gap-1 my-4 pb-4 border-b border-white/[0.08]">
                   <span
-                    className={`text-3xl sm:text-4xl font-black tracking-tight ${
-                      tier.popular ? "text-[#8be0b7]" : "text-white"
-                    }`}
+                    className={`text-3xl sm:text-4xl font-black tracking-tight ${tier.popular ? "text-[#8be0b7]" : "text-white"
+                      }`}
                   >
                     {tier.price}
                   </span>
@@ -177,11 +175,10 @@ export default function PricingTiers() {
                 )}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className={`w-full text-center py-3.5 rounded-full font-bold text-xs transition-all flex items-center justify-center gap-2 ${
-                  tier.popular
-                    ? "bg-gradient-to-r from-[#8be0b7] via-[#6fc59b] to-[#48a877] text-[#08090d] shadow-lg shadow-[#6fc59b]/40 hover:scale-[1.02] hover:shadow-[#6fc59b]/60"
-                    : "bg-white/[0.06] hover:bg-white/[0.12] text-white border border-white/15"
-                }`}
+                className={`w-full text-center py-3.5 rounded-full font-bold text-xs transition-all flex items-center justify-center gap-2 ${tier.popular
+                  ? "bg-gradient-to-r from-[#8be0b7] via-[#6fc59b] to-[#48a877] text-[#08090d] shadow-lg shadow-[#6fc59b]/40 hover:scale-[1.02] hover:shadow-[#6fc59b]/60"
+                  : "bg-white/[0.06] hover:bg-white/[0.12] text-white border border-white/15"
+                  }`}
               >
                 <span>{tier.cta}</span>
                 <ArrowRight className="w-3.5 h-3.5" />
