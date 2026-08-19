@@ -2,11 +2,11 @@ import type { Metadata } from "next";
 import "./web-design.css";
 
 export const metadata: Metadata = {
-  title: "Bespoke Web Design & Engineering Services | BizRavana",
+  title: "Bespoke Web Design & Development Services | BizRavana",
   description:
     "Custom, sub-second web platforms, landing pages, and web apps engineered for Sri Lankan business leaders and global brands. Zero generic templates, 100% conversion-obsessed Next.js architecture.",
   openGraph: {
-    title: "Bespoke Web Design & Engineering Services | BizRavana",
+    title: "Bespoke Web Design & Development Services | BizRavana",
     description:
       "Custom, sub-second web platforms, landing pages, and web apps engineered for Sri Lankan business leaders and global brands.",
     type: "website",
@@ -14,7 +14,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Bespoke Web Design & Engineering Services | BizRavana",
+    title: "Bespoke Web Design & Development Services | BizRavana",
     description:
       "Custom, sub-second web platforms, landing pages, and web apps engineered for Sri Lankan business leaders and global brands.",
   },

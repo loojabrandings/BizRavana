@@ -121,7 +121,7 @@ export default function TechOrbitHub() {
             </span>
           </h2>
           <p className="text-neutral-400 text-sm sm:text-base leading-relaxed">
-            A comprehensive, battle-tested foundation included in our website engineering sprints.
+            A comprehensive, battle-tested foundation included in our website development sprints.
           </p>
         </div>
 

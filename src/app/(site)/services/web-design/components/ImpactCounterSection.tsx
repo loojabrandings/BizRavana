@@ -25,7 +25,7 @@ const STATS = [
   {
     value: "99.8%",
     unit: "Client Satisfaction",
-    sub: "Based on 120+ custom web engineering projects",
+    sub: "Based on 120+ custom web design projects",
     icon: Award,
   },
 ];

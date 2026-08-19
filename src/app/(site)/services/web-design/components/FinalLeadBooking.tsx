@@ -37,7 +37,7 @@ export default function FinalLeadBooking() {
 
           {/* Sub-copy */}
           <p className="text-base sm:text-xl text-neutral-300 font-normal leading-relaxed mb-10 max-w-xl">
-            Turn your business into a high-speed, modern customer magnet. We handle design, engineering, and deployment from start to finish.
+            Turn your business into a high-speed, modern customer magnet. We handle design, develop, and deployment from start to finish.
           </p>
 
           {/* Action Buttons */}

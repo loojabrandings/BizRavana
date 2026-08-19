@@ -41,7 +41,7 @@ const STEPS = [
   },
   {
     num: "04",
-    phase: "ENGINEERING & SPEED",
+    phase: "DEVELOPMENT & SPEED",
     title: "Develop",
     desc: "Your approved design is transformed into a responsive, high-performance website.",
     icon: Code2,
