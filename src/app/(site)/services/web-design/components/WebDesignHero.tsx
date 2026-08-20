@@ -22,6 +22,52 @@ export default function WebDesignHero() {
       <div className="absolute top-20 right-10 w-[520px] h-[520px] bg-[#6fc59b]/20 rounded-full blur-[140px] pointer-events-none -z-10" />
 
       <div className="wd-container relative z-10">
+        {/* Temporary Launch Promo Banner */}
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.1 }}
+          className="mb-8 p-4 sm:p-5 rounded-2xl border border-[#6fc59b]/25 bg-gradient-to-r from-[#0d1612]/95 to-[#08090d]/95 backdrop-blur-md relative overflow-hidden max-w-4xl"
+        >
+          {/* Ambient glow inside */}
+          <div className="absolute top-0 right-0 w-24 h-24 bg-[#6fc59b]/10 blur-[40px] rounded-full pointer-events-none" />
+          
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 z-10 relative">
+            <div className="flex items-center gap-3">
+              <div className="flex h-2 w-2 relative flex-shrink-0">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#8be0b7] opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-[#6fc59b]"></span>
+              </div>
+              <div>
+                <p className="text-xs sm:text-sm font-bold text-white leading-tight">
+                  Launch Offer: 25% Off Web Design Projects
+                </p>
+                <p className="text-[11px] text-neutral-400">
+                  Introductory rates for the first 10 clients. Lock in your slot.
+                </p>
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-5 flex-shrink-0 flex-wrap sm:flex-nowrap">
+              <div className="flex items-center gap-3">
+                <div className="text-left font-mono">
+                  <span className="block text-[9px] uppercase tracking-wider text-neutral-400 font-bold">Booked Status</span>
+                  <span className="text-base font-black text-white">6<span className="text-neutral-500 font-normal">/10</span></span>
+                </div>
+                <div className="px-3 py-1.5 rounded-xl bg-[#6fc59b]/15 border border-[#6fc59b]/30 text-xs font-black font-mono text-[#8be0b7] animate-pulse shadow-[0_0_15px_rgba(111,197,155,0.2)]">
+                  🔥 4 SLOTS LEFT!
+                </div>
+              </div>
+              <a
+                href="#pricing"
+                className="px-5 py-2.5 rounded-full bg-gradient-to-r from-[#8be0b7] via-[#6fc59b] to-[#48a877] text-[#08090d] text-[10px] font-black uppercase tracking-wider shadow-lg shadow-[#6fc59b]/35 hover:scale-[1.03] transition-all flex-shrink-0"
+              >
+                Claim Offer
+              </a>
+            </div>
+          </div>
+        </motion.div>
+
         {/* Hero Main Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-12 items-end pt-4">
           
