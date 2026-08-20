@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { motion } from "framer-motion";
 import Image from "next/image";
@@ -7,104 +7,47 @@ import { ArrowRight } from "lucide-react";
 export default function WebDesignHero() {
   return (
     <section className="relative min-h-[860px] pt-32 pb-20 lg:pt-36 lg:pb-24 overflow-hidden bg-[#000000] text-white">
-      {/* Bioluminescent BizRavana Emerald Jellyfish Asset in Center/Right Background */}
-      <div className="absolute top-0 right-0 sm:right-10 lg:right-28 w-[450px] sm:w-[600px] lg:w-[760px] h-[550px] sm:h-[720px] lg:h-[880px] pointer-events-none select-none z-0">
-        <Image
-          src="/images/web-design/emerald-jellyfish.jpg"
-          alt="Bioluminescent BizRavana Emerald Jellyfish"
-          fill
-          priority
-          className="object-contain opacity-90 mix-blend-screen"
-        />
-      </div>
-
-      {/* Atmospheric Ambient Glow behind Jellyfish */}
-      <div className="absolute top-20 right-10 w-[520px] h-[520px] bg-[#6fc59b]/20 rounded-full blur-[140px] pointer-events-none -z-10" />
+      {/* Atmospheric Ambient Glow behind mockup */}
+      <div className="absolute top-1/3 right-1/4 w-[420px] h-[420px] bg-[#fd3a25]/10 rounded-full blur-[120px] pointer-events-none -z-10" />
 
       <div className="wd-container relative z-10">
-        {/* Temporary Launch Promo Banner */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.1 }}
-          className="mb-8 p-4 sm:p-5 rounded-2xl border border-[#6fc59b]/25 bg-gradient-to-r from-[#0d1612]/95 to-[#08090d]/95 backdrop-blur-md relative overflow-hidden max-w-4xl"
-        >
-          {/* Ambient glow inside */}
-          <div className="absolute top-0 right-0 w-24 h-24 bg-[#6fc59b]/10 blur-[40px] rounded-full pointer-events-none" />
-          
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 z-10 relative">
-            <div className="flex items-center gap-3">
-              <div className="flex h-2 w-2 relative flex-shrink-0">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#8be0b7] opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-[#6fc59b]"></span>
-              </div>
-              <div>
-                <p className="text-xs sm:text-sm font-bold text-white leading-tight">
-                  Launch Offer: 25% Off Web Design Projects
-                </p>
-                <p className="text-[11px] text-neutral-400">
-                  Introductory rates for the first 10 clients. Lock in your slot.
-                </p>
-              </div>
-            </div>
-            
-            <div className="flex items-center gap-5 flex-shrink-0 flex-wrap sm:flex-nowrap">
-              <div className="flex items-center gap-3">
-                <div className="text-left font-mono">
-                  <span className="block text-[9px] uppercase tracking-wider text-neutral-400 font-bold">Booked Status</span>
-                  <span className="text-base font-black text-white">6<span className="text-neutral-500 font-normal">/10</span></span>
-                </div>
-                <div className="px-3 py-1.5 rounded-xl bg-[#6fc59b]/15 border border-[#6fc59b]/30 text-xs font-black font-mono text-[#8be0b7] animate-pulse shadow-[0_0_15px_rgba(111,197,155,0.2)]">
-                  🔥 4 SLOTS LEFT!
-                </div>
-              </div>
-              <a
-                href="#pricing"
-                className="px-5 py-2.5 rounded-full bg-gradient-to-r from-[#8be0b7] via-[#6fc59b] to-[#48a877] text-[#08090d] text-[10px] font-black uppercase tracking-wider shadow-lg shadow-[#6fc59b]/35 hover:scale-[1.03] transition-all flex-shrink-0"
-              >
-                Claim Offer
-              </a>
-            </div>
-          </div>
-        </motion.div>
-
         {/* Hero Main Content Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-12 items-end pt-4">
-          
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-16 lg:gap-8 items-center pt-4">
+
           {/* Left Column: Core Headline, Copy & Action Buttons */}
-          <div className="lg:col-span-7 flex flex-col items-start">
+          <div className="lg:col-span-5 flex flex-col items-start">
             {/* Pill Badge */}
             <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/[0.04] border border-white/10 text-xs font-medium text-neutral-300 mb-8 backdrop-blur-md">
-              <span className="text-[#6fc59b]">✦</span>
-              <span>Modern Web Agency</span>
+              <span className="text-[#fd3a25]">✦</span>
+              <span>WEB DESIGN FOR SRI LANKAN BUSINESSES</span>
             </div>
 
             {/* Headline */}
             <div className="relative mb-6">
               <h1 className="text-5xl sm:text-6xl lg:text-[4.6rem] font-extrabold tracking-tight text-white leading-[1.05]">
-                Websites That Make <br />
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-white via-neutral-100 to-[#8be0b7]">
-                  Your Business
+                Your Business Deserves <br />
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-white via-neutral-100 to-[#ff6b57]">
+                  More Than
                 </span>{" "}
                 <br />
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#9ef0c7] via-[#6fc59b] to-[#3a996c]">
-                  Stand Out.
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#ff8a7a] via-[#fd3a25] to-[#c72515]">
+                  a Facebook Page.
                 </span>
               </h1>
             </div>
 
             {/* Subheading */}
             <p className="text-base sm:text-lg text-neutral-300 max-w-lg font-normal leading-relaxed mb-10">
-              We design and build modern, fast, mobile-first websites that turn your online visitors into real customers.
+              We build fast, modern websites for Sri Lankan businesses that want to look professional, reach more customers, and turn visitors into real enquiries.
             </p>
 
             {/* CTA Buttons */}
             <div className="flex flex-wrap items-center gap-4">
               <a
                 href="#pricing"
-                className="px-8 py-3.5 rounded-full bg-gradient-to-r from-[#8be0b7] via-[#6fc59b] to-[#48a877] hover:from-[#9ef0c7] hover:to-[#5eb989] text-[#08090d] text-sm font-black shadow-[0_10px_35px_rgba(111,197,155,0.45)] hover:scale-105 transition-all flex items-center gap-2"
+                className="px-8 py-3.5 rounded-full bg-gradient-to-r from-[#ff6b57] via-[#fd3a25] to-[#d42c1a] hover:from-[#ff8a7a] hover:to-[#e8321e] text-white text-sm font-black shadow-[0_10px_35px_rgba(253, 58, 37, 0.4)] hover:scale-105 transition-all flex items-center gap-2"
               >
-                <span>Start Your Project</span>
+                <span>Get a Free Website Consultation →</span>
                 <ArrowRight className="w-4 h-4" />
               </a>
 
@@ -115,48 +58,95 @@ export default function WebDesignHero() {
                 View Our Work
               </a>
             </div>
+
+            {/* Small Trust Line */}
+            <p className="text-[11px] sm:text-xs font-mono text-neutral-400 mt-6 flex flex-wrap items-center gap-x-2.5 gap-y-1.5 leading-none">
+              <span>Mobile-first</span>
+              <span className="text-[#fd3a25]/50 font-sans">•</span>
+              <span>SEO-friendly</span>
+              <span className="text-[#fd3a25]/50 font-sans">•</span>
+              <span>Built for your business</span>
+            </p>
           </div>
 
-          {/* Right Column: 3 Glass Metric Cards Bottom-Aligned */}
-          <div className="lg:col-span-5 flex flex-col justify-end h-full pt-8 lg:pt-32">
+          {/* Right Column: CafeVibe Desktop & Mobile Mockup (Further Enlarged & Animated) */}
+          <div className="lg:col-span-7 flex flex-col justify-center pt-12 lg:pt-0 z-10 w-full">
+            {/* Desktop Mockup (Browser Frame) - Floating Loop */}
             <motion.div
-              initial={{ opacity: 0, y: 25 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.2 }}
-              className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-3 gap-3 w-full"
+              animate={{ 
+                y: [0, -10, 0] 
+              }}
+              transition={{ 
+                duration: 6,
+                repeat: Infinity,
+                ease: "easeInOut"
+              }}
+              className="relative w-full max-w-lg mx-auto lg:max-w-none pr-16 sm:pr-24"
             >
-              {/* Metric Card 1 */}
-              <div className="p-4 rounded-2xl bg-[#0c0d12]/85 border border-white/[0.08] backdrop-blur-xl flex flex-col justify-between h-32 hover:border-[#6fc59b]/40 transition-all">
-                <span className="text-xs text-neutral-400">Happy Clients</span>
-                <div className="mt-auto">
-                  <span className="text-2xl font-black text-white">120+</span>
-                  <p className="text-[10px] text-neutral-400 leading-tight mt-1">
-                    Across LK &amp; Global.
-                  </p>
+              {/* Browser frame container with hover lift */}
+              <motion.div
+                whileHover={{ scale: 1.01 }}
+                transition={{ duration: 0.3 }}
+                className="rounded-2xl border border-white/[0.08] bg-[#0c0d12]/80 p-2 backdrop-blur-xl shadow-2xl relative z-10"
+              >
+                {/* Browser address/top bar */}
+                <div className="flex items-center gap-1.5 px-3 pb-2 border-b border-white/[0.06] mb-2">
+                  <div className="w-2.5 h-2.5 rounded-full bg-[#ff5f56]" />
+                  <div className="w-2.5 h-2.5 rounded-full bg-[#ffbd2e]" />
+                  <div className="w-2.5 h-2.5 rounded-full bg-[#27c93f]" />
+                  <div className="h-4 px-3 py-0.5 rounded bg-white/[0.04] border border-white/[0.06] text-[8px] font-mono text-neutral-500 mx-auto w-32 text-center overflow-hidden">
+                    artofframes.lk
+                  </div>
                 </div>
-              </div>
 
-              {/* Metric Card 2 */}
-              <div className="p-4 rounded-2xl bg-[#0c0d12]/85 border border-white/[0.08] backdrop-blur-xl flex flex-col justify-between h-32 hover:border-[#6fc59b]/40 transition-all">
-                <span className="text-xs text-neutral-400">ROI Improvement</span>
-                <div className="mt-auto">
-                  <div className="text-2xl font-black text-white">95%</div>
-                  <p className="text-[10px] text-neutral-400 leading-tight mt-1">
-                    Better ROI in month 1.
-                  </p>
+                {/* Browser viewport */}
+                <div className="relative aspect-[16/10] overflow-hidden rounded-lg border border-white/5 bg-neutral-900">
+                  <Image
+                    src="/images/web-design/artofframes-preview.png"
+                    alt="Art of Frames Desktop Mockup"
+                    fill
+                    className="object-cover object-top"
+                  />
                 </div>
-              </div>
+              </motion.div>
 
-              {/* Metric Card 3 */}
-              <div className="p-4 rounded-2xl bg-[#08140f]/90 border border-[#6fc59b]/30 backdrop-blur-xl flex flex-col justify-between h-32 relative overflow-hidden hover:border-[#6fc59b]/60 transition-all">
-                <div className="absolute top-0 right-0 w-24 h-24 bg-[#6fc59b]/20 rounded-full blur-xl" />
-                <span className="text-xs text-neutral-400">Client Retention</span>
-                <div className="mt-auto relative z-10">
-                  <div className="text-2xl font-black text-white">88%</div>
-                  <p className="text-[10px] text-neutral-400 leading-tight mt-1">
-                    Multi-project clients.
-                  </p>
+              {/* Mobile Mockup (Overlapping Phone Frame) - Independent Floating Parallax Drift */}
+              <motion.div
+                animate={{ 
+                  y: [0, 10, 0],
+                  x: [0, -4, 0]
+                }}
+                transition={{ 
+                  duration: 5,
+                  repeat: Infinity,
+                  ease: "easeInOut"
+                }}
+                className="absolute -bottom-6 -right-2 sm:-right-6 w-[155px] sm:w-[190px] aspect-[9/19] rounded-[24px] border-[5px] border-[#1c1d22] bg-[#0c0d12] shadow-[0_25px_50px_rgba(0,0,0,0.7)] p-1 overflow-hidden z-20 flex flex-col"
+              >
+                {/* Mobile screen */}
+                <div className="rounded-[18px] overflow-hidden w-full h-full relative border border-white/5 bg-[#000000]">
+                  {/* Camera Notch */}
+                  <div className="absolute top-1 left-1/2 -translate-x-1/2 w-10 h-2 bg-black rounded-full z-30" />
+                  <Image
+                    src="/images/web-design/artofframes-mobile.png"
+                    alt="Art of Frames Mobile Mockup"
+                    fill
+                    className="object-cover object-top"
+                  />
                 </div>
+              </motion.div>
+            </motion.div>
+
+            {/* Badge under mockup */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.5, delay: 0.4 }}
+              className="mt-12 flex justify-center lg:justify-start lg:pl-4"
+            >
+              <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-white/[0.04] border border-white/10 text-[9px] sm:text-[10px] font-mono font-bold text-neutral-400 tracking-widest uppercase shadow-md backdrop-blur-md">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#fd3a25]" />
+                <span>Built by BizRavana</span>
               </div>
             </motion.div>
           </div>

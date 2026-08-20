@@ -1,61 +1,44 @@
-"use client";
+﻿"use client";
 
+import { Fragment } from "react";
 import { motion } from "framer-motion";
 import { 
-  Compass, 
-  Layers, 
+  Search, 
   Palette, 
   Code2, 
-  Rocket, 
-  Sparkles,
-  CheckCircle2
+  Rocket,
+  ArrowRight,
+  ArrowDown
 } from "lucide-react";
 
 const STEPS = [
   {
     num: "01",
-    phase: "DISCOVERY & STRATEGY",
-    title: "Discover",
-    desc: "We learn about your business, customers, competitors and goals.",
-    icon: Compass,
-    timeline: "Days 1–2",
-    deliverable: "Strategic Brand Brief",
+    title: "Discover & Scope",
+    desc: "We learn about your business, goals, audience, and what your website needs to achieve.",
+    icon: Search,
+    timeline: "1–2 DAYS",
   },
   {
     num: "02",
-    phase: "INFORMATION ARCHITECTURE",
-    title: "Plan",
-    desc: "We define the sitemap, content structure and user journey.",
-    icon: Layers,
-    timeline: "Days 3–4",
-    deliverable: "Wireframe & Sitemap Blueprint",
+    title: "Design & Style",
+    desc: "We create a custom visual direction and structure your website around your brand and customers.",
+    icon: Palette,
+    timeline: "3–6 DAYS",
   },
   {
     num: "03",
-    phase: "VISUAL CRAFTSMANSHIP",
-    title: "Design",
-    desc: "We create the visual direction and interface for your website.",
-    icon: Palette,
-    timeline: "Days 5–8",
-    deliverable: "Interactive Figma Prototype",
+    title: "Build & Code",
+    desc: "We turn the approved design into a fast, responsive, production-ready website.",
+    icon: Code2,
+    timeline: "7–11 DAYS",
   },
   {
     num: "04",
-    phase: "DEVELOPMENT & SPEED",
-    title: "Develop",
-    desc: "Your approved design is transformed into a responsive, high-performance website.",
-    icon: Code2,
-    timeline: "Days 9–12",
-    deliverable: "Next.js Full-Stack Codebase",
-  },
-  {
-    num: "05",
-    phase: "QA & DEPLOYMENT",
-    title: "Launch",
-    desc: "We test everything, optimize the experience and get your website live.",
+    title: "Launch & Go Live",
+    desc: "We test everything across devices, connect your essential tools, and get your website ready to go live.",
     icon: Rocket,
-    timeline: "Days 13–14",
-    deliverable: "Live Worldwide Deployment",
+    timeline: "12–14 DAYS",
   },
 ];
 
@@ -67,85 +50,72 @@ export default function ArchitectureFlowDiagram() {
         <div className="text-center max-w-2xl mx-auto mb-20">
           <div className="wd-badge-mono mb-4">
             <span className="wd-dot-pulse" />
-            <span>[ PROCESS ]</span>
+            <span>[ SIMPLE PROCESS ]</span>
           </div>
           <h2 className="text-3xl sm:text-5xl font-extrabold text-white tracking-tight leading-tight mb-4">
             From Idea to <br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#8be0b7] via-[#6fc59b] to-white">
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#ff6b57] via-[#fd3a25] to-white">
               Launch.
             </span>
           </h2>
           <p className="text-neutral-400 text-sm sm:text-base">
-            A clear, structured 5-stage sprint from first discovery to a sub-second live website.
+            We keep the process simple, transparent, and focused on getting your business online without unnecessary complexity.
           </p>
         </div>
 
-        {/* Editorial Scroll Timeline Layout */}
-        <div className="relative max-w-4xl mx-auto">
-          {/* Vertical connecting laser spine on desktop and tablet */}
-          <div className="absolute top-8 bottom-8 left-6 md:left-1/2 w-0.5 -translate-x-1/2 bg-gradient-to-b from-[#6fc59b] via-[#6fc59b]/40 to-[#6fc59b]/10 z-0" />
-
-          <div className="space-y-12 md:space-y-16 relative z-10">
+        {/* Horizontal timeline flow on desktop, vertical stack on mobile */}
+        <div className="max-w-6xl mx-auto">
+          <div className="flex flex-col lg:flex-row lg:items-stretch items-center gap-6 lg:gap-4 w-full">
             {STEPS.map((step, idx) => {
               const IconComp = step.icon;
-              const isEven = idx % 2 === 1;
-
+              
               return (
-                <motion.div
-                  key={idx}
-                  initial={{ opacity: 0, y: 30 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true, margin: "-60px" }}
-                  transition={{ duration: 0.5, delay: idx * 0.1 }}
-                  className={`flex flex-col md:flex-row items-start md:items-center gap-6 md:gap-12 pl-14 md:pl-0 ${
-                    isEven ? "md:flex-row-reverse" : ""
-                  }`}
-                >
-                  {/* Step Card */}
-                  <div
-                    className={`w-full md:w-[calc(50%-3rem)] wd-glass-card p-6 sm:p-8 border-white/[0.08] hover:border-[#6fc59b]/40 transition-all duration-300 group relative ${
-                      isEven ? "md:text-right" : "md:text-left"
-                    }`}
+                <Fragment key={idx}>
+                  {/* Card Container */}
+                  <motion.div
+                    initial={{ opacity: 0, y: 30 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true, margin: "-60px" }}
+                    transition={{ duration: 0.5, delay: idx * 0.15 }}
+                    className="flex-1 w-full p-7 rounded-[32px] bg-[#0c0d12]/90 border border-white/[0.08] hover:border-white/[0.15] transition-all duration-300 flex flex-col items-start text-left relative z-10 group backdrop-blur-md"
                   >
-                    <div
-                      className={`flex items-center gap-3 mb-3 ${
-                        isEven ? "md:justify-end" : "md:justify-start"
-                      }`}
-                    >
-                      <span className="text-[10px] font-mono font-bold px-2.5 py-0.5 rounded bg-[#6fc59b]/10 text-[#8be0b7] border border-[#6fc59b]/20 tracking-wider uppercase">
-                        {step.phase}
-                      </span>
-                      <span className="text-xs font-mono text-neutral-500">
-                        {step.timeline}
-                      </span>
+                    {/* Glowing Red-Orange Squircle Icon Block */}
+                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#ff5e3a] to-[#ff2a68] shadow-[0_8px_20px_rgba(255,94,58,0.35)] flex items-center justify-center text-white mb-6 group-hover:scale-105 transition-transform duration-300">
+                      <IconComp className="w-5 h-5 stroke-[2.5px]" />
                     </div>
 
-                    <h3 className="text-2xl font-extrabold text-white tracking-tight mb-2 group-hover:text-[#8be0b7] transition-colors">
-                      {step.num} — {step.title}
+                    {/* Title */}
+                    <h3 className="text-lg sm:text-xl font-extrabold text-white tracking-tight mb-3">
+                      {step.title}
                     </h3>
 
-                    <p className="text-neutral-300 text-sm leading-relaxed mb-4">
+                    {/* Gradient Divider Line */}
+                    <div className="w-full h-px bg-gradient-to-r from-white/15 via-white/5 to-transparent my-4" />
+
+                    {/* Desc */}
+                    <p className="text-neutral-400 text-xs sm:text-sm leading-relaxed font-normal mb-8 text-left">
                       {step.desc}
                     </p>
 
-                    <div
-                      className={`pt-4 border-t border-white/[0.06] flex items-center gap-2 text-xs font-mono text-neutral-400 ${
-                        isEven ? "md:justify-end" : "md:justify-start"
-                      }`}
-                    >
-                      <CheckCircle2 className="w-3.5 h-3.5 text-[#6fc59b] flex-shrink-0" />
-                      <span>{step.deliverable}</span>
+                    {/* Bottom Row Footer (Timeline) */}
+                    <div className="w-full flex items-center mt-auto pt-4 border-t border-white/[0.04]">
+                      {/* Timeline Badge */}
+                      <span className="px-3.5 py-1 rounded-full bg-white text-[#0a0b10] text-[9px] font-black tracking-widest uppercase select-none">
+                        {step.timeline}
+                      </span>
                     </div>
-                  </div>
+                  </motion.div>
 
-                  {/* Center Node Indicator */}
-                  <div className="absolute left-6 md:left-1/2 -translate-x-1/2 w-12 h-12 rounded-full bg-[#0d0e14] border-2 border-[#6fc59b] shadow-[0_0_20px_rgba(111,197,155,0.6)] flex items-center justify-center text-[#8be0b7] group hover:scale-110 transition-transform">
-                    <IconComp className="w-5 h-5" />
-                  </div>
-
-                  {/* Desktop Empty Spacer for Symmetry */}
-                  <div className="hidden md:block w-[calc(50%-3rem)]" />
-                </motion.div>
+                  {/* Glowing Arrow Connector (Centered Vertically) */}
+                  {idx < 3 && (
+                    <div className="flex items-center justify-center text-[#fd3a25] py-2 lg:py-0 px-0 lg:px-2 z-20 flex-shrink-0 lg:self-center">
+                      {/* Desktop horizontal right arrow */}
+                      <ArrowRight className="hidden lg:block w-6 h-6 text-[#fd3a25] stroke-[3px] drop-shadow-[0_0_8px_rgba(111,197,155,0.5)] animate-pulse" />
+                      {/* Mobile vertical down arrow */}
+                      <ArrowDown className="lg:hidden w-6 h-6 text-[#fd3a25] stroke-[3px] drop-shadow-[0_0_8px_rgba(111,197,155,0.5)] animate-pulse" />
+                    </div>
+                  )}
+                </Fragment>
               );
             })}
           </div>

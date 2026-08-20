@@ -1,8 +1,7 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowUp } from "lucide-react";
 
 export default function WebDesignFooter() {
   const scrollToTop = () => {
@@ -96,7 +95,7 @@ export default function WebDesignFooter() {
             className="px-6 py-4 rounded-full bg-white hover:bg-neutral-100 text-[#0a0b10] font-bold text-sm shadow-xl flex items-center justify-between gap-4 transition-all duration-300 hover:scale-105 group cursor-pointer"
           >
             <span>Email</span>
-            <div className="w-8 h-8 rounded-full bg-[#0a0b10] text-[#6fc59b] group-hover:bg-[#6fc59b] group-hover:text-[#08090d] flex items-center justify-center transition-colors flex-shrink-0">
+            <div className="w-8 h-8 rounded-full bg-[#0a0b10] text-[#fd3a25] group-hover:bg-[#fd3a25] group-hover:text-white flex items-center justify-center transition-colors flex-shrink-0">
               <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
                 <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/>
               </svg>
@@ -109,7 +108,7 @@ export default function WebDesignFooter() {
         <div className="w-full pt-8 border-t border-white/[0.08] flex flex-col md:flex-row items-center justify-between gap-6 text-xs text-neutral-400">
           {/* Left: Nav Links */}
           <div className="flex items-center gap-6 font-medium">
-            <Link href="/" className="text-[#8be0b7] hover:text-white transition-colors font-mono">
+            <Link href="/" className="text-[#ff6b57] hover:text-white transition-colors font-mono">
               &larr; Main Site
             </Link>
             <a href="#why-us" className="hover:text-white transition-colors">

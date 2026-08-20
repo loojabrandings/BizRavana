@@ -1,6 +1,6 @@
-/* ==========================================================================
+﻿/* ==========================================================================
    BIZRAVANA BESPOKE WEB DESIGN LANDING STYLESHEET (100% ISOLATED)
-   Theme: Deep Matte Obsidian (#060608) & BizRavana Emerald Mint Glow (#6fc59b)
+   Theme: Deep Matte Obsidian (#060608) & BizRavana Red Flame (#fd3a25)
    ========================================================================== */
 
 :root {
@@ -10,11 +10,11 @@
   --wd-bg-card-light: #ffffff;
   --wd-border: rgba(255, 255, 255, 0.08);
   --wd-border-light: rgba(255, 255, 255, 0.14);
-  --wd-border-accent: rgba(111, 197, 155, 0.35);
-  --wd-accent: #6fc59b;
-  --wd-accent-bright: #8be0b7;
-  --wd-accent-glow: rgba(111, 197, 155, 0.25);
-  --wd-accent-glow-strong: rgba(111, 197, 155, 0.6);
+  --wd-border-accent: rgba(253, 58, 37, 0.35);
+  --wd-accent: #fd3a25;
+  --wd-accent-bright: #ff6b57;
+  --wd-accent-glow: rgba(253, 58, 37, 0.2);
+  --wd-accent-glow-strong: rgba(253, 58, 37, 0.55);
   --wd-text-main: #ffffff;
   --wd-text-muted: #9496a1;
   --wd-text-dim: #5e606e;
@@ -62,7 +62,7 @@
   right: -50px;
   width: 600px;
   height: 600px;
-  background: radial-gradient(circle, rgba(111, 197, 155, 0.18) 0%, rgba(111, 197, 155, 0) 70%);
+  background: radial-gradient(circle, rgba(253, 58, 37, 0.15) 0%, rgba(111, 197, 155, 0) 70%);
 }
 
 .wd-radial-glow-center {
@@ -71,7 +71,7 @@
   transform: translate(-50%, -50%);
   width: 700px;
   height: 700px;
-  background: radial-gradient(circle, rgba(111, 197, 155, 0.12) 0%, rgba(111, 197, 155, 0) 70%);
+  background: radial-gradient(circle, rgba(253, 58, 37, 0.1) 0%, rgba(111, 197, 155, 0) 70%);
 }
 
 /* Common Container */
@@ -95,9 +95,9 @@
   font-size: 0.72rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: #8be0b7;
-  background: rgba(111, 197, 155, 0.08);
-  border: 1px solid rgba(111, 197, 155, 0.25);
+  color: #ff6b57;
+  background: rgba(253, 58, 37, 0.08);
+  border: 1px solid rgba(253, 58, 37, 0.2);
   border-radius: 9999px;
   backdrop-filter: blur(8px);
 }
@@ -106,8 +106,8 @@
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: #6fc59b;
-  box-shadow: 0 0 8px #6fc59b;
+  background: #fd3a25;
+  box-shadow: 0 0 8px #fd3a25;
   animation: wdPulse 2s infinite ease-in-out;
 }
 
@@ -127,10 +127,10 @@
   font-weight: 600;
   font-size: 0.95rem;
   color: #08090d;
-  background: linear-gradient(135deg, #8be0b7 0%, #6fc59b 100%);
+  background: linear-gradient(135deg, #ff6b57 0%, #fd3a25 100%);
   border-radius: 9999px;
   border: 1px solid rgba(255, 255, 255, 0.2);
-  box-shadow: 0 0 25px rgba(111, 197, 155, 0.45), 0 4px 12px rgba(0,0,0,0.5);
+  box-shadow: 0 0 25px rgba(253, 58, 37, 0.4), 0 4px 12px rgba(0,0,0,0.5);
   transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   cursor: pointer;
   text-decoration: none;
@@ -138,8 +138,8 @@
 
 .wd-btn-accent:hover {
   transform: translateY(-2px);
-  box-shadow: 0 0 35px rgba(111, 197, 155, 0.7), 0 8px 20px rgba(0,0,0,0.6);
-  background: linear-gradient(135deg, #9ef0c7 0%, #7fd6ab 100%);
+  box-shadow: 0 0 35px rgba(253, 58, 37, 0.65), 0 8px 20px rgba(0,0,0,0.6);
+  background: linear-gradient(135deg, #ff8a7a 0%, #ff7060 100%);
 }
 
 .wd-btn-secondary {
@@ -186,7 +186,7 @@
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  background: linear-gradient(145deg, rgba(16, 44, 30, 0.9) 0%, rgba(10, 26, 18, 0.55) 45%, rgba(6, 8, 12, 0.95) 100%);
+  background: linear-gradient(145deg, rgba(60, 10, 5, 0.9) 0%, rgba(40, 5, 3, 0.55) 45%, rgba(6, 8, 12, 0.95) 100%);
   opacity: 0;
   transition: opacity 0.65s cubic-bezier(0.16, 1, 0.3, 1);
   pointer-events: none;
@@ -200,9 +200,9 @@
 
 .wd-glass-card:hover {
   transform: translateY(-4px);
-  border-color: rgba(111, 197, 155, 0.5);
+  border-color: rgba(253, 58, 37, 0.5);
   box-shadow: 0 20px 45px -10px rgba(0, 0, 0, 0.8),
-              0 0 35px -5px rgba(111, 197, 155, 0.28);
+              0 0 35px -5px rgba(253, 58, 37, 0.25);
 }
 
 .wd-glass-card:hover::before {
@@ -236,7 +236,7 @@
   border: 1px solid rgba(255, 255, 255, 0.12);
   backdrop-filter: blur(20px);
   border-radius: 9999px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6), 0 0 20px rgba(111, 197, 155, 0.08);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6), 0 0 20px rgba(253, 58, 37, 0.08);
   max-width: 92vw;
 }
 
@@ -245,14 +245,14 @@
   width: 140px;
   height: 140px;
   border-radius: 50%;
-  background: radial-gradient(circle, #6fc59b 0%, #2f7a55 60%, transparent 100%);
-  box-shadow: 0 0 60px #6fc59b, 0 0 120px rgba(111, 197, 155, 0.4);
+  background: radial-gradient(circle, #fd3a25 0%, #c42010 60%, transparent 100%);
+  box-shadow: 0 0 60px #fd3a25, 0 0 120px rgba(253, 58, 37, 0.35);
   animation: wdOrbFloat 6s ease-in-out infinite alternate;
 }
 
 @keyframes wdOrbFloat {
-  0% { transform: translateY(0) scale(1); filter: drop-shadow(0 0 20px rgba(111,197,155,0.6)); }
-  100% { transform: translateY(-12px) scale(1.05); filter: drop-shadow(0 0 40px rgba(111,197,155,0.9)); }
+  0% { transform: translateY(0) scale(1); filter: drop-shadow(0 0 20px rgba(253, 58, 37, 0.55)); }
+  100% { transform: translateY(-12px) scale(1.05); filter: drop-shadow(0 0 40px rgba(253, 58, 37, 0.85)); }
 }
 
 /* Watermark in Footer */
@@ -280,5 +280,5 @@
   border-radius: 3px;
 }
 .wd-standalone-root::-webkit-scrollbar-thumb:hover {
-  background: #6fc59b;
+  background: #fd3a25;
 }

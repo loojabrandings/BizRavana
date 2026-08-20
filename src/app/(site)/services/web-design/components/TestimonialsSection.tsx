@@ -1,9 +1,9 @@
-"use client";
+﻿"use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
-import { ChevronLeft, ChevronRight, Star } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 const TESTIMONIALS = [
   {
@@ -23,6 +23,14 @@ const TESTIMONIALS = [
 export default function TestimonialsSection() {
   const [currentIdx, setCurrentIdx] = useState(0);
 
+  // Auto-play / Rotate reviews every 5 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentIdx((prev) => (prev === TESTIMONIALS.length - 1 ? 0 : prev + 1));
+    }, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
   const prevSlide = () => {
     setCurrentIdx((prev) => (prev === 0 ? TESTIMONIALS.length - 1 : prev - 1));
   };
@@ -36,7 +44,7 @@ export default function TestimonialsSection() {
   return (
     <section id="testimonials" className="py-28 relative bg-[#040406] overflow-hidden">
       {/* Background Glow */}
-      <div className="absolute top-1/2 right-1/4 -translate-y-1/2 w-[500px] h-[500px] bg-[#6fc59b]/10 rounded-full blur-[140px] pointer-events-none -z-10" />
+      <div className="absolute top-1/2 right-1/4 -translate-y-1/2 w-[500px] h-[500px] bg-[#fd3a25]/10 rounded-full blur-[140px] pointer-events-none -z-10" />
 
       <div className="wd-container max-w-6xl mx-auto">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-center">
@@ -45,23 +53,16 @@ export default function TestimonialsSection() {
           <div className="lg:col-span-6 flex flex-col justify-between space-y-8">
             <div>
               {/* Pill Tag */}
-              <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-white/[0.04] border border-white/10 text-xs font-bold text-neutral-300 mb-8 backdrop-blur-md">
-                <span className="w-2 h-2 rounded-full bg-[#6fc59b] animate-pulse" />
-                <span className="text-[#8be0b7]">Testimonials</span>
+              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/[0.04] border border-white/10 text-xs font-mono text-neutral-300 mb-8 backdrop-blur-md">
+                <span className="w-2 h-2 rounded-full bg-[#fd3a25] animate-pulse" />
+                <span className="text-[#ff6b57] font-black uppercase tracking-wider">[ CLIENT FEEDBACK ]</span>
               </div>
 
-              {/* Large Main Heading in Poiret One */}
+              {/* Large Main Heading */}
               <h2 className="text-4xl sm:text-6xl font-normal text-white tracking-tight leading-[1.08] mb-10">
                 What Our <br />
                 Clients Say
               </h2>
-
-              {/* Star Rating */}
-              <div className="flex items-center gap-1 mb-6 text-[#6fc59b]">
-                {[...Array(5)].map((_, i) => (
-                  <Star key={i} className="w-4 h-4 fill-current" />
-                ))}
-              </div>
 
               {/* Dynamic Quote & Author Area */}
               <div className="min-h-[160px] relative">
@@ -79,7 +80,7 @@ export default function TestimonialsSection() {
                     </p>
 
                     <div className="flex items-center gap-3 pt-2">
-                      <div className="w-1 h-5 bg-[#6fc59b] rounded-full" />
+                      <div className="w-1 h-5 bg-[#fd3a25] rounded-full" />
                       <div className="text-sm font-bold text-white">
                         {activeTestimonial.author}
                         <span className="text-xs font-normal text-neutral-400 ml-2 font-mono">
@@ -110,7 +111,7 @@ export default function TestimonialsSection() {
                   type="button"
                   onClick={nextSlide}
                   aria-label="Next Testimonial"
-                  className="w-12 h-12 rounded-full bg-white hover:bg-neutral-200 text-[#08090d] flex items-center justify-center font-bold shadow-lg shadow-white/10 transition-all hover:scale-105 active:scale-95 cursor-pointer"
+                  className="w-12 h-12 rounded-full bg-white hover:bg-neutral-200 text-white flex items-center justify-center font-bold shadow-lg shadow-white/10 transition-all hover:scale-105 active:scale-95 cursor-pointer"
                 >
                   <ChevronRight className="w-5 h-5 stroke-[2.5]" />
                 </button>

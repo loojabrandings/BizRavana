@@ -1,8 +1,8 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronDown, HelpCircle } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 
 const FAQS = [
   {
@@ -45,7 +45,7 @@ export default function FaqAccordion() {
           </div>
           <h2 className="text-3xl sm:text-5xl font-extrabold text-white tracking-tight leading-tight mb-4">
             Got Questions? <br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#8be0b7] via-[#6fc59b] to-white">
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#ff6b57] via-[#fd3a25] to-white">
               We Have Direct Answers.
             </span>
           </h2>
@@ -59,8 +59,8 @@ export default function FaqAccordion() {
               <div
                 key={idx}
                 className={`rounded-2xl border transition-all duration-500 overflow-hidden ${isOpen
-                  ? "border-[#6fc59b]/60 shadow-[0_20px_45px_-10px_rgba(0,0,0,0.8),0_0_35px_-5px_rgba(111,197,155,0.3)] bg-gradient-to-br from-[#102c1e] via-[#0a1a12] to-[#06080c]"
-                  : "bg-[#0c0d12]/80 border-white/[0.08] hover:border-[#6fc59b]/40 hover:bg-gradient-to-br hover:from-[#0d2218] hover:via-[#091510] hover:to-[#07080c]"
+                  ? "border-[#fd3a25]/60 shadow-[0_20px_45px_-10px_rgba(0,0,0,0.8),0_0_35px_-5px_rgba(253, 58, 37, 0.3)] bg-gradient-to-br from-[#200504] via-[#160302] to-[#06080c]"
+                  : "bg-[#0c0d12]/80 border-white/[0.08] hover:border-[#fd3a25]/40 hover:bg-gradient-to-br hover:from-[#1a0403] hover:via-[#120202] hover:to-[#07080c]"
                   }`}
               >
                 <button
@@ -69,14 +69,14 @@ export default function FaqAccordion() {
                   className="w-full p-6 text-left flex items-center justify-between gap-4 cursor-pointer"
                 >
                   <span
-                    className={`text-base sm:text-lg font-bold tracking-tight transition-colors duration-300 ${isOpen ? "text-[#8be0b7]" : "text-white group-hover:text-white"
+                    className={`text-base sm:text-lg font-bold tracking-tight transition-colors duration-300 ${isOpen ? "text-[#ff6b57]" : "text-white group-hover:text-white"
                       }`}
                   >
                     {faq.q}
                   </span>
                   <div
                     className={`w-9 h-9 rounded-full flex items-center justify-center transition-all duration-300 flex-shrink-0 ${isOpen
-                      ? "rotate-180 bg-[#6fc59b] text-[#08090d] shadow-[0_0_15px_#6fc59b]"
+                      ? "rotate-180 bg-[#fd3a25] text-white shadow-[0_0_15px_#fd3a25]"
                       : "bg-white/[0.04] border border-white/10 text-neutral-300"
                       }`}
                   >
@@ -92,7 +92,7 @@ export default function FaqAccordion() {
                       exit={{ height: 0, opacity: 0 }}
                       transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
                     >
-                      <div className="px-6 pb-6 pt-2 text-sm sm:text-base text-neutral-200 leading-relaxed border-t border-[#6fc59b]/15">
+                      <div className="px-6 pb-6 pt-2 text-sm sm:text-base text-neutral-200 leading-relaxed border-t border-[#fd3a25]/15">
                         {faq.a}
                       </div>
                     </motion.div>
