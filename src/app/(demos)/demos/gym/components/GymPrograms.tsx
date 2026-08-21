@@ -16,8 +16,8 @@ interface Program {
 const PROGRAMS: Program[] = [
   {
     number: '01',
-    category: 'Build Strength. Build Muscle.',
-    headline: 'Strength & Muscle',
+    category: 'Strength & Muscle',
+    headline: 'Build Strength. Build Muscle.',
     description:
       'Structured resistance training designed to help you build strength, increase muscle and become more powerful.',
     ctaText: 'EXPLORE PROGRAM',
@@ -81,7 +81,13 @@ export const GymPrograms: React.FC = () => {
       <div className="max-w-7xl mx-auto px-6 sm:px-10 lg:px-16 relative z-10">
         
         {/* ── Section Header ─────────────────────────────────── */}
-        <div className="max-w-3xl mb-16 sm:mb-20">
+        <motion.div
+          initial={{ opacity: 0, y: 35 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: '-80px' }}
+          transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+          className="max-w-3xl mb-16 sm:mb-20"
+        >
           <div className="inline-flex items-center gap-2.5 px-3.5 py-1 rounded-full bg-white/5 border border-[#CCFF00]/30 mb-4">
             <span className="w-1.5 h-1.5 rounded-full bg-[#CCFF00]" />
             <span className="text-[10px] font-bold uppercase tracking-[0.25em] text-[#CCFF00]">
@@ -97,16 +103,20 @@ export const GymPrograms: React.FC = () => {
           <p className="text-sm sm:text-base text-[#FEF9F5]/70 leading-relaxed font-normal max-w-2xl">
             Whether you&apos;re here to build strength, transform your body, improve your fitness or simply feel better, find a training program built around your goals.
           </p>
-        </div>
+        </motion.div>
 
         {/* ── 6 Programs Grid ─────────────────────────────────── */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 mb-16 sm:mb-20">
-          {PROGRAMS.map((prog) => {
+          {PROGRAMS.map((prog, idx) => {
             const IconComponent = prog.icon;
 
             return (
-              <div
+              <motion.div
                 key={prog.number}
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: '-50px' }}
+                transition={{ duration: 0.6, delay: idx * 0.08, ease: [0.16, 1, 0.3, 1] }}
                 className="group relative bg-[#0e0e0e] hover:bg-[#141414] border border-white/10 hover:border-[#CCFF00]/40 rounded-3xl p-7 sm:p-9 transition-all duration-400 flex flex-col justify-between hover:shadow-2xl hover:shadow-[#CCFF00]/10"
               >
                 {/* Card Top: Number & Lucide Icon */}
@@ -152,13 +162,19 @@ export const GymPrograms: React.FC = () => {
 
                 {/* Corner Glow Accent */}
                 <div className="absolute top-0 right-0 w-24 h-24 bg-[#CCFF00]/0 group-hover:bg-[#CCFF00]/10 rounded-tr-3xl rounded-bl-full blur-xl transition-all duration-500 pointer-events-none" />
-              </div>
+              </motion.div>
             );
           })}
         </div>
 
         {/* ── Bottom CTA Banner ───────────────────────────────── */}
-        <div className="relative rounded-3xl bg-gradient-to-r from-[#101908] via-[#0c1407] to-[#080808] border border-[#CCFF00]/30 p-8 sm:p-12 lg:p-14 overflow-hidden shadow-2xl">
+        <motion.div
+          initial={{ opacity: 0, y: 35 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: '-60px' }}
+          transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+          className="relative rounded-3xl bg-gradient-to-r from-[#101908] via-[#0c1407] to-[#080808] border border-[#CCFF00]/30 p-8 sm:p-12 lg:p-14 overflow-hidden shadow-2xl"
+        >
           <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-[#CCFF00]/10 rounded-full blur-3xl pointer-events-none" />
           
           <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-8">
@@ -190,7 +206,7 @@ export const GymPrograms: React.FC = () => {
               </button>
             </div>
           </div>
-        </div>
+        </motion.div>
 
       </div>
     </section>

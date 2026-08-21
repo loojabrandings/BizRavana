@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import Image from 'next/image';
+import { motion } from 'framer-motion';
 
 interface Facility {
   number: string;
@@ -79,7 +80,13 @@ export const GymFacilities: React.FC = () => {
       <div className="max-w-7xl mx-auto px-6 sm:px-10 lg:px-16 relative z-10">
 
         {/* ── Section Header ─────────────────────────────────── */}
-        <div className="max-w-3xl mb-16 sm:mb-20">
+        <motion.div
+          initial={{ opacity: 0, y: 35 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: '-80px' }}
+          transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+          className="max-w-3xl mb-16 sm:mb-20"
+        >
           <div className="inline-flex items-center gap-2.5 px-3.5 py-1 rounded-full bg-white/5 border border-[#CCFF00]/30 mb-4">
             <span className="w-1.5 h-1.5 rounded-full bg-[#CCFF00]" />
             <span className="text-[10px] font-bold uppercase tracking-[0.25em] text-[#CCFF00]">
@@ -95,16 +102,20 @@ export const GymFacilities: React.FC = () => {
           <p className="text-sm sm:text-base text-[#FEF9F5]/70 leading-relaxed font-normal max-w-2xl">
             A focused training environment with the equipment, space and facilities you need to train harder, move better and stay consistent.
           </p>
-        </div>
+        </motion.div>
 
         {/* ── Facility Visual Gallery Grid ────────────────────── */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
-          {FACILITIES.map((facility) => {
+          {FACILITIES.map((facility, idx) => {
             const isActive = activeCard === facility.number;
 
             return (
-              <div
+              <motion.div
                 key={facility.number}
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: '-50px' }}
+                transition={{ duration: 0.6, delay: idx * 0.08, ease: [0.16, 1, 0.3, 1] }}
                 onClick={() => toggleCard(facility.number)}
                 className={`group relative rounded-3xl overflow-hidden bg-[#0e0e0e] border transition-all duration-500 flex flex-col justify-end min-h-[380px] sm:min-h-[440px] shadow-xl hover:shadow-2xl hover:shadow-[#CCFF00]/20 cursor-pointer select-none ${
                   isActive
@@ -179,7 +190,7 @@ export const GymFacilities: React.FC = () => {
                     isActive ? 'opacity-100' : 'opacity-0'
                   }`}
                 />
-              </div>
+              </motion.div>
             );
           })}
         </div>

@@ -61,7 +61,13 @@ export const GymWhyUs: React.FC = () => {
       <div className="max-w-7xl mx-auto px-6 sm:px-10 lg:px-16 relative z-10">
         
         {/* ── Section Header ─────────────────────────────────── */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-16 pb-16 sm:pb-20 border-b border-white/10 items-end">
+        <motion.div
+          initial={{ opacity: 0, y: 35 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: '-80px' }}
+          transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+          className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-16 pb-16 sm:pb-20 border-b border-white/10 items-end"
+        >
           <div className="lg:col-span-7 space-y-4">
             <div className="inline-flex items-center gap-2.5 px-3.5 py-1 rounded-full bg-white/5 border border-[#CCFF00]/30">
               <span className="w-1.5 h-1.5 rounded-full bg-[#CCFF00]" />
@@ -81,16 +87,20 @@ export const GymWhyUs: React.FC = () => {
               Whether you&apos;re starting your fitness journey or pushing toward your next goal, we give you the environment, guidance and support to keep moving forward.
             </p>
           </div>
-        </div>
+        </motion.div>
 
-        {/* ── Editorial Index Rows (No Cards) ────────────────── */}
+        {/* ── Editorial Index Rows with Scroll Stagger ───────── */}
         <div className="divide-y divide-white/10">
           {PILLARS.map((pillar, idx) => {
             const isHovered = hoveredIdx === idx;
 
             return (
-              <div
+              <motion.div
                 key={pillar.number}
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: '-50px' }}
+                transition={{ duration: 0.6, delay: idx * 0.08, ease: [0.16, 1, 0.3, 1] }}
                 onMouseEnter={() => setHoveredIdx(idx)}
                 className={`group py-8 sm:py-12 transition-all duration-400 cursor-pointer ${
                   isHovered ? 'bg-white/[0.02]' : 'bg-transparent'
@@ -145,7 +155,7 @@ export const GymWhyUs: React.FC = () => {
                   </div>
 
                 </div>
-              </div>
+              </motion.div>
             );
           })}
         </div>

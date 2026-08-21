@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { motion } from 'framer-motion';
 import { ArrowUpRight, MessageSquare, Phone, Mail, Clock, MapPin } from 'lucide-react';
 
 export const GymContact: React.FC = () => {
@@ -13,7 +14,13 @@ export const GymContact: React.FC = () => {
       <div className="max-w-7xl mx-auto px-6 sm:px-10 lg:px-16 relative z-10">
         
         {/* ── Section Header ─────────────────────────────────── */}
-        <div className="max-w-3xl mb-16 sm:mb-20">
+        <motion.div
+          initial={{ opacity: 0, y: 35 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: '-80px' }}
+          transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+          className="max-w-3xl mb-16 sm:mb-20"
+        >
           <div className="inline-flex items-center gap-2.5 px-3.5 py-1 rounded-full bg-white/5 border border-[#CCFF00]/30 mb-4">
             <span className="w-1.5 h-1.5 rounded-full bg-[#CCFF00]" />
             <span className="text-[10px] font-bold uppercase tracking-[0.25em] text-[#CCFF00]">
@@ -29,14 +36,19 @@ export const GymContact: React.FC = () => {
           <p className="text-sm sm:text-base text-[#FEF9F5]/70 leading-relaxed font-normal max-w-2xl">
             Ready to take the next step? Come visit us, talk to our team and find the right way to start your fitness journey.
           </p>
-        </div>
+        </motion.div>
 
         {/* ── Editorial Asymmetric Layout (No Generic Cards) ─── */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-start">
           
           {/* Left Column: Location & Direct Inquiries (7 Cols) */}
-          <div className="lg:col-span-7 space-y-10">
-            
+          <motion.div
+            initial={{ opacity: 0, x: -30 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true, margin: '-60px' }}
+            transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+            className="lg:col-span-7 space-y-10"
+          >
             {/* Location & Directions */}
             <div className="space-y-4 pb-8 border-b border-white/10">
               <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.2em] text-[#CCFF00]">
@@ -124,11 +136,16 @@ export const GymContact: React.FC = () => {
               </a>
             </div>
 
-          </div>
+          </motion.div>
 
           {/* Right Column: Weekly Schedule Matrix (5 Cols) */}
-          <div className="lg:col-span-5 bg-[#0a0a0a] border border-white/10 rounded-3xl p-8 sm:p-10">
-            
+          <motion.div
+            initial={{ opacity: 0, x: 30 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true, margin: '-60px' }}
+            transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+            className="lg:col-span-5 bg-[#0a0a0a] border border-white/10 rounded-3xl p-8 sm:p-10"
+          >
             <div className="flex items-center justify-between pb-6 border-b border-white/10 mb-8">
               <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.2em] text-[#CCFF00]">
                 <Clock className="w-4 h-4" />
@@ -199,7 +216,7 @@ export const GymContact: React.FC = () => {
               </p>
             </div>
 
-          </div>
+          </motion.div>
 
         </div>
 

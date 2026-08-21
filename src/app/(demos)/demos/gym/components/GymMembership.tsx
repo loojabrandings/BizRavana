@@ -76,7 +76,13 @@ export const GymMembership: React.FC = () => {
       <div className="max-w-7xl mx-auto px-6 sm:px-10 lg:px-16 relative z-10">
         
         {/* ── Section Header ─────────────────────────────────── */}
-        <div className="max-w-3xl mb-16 sm:mb-20">
+        <motion.div
+          initial={{ opacity: 0, y: 35 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: '-80px' }}
+          transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+          className="max-w-3xl mb-16 sm:mb-20"
+        >
           <div className="inline-flex items-center gap-2.5 px-3.5 py-1 rounded-full bg-white/5 border border-[#CCFF00]/30 mb-4">
             <span className="w-1.5 h-1.5 rounded-full bg-[#CCFF00]" />
             <span className="text-[10px] font-bold uppercase tracking-[0.25em] text-[#CCFF00]">
@@ -92,16 +98,20 @@ export const GymMembership: React.FC = () => {
           <p className="text-sm sm:text-base text-[#FEF9F5]/70 leading-relaxed font-normal max-w-2xl">
             Simple membership options designed to fit your goals, your schedule and the way you like to train.
           </p>
-        </div>
+        </motion.div>
 
         {/* ── 3 Membership Plans Grid ─────────────────────────── */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-stretch">
-          {PLANS.map((plan) => {
+          {PLANS.map((plan, idx) => {
             const isPopular = plan.popular;
 
             return (
-              <div
+              <motion.div
                 key={plan.id}
+                initial={{ opacity: 0, y: 35 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: '-50px' }}
+                transition={{ duration: 0.65, delay: idx * 0.1, ease: [0.16, 1, 0.3, 1] }}
                 className={`relative rounded-3xl p-8 sm:p-10 flex flex-col justify-between transition-all duration-400 ${
                   isPopular
                     ? 'bg-gradient-to-b from-[#141b0b] to-[#0e1208] border-2 border-[#CCFF00] shadow-2xl shadow-[#CCFF00]/15 lg:-translate-y-3'
@@ -183,7 +193,7 @@ export const GymMembership: React.FC = () => {
                     <span className="transition-transform duration-300 group-hover:translate-x-1">→</span>
                   </button>
                 </div>
-              </div>
+              </motion.div>
             );
           })}
         </div>

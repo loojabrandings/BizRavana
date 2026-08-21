@@ -20,28 +20,52 @@ export const GymFinalCTA: React.FC = () => {
       <div className="max-w-6xl mx-auto px-6 sm:px-10 lg:px-16 relative z-10 text-center flex flex-col items-center">
         
         {/* ── Top Pill Badge ─────────────────────────────────── */}
-        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/5 border border-[#CCFF00]/40 backdrop-blur-md mb-8">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          whileInView={{ opacity: 1, scale: 1 }}
+          viewport={{ once: true, margin: '-60px' }}
+          transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+          className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/5 border border-[#CCFF00]/40 backdrop-blur-md mb-8"
+        >
           <Sparkles className="w-3.5 h-3.5 text-[#CCFF00]" />
           <span className="text-[11px] font-bold uppercase tracking-[0.25em] text-[#CCFF00]">
             TAKE THE FIRST STEP
           </span>
-        </div>
+        </motion.div>
 
         {/* ── Massive Display Statement (No Cards) ───────────── */}
-        <h2 className="font-impact italic text-5xl sm:text-7xl md:text-8xl lg:text-9xl uppercase tracking-tight leading-[0.88] text-[#FEF9F5] max-w-5xl mb-8">
+        <motion.h2
+          initial={{ opacity: 0, y: 40 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: '-80px' }}
+          transition={{ duration: 0.75, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
+          className="font-impact italic text-5xl sm:text-7xl md:text-8xl lg:text-9xl uppercase tracking-tight leading-[0.88] text-[#FEF9F5] max-w-5xl mb-8"
+        >
           START TODAY.<br />
           <span className="text-[#CCFF00] drop-shadow-[0_0_60px_rgba(204,255,0,0.4)]">
             TRANSFORM FOREVER.
           </span>
-        </h2>
+        </motion.h2>
 
         {/* ── Subtitle Description ───────────────────────────── */}
-        <p className="text-base sm:text-xl text-[#FEF9F5]/75 font-normal leading-relaxed max-w-2xl mb-12">
+        <motion.p
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: '-60px' }}
+          transition={{ duration: 0.65, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
+          className="text-base sm:text-xl text-[#FEF9F5]/75 font-normal leading-relaxed max-w-2xl mb-12"
+        >
           Join our community, train with expert guidance, and give yourself the space, energy and focus to reach your true potential.
-        </p>
+        </motion.p>
 
         {/* ── Action Buttons ─────────────────────────────────── */}
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-6 w-full sm:w-auto mb-14">
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: '-50px' }}
+          transition={{ duration: 0.65, delay: 0.3, ease: [0.16, 1, 0.3, 1] }}
+          className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-6 w-full sm:w-auto mb-14"
+        >
           <button
             type="button"
             onClick={() => handleScrollTo('membership')}
@@ -58,10 +82,16 @@ export const GymFinalCTA: React.FC = () => {
           >
             <span>BOOK A FREE TOUR</span>
           </button>
-        </div>
+        </motion.div>
 
         {/* ── Trust Metadata Strip ───────────────────────────── */}
-        <div className="flex flex-wrap items-center justify-center gap-6 sm:gap-10 pt-8 border-t border-white/10 text-xs sm:text-sm text-[#FEF9F5]/60">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: '-40px' }}
+          transition={{ duration: 0.6, delay: 0.4, ease: [0.16, 1, 0.3, 1] }}
+          className="flex flex-wrap items-center justify-center gap-6 sm:gap-10 pt-8 border-t border-white/10 text-xs sm:text-sm text-[#FEF9F5]/60"
+        >
           <div className="flex items-center gap-2">
             <CheckCircle2 className="w-4 h-4 text-[#CCFF00]" />
             <span>No Long-Term Lock-in</span>
@@ -76,7 +106,7 @@ export const GymFinalCTA: React.FC = () => {
             <CheckCircle2 className="w-4 h-4 text-[#CCFF00]" />
             <span>All Standard Equipment Access</span>
           </div>
-        </div>
+        </motion.div>
 
       </div>
     </section>
