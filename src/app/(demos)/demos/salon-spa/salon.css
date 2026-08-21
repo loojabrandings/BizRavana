@@ -1,0 +1,64 @@
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,400;1,600&family=Playfair+Display:ital,wght@0,600;0,700;0,800;1,400;1,600&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=Pinyon+Script&display=swap');
+
+@layer utilities {
+  .font-serif-luxury {
+    font-family: 'Playfair Display', 'Cormorant Garamond', Georgia, serif;
+  }
+  .font-script {
+    font-family: 'Pinyon Script', cursive;
+  }
+  .font-cormorant {
+    font-family: 'Cormorant Garamond', Georgia, serif;
+  }
+  .font-sans-clean {
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  }
+  .salon-bg-dark {
+    background-color: #1C1C1C;
+  }
+  .salon-text-ivory {
+    color: #F5F5F2;
+  }
+  .salon-text-gold {
+    color: #ECA53D;
+  }
+  .salon-bg-gold {
+    background-color: #ECA53D;
+  }
+  .salon-border-gold {
+    border-color: rgba(236, 165, 61, 0.3);
+  }
+  .salon-glow-gold {
+    box-shadow: 0 0 35px -5px rgba(236, 165, 61, 0.45);
+  }
+  .salon-glow-copper {
+    box-shadow: 0 0 25px -5px rgba(196, 106, 59, 0.4);
+  }
+}
+
+.salon-theme {
+  --color-charcoal: #1C1C1C;
+  --color-ivory: #F5F5F2;
+  --color-gold-primary: #ECA53D;
+  --color-copper: #C46A3B;
+  --color-burgundy: #7A1E2C;
+  --color-champagne: #E2C391;
+}
+
+@keyframes marquee {
+  0% {
+    transform: translateX(0%);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+@keyframes marquee-reverse {
+  0% {
+    transform: translateX(-50%);
+  }
+  100% {
+    transform: translateX(0%);
+  }
+}

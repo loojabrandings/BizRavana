@@ -1,0 +1,38 @@
+/* =============================================================================
+   GYM & FITNESS DEMO — BRAND STYLESHEET
+   Dark mode high-performance fitness aesthetic
+   Heading: Impact
+   Body: Poppins
+   ============================================================================= */
+
+@import url('https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,600;1,700&display=swap');
+
+:root {
+  --gym-bg: #080808;
+  --gym-surface: #121212;
+  --gym-surface-light: #1c1c1c;
+  --gym-white: #FEF9F5;
+  --gym-fit-green: #CCFF00;
+  --gym-fit-green-glow: rgba(204, 255, 0, 0.35);
+  --gym-fit-sand: #F1DFCF;
+  --gym-olive: #7B7457;
+  --gym-amber: #CF8E54;
+  --gym-bronze: #854627;
+  
+  --font-display: Impact, Haettenschweiler, 'Arial Narrow Bold', sans-serif;
+  --font-body: 'Poppins', system-ui, -apple-system, sans-serif;
+}
+
+.gym-root {
+  background-color: #050505;
+  color: #FEF9F5;
+  font-family: var(--font-body);
+  min-height: 100vh;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+.font-impact {
+  font-family: var(--font-display);
+  letter-spacing: 0.02em;
+}
