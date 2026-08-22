@@ -98,9 +98,9 @@ export default function DemosHubPage() {
           >
             {[
               { id: 'all', label: 'All Demos' },
-              { id: 'salon-spa', label: 'Salons & Spas' },
-              { id: 'event-planner', label: 'Event Planners' },
               { id: 'hotel-villa', label: 'Hotels & Villas' },
+              { id: 'gym', label: 'Gym & Fitness' },
+              { id: 'salon-spa', label: 'Salons & Spas' },
             ].map((tab) => {
               const isActive = activeCategory === tab.id;
               return (
@@ -129,84 +129,84 @@ export default function DemosHubPage() {
                 <motion.div
                   key={demo.id}
                   layout
-                  initial={{ opacity: 0, scale: 0.95 }}
+                  initial={{ opacity: 0, scale: 0.96 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.95 }}
+                  exit={{ opacity: 0, scale: 0.96 }}
                   transition={{ duration: 0.4 }}
-                  className={`wd-glass-card flex flex-col justify-between group ${
-                    isLive ? 'border-[#fd3a25]/40' : 'opacity-75'
-                  }`}
                 >
-                  {/* Card Media Header */}
-                  <div className="relative h-64 w-full overflow-hidden bg-[#0c0d12]">
-                    <Image
-                      src={demo.thumbnailUrl}
-                      alt={demo.title}
-                      fill
-                      sizes="(max-width: 768px) 100vw, 33vw"
-                      className="object-cover object-center group-hover:scale-105 transition-transform duration-700 ease-out"
+                  <Link
+                    href={demo.liveUrl}
+                    className="group relative flex flex-col justify-between rounded-3xl border border-white/10 bg-[#0c0d12]/90 backdrop-blur-xl overflow-hidden shadow-2xl hover:border-white/25 transition-all duration-500 hover:-translate-y-1.5"
+                  >
+                    {/* Ambient Glow on Hover */}
+                    <div
+                      className="absolute -inset-px rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none -z-10 blur-xl"
+                      style={{
+                        background: `radial-gradient(circle at 50% 50%, ${demo.accentColor}25, transparent 70%)`,
+                      }}
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-[#0c0d12] via-[#0c0d12]/40 to-transparent" />
 
-                    {/* Category & Status Badges */}
-                    <div className="absolute top-4 left-4 flex items-center gap-2">
-                      <span className="px-3 py-1 rounded-full bg-[#060608]/90 border border-white/15 text-[10px] font-bold uppercase tracking-wider text-neutral-300 backdrop-blur-md">
-                        {demo.categoryLabel}
-                      </span>
-                      {isLive ? (
-                        <span className="px-2.5 py-1 rounded-full bg-[#fd3a25] text-white text-[9px] font-extrabold uppercase tracking-wider flex items-center gap-1 shadow-md shadow-[#fd3a25]/40">
-                          <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping" />
-                          <span>Live Concept</span>
+                    {/* Card Media Viewport (Large Cinematic 16:10 Image) */}
+                    <div className="relative aspect-[16/10] w-full overflow-hidden bg-[#060608]">
+                      <Image
+                        src={demo.thumbnailUrl}
+                        alt={demo.title}
+                        fill
+                        priority
+                        sizes="(max-width: 768px) 100vw, 50vw"
+                        className="object-cover object-top group-hover:scale-105 transition-transform duration-700 ease-out"
+                      />
+                      {/* Subtle Top & Bottom Gradient Vignette */}
+                      <div className="absolute inset-0 bg-gradient-to-t from-[#0c0d12] via-transparent to-black/40" />
+
+                      {/* Floating Header Badges */}
+                      <div className="absolute top-4 inset-x-4 flex items-center justify-between z-10">
+                        <span className="px-3 py-1.5 rounded-full bg-[#060608]/85 border border-white/15 text-[11px] font-bold uppercase tracking-wider text-neutral-200 backdrop-blur-md shadow-lg">
+                          {demo.categoryLabel}
                         </span>
-                      ) : (
-                        <span className="px-2.5 py-1 rounded-full bg-white/[0.08] text-neutral-400 text-[9px] font-medium uppercase tracking-wider backdrop-blur-md">
-                          Coming Next
-                        </span>
-                      )}
-                    </div>
-                  </div>
 
-                  {/* Card Body Details */}
-                  <div className="p-6 sm:p-7 flex-1 flex flex-col justify-between bg-[#0c0d12]/90">
-                    <div className="space-y-3">
-                      <h2 className="text-lg sm:text-xl font-bold text-white group-hover:text-[#ff6b57] transition-colors leading-snug">
-                        {demo.title}
-                      </h2>
-                      <p className="text-xs sm:text-sm text-neutral-400 leading-relaxed line-clamp-2">
-                        {demo.tagline}
-                      </p>
+                        {isLive && (
+                          <span className="px-3 py-1.5 rounded-full bg-black/80 border border-emerald-500/40 text-emerald-400 text-[10px] font-extrabold uppercase tracking-wider flex items-center gap-1.5 backdrop-blur-md shadow-lg">
+                            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                            <span>Live Demo</span>
+                          </span>
+                        )}
+                      </div>
 
-                      {/* Feature Bullet List */}
-                      <div className="pt-2 space-y-1.5 border-t border-white/5">
-                        {demo.features.map((feature, idx) => (
-                          <div
-                            key={idx}
-                            className="flex items-center gap-2 text-xs text-neutral-300"
-                          >
-                            <span className="text-[#ff6b57] font-bold">✓</span>
-                            <span>{feature}</span>
-                          </div>
-                        ))}
+                      {/* Center Hover Launch Pill */}
+                      <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 z-10">
+                        <div className="px-5 py-2.5 rounded-full bg-[#060608]/90 border border-white/20 text-white font-bold text-xs uppercase tracking-wider backdrop-blur-md shadow-2xl flex items-center gap-2 transform translate-y-2 group-hover:translate-y-0 transition-transform duration-300">
+                          <span>Explore Experience</span>
+                          <span className="text-[#ff6b57]">↗</span>
+                        </div>
                       </div>
                     </div>
 
-                    {/* Bottom Action Button */}
-                    <div className="pt-6 mt-6 border-t border-white/10">
-                      {isLive ? (
-                        <Link
-                          href={demo.liveUrl}
-                          className="w-full py-3 rounded-full bg-gradient-to-r from-[#ff6b57] to-[#fd3a25] hover:from-[#ff8a7a] hover:to-[#ff7060] text-[#060608] font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg shadow-[#fd3a25]/25 transition-all transform hover:-translate-y-0.5"
+                    {/* Minimalist Editorial Bottom Bar */}
+                    <div className="p-5 sm:p-6 flex items-center justify-between gap-4 bg-[#0c0d12] border-t border-white/5">
+                      <div className="space-y-1 min-w-0">
+                        <span className="text-[11px] font-mono uppercase tracking-widest text-[#ff6b57] font-semibold block">
+                          Client Concept Demo
+                        </span>
+                        <h2 className="text-lg sm:text-xl font-bold text-white group-hover:text-white transition-colors truncate">
+                          {demo.title}
+                        </h2>
+                      </div>
+
+                      {/* Action Arrow Icon Button */}
+                      <div className="w-11 h-11 rounded-full bg-white/[0.06] border border-white/10 group-hover:bg-[#fd3a25] group-hover:border-[#fd3a25] group-hover:text-[#060608] text-white flex items-center justify-center shrink-0 transition-all duration-300 shadow-md">
+                        <svg
+                          className="w-4 h-4 transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform duration-300"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                          strokeWidth={2.5}
                         >
-                          <span>Launch Live Concept Demo</span>
-                          <span className="font-sans">→</span>
-                        </Link>
-                      ) : (
-                        <div className="w-full py-3 rounded-full bg-white/[0.04] text-neutral-500 font-medium text-xs uppercase tracking-wider text-center border border-white/5 cursor-not-allowed">
-                          Ready for Section-by-Section UI
-                        </div>
-                      )}
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M7 17L17 7M17 7H7M17 7V17" />
+                        </svg>
+                      </div>
                     </div>
-                  </div>
+                  </Link>
                 </motion.div>
               );
             })}

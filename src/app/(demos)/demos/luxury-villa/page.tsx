@@ -1,33 +1,45 @@
 'use client';
 
 import React from 'react';
-import { useDemoToast } from '@/components/demos/DemoToastContext';
+import './luxury-villa.css';
+import { VillaNavbar } from './components/VillaNavbar';
+import { VillaHero } from './components/VillaHero';
+import { VillaFacilities } from './components/VillaFacilities';
+import { VillaActivities } from './components/VillaActivities';
+import { VillaSpaces } from './components/VillaSpaces';
+import { VillaRates } from './components/VillaRates';
+import { VillaBooking } from './components/VillaBooking';
+import { VillaFooter } from './components/VillaFooter';
 
 export default function LuxuryVillaDemoPage() {
-  const { showDemoToast } = useDemoToast();
-
   return (
-    <div className="w-full min-h-screen bg-[#0A1118] text-[#EDF2F7] flex flex-col items-center justify-center p-6 text-center">
-      {/* Ready for Section by Section Implementation */}
-      <div className="max-w-xl space-y-4 p-8 rounded-3xl bg-white/[0.03] border border-white/10 backdrop-blur-xl">
-        <span className="inline-block px-3 py-1 rounded-full text-xs font-semibold tracking-widest uppercase bg-teal-500/20 text-teal-300 border border-teal-500/30">
-          Demo Landing Page Ready
-        </span>
-        <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-white">
-          Hotels & Villas Demo
-        </h1>
-        <p className="text-slate-400 text-sm leading-relaxed">
-          Folder structure and isolated routing setup complete. Ready for section-by-section UI implementation (Hero, Suites/Villas, Amenities, Gallery, Date Reservation).
-        </p>
-        <div className="pt-4">
-          <button
-            onClick={() => showDemoToast('Reservation Inquired', 'This demonstrates instant direct booking inquiries.')}
-            className="px-6 py-2.5 rounded-full bg-gradient-to-r from-teal-400 to-emerald-500 text-slate-950 font-bold text-sm hover:opacity-90 transition-opacity"
-          >
-            Test Demo Interaction
-          </button>
-        </div>
-      </div>
+    <div className="villa-root min-h-screen">
+      {/* ── Section 1: Navigation Bar ─────────────────────────── */}
+      <VillaNavbar />
+
+      {/* ── Main Content Flow ─────────────────────────────────── */}
+      <main id="top">
+        {/* Section 2: Hero Experience */}
+        <VillaHero />
+
+        {/* Section 3: Facilities (Subtle Amenity Ribbon) */}
+        <VillaFacilities />
+
+        {/* Section 4: Activities & Experiences (3-Column Interactive Cards) */}
+        <VillaActivities />
+
+        {/* Section 5: The Sanctuary / Spaces (Reference Layout Carousel) */}
+        <VillaSpaces />
+
+        {/* Section 6: Rates & Packages (3-Column Bespoke Pricing Grid) */}
+        <VillaRates />
+
+        {/* Section 7: Direct Booking & Check Availability */}
+        <VillaBooking />
+      </main>
+
+      {/* ── Section 8: Luxury Footer ──────────────────────────── */}
+      <VillaFooter />
     </div>
   );
 }
