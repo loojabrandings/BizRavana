@@ -91,16 +91,13 @@ export default function RootLayout({
       suppressHydrationWarning
       className={`h-full antialiased ${poppins.variable} ${lora.variable} ${caveat.variable} ${mohave.variable}`}
     >
-      <body className="min-h-full flex flex-col">
-        {/* Sets data-accent before first paint; the type switch follows the
-            landing site's theme script: text/javascript on the server so it
-            runs during HTML parsing, text/plain on the client so React
-            ignores it while hydrating. */}
+      <head>
         <script
-          type={typeof window === "undefined" ? "text/javascript" : "text/plain"}
           suppressHydrationWarning
           dangerouslySetInnerHTML={{ __html: accentInitScript }}
         />
+      </head>
+      <body className="min-h-full flex flex-col">
         <ThemeProvider defaultTheme="system" accent="bizravana">
           <PreferencesProvider>
             <QueryProvider>

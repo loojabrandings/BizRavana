@@ -1,0 +1,209 @@
+@import url('https://fonts.googleapis.com/css2?family=Alex+Brush&family=Cinzel:wght@400;500;600;700;800;900&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400;1,600&family=Great+Vibes&family=Italiana&family=Montserrat:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,600&display=swap');
+
+/* ==========================================================================
+   CUSTOM TYPOGRAPHY: BROWN SUGAR
+   ========================================================================= */
+@font-face {
+  font-family: 'Brown Sugar';
+  src: url('/fonts/Brown%20Sugar%20.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ==========================================================================
+   CÂLIN / LUXURY FINE JEWELLERY DEMO STYLESHEET
+   Brand Palette:
+   - Primary: #0D2D25 (Deep Royal Velvet Emerald)
+   - Secondary: #C6A05F (Brushed Champagne Gold)
+   - Accent: #F6EFE7 (Alabaster Cream / Pearl Ivory)
+   ========================================================================== */
+
+:root {
+  /* Core Brand Tokens */
+  --lux-primary: #0D2D25;
+  --lux-secondary: #C6A05F;
+  --lux-accent: #F6EFE7;
+
+  /* Emerald Noir Dark Spectrum */
+  --lux-bg-dark: #071713;
+  --lux-bg-dark-surface: #0D2D25;
+  --lux-bg-dark-card: #09201a;
+  --lux-emerald-deep: #05120e;
+  --lux-emerald-rich: #0D2D25;
+  --lux-emerald-accent: #134237;
+  --lux-emerald-glow: rgba(13, 45, 37, 0.45);
+
+  /* Gold & Champagne Spectrum */
+  --lux-gold-primary: #C6A05F;
+  --lux-gold-light: #dfbe82;
+  --lux-gold-champagne: #edd3a4;
+  --lux-gold-warm: #C6A05F;
+  --lux-gold-dark: #9e7a3a;
+  --lux-gold-bronze: #84642c;
+  --lux-gold-glow: rgba(198, 160, 95, 0.25);
+
+  /* Light Ivory / Cream Spectrum */
+  --lux-bg-light: #F6EFE7;
+  --lux-bg-light-surface: #ede3d6;
+  --lux-bg-light-card: #ffffff;
+  --lux-text-dark: #0D2D25;
+  --lux-text-muted: #62726b;
+
+  /* Typography Variables */
+  --lux-font-custom: 'Brown Sugar', 'Italiana', 'Cormorant Garamond', serif;
+  --lux-font-secondary: 'Italiana', 'Cormorant Garamond', serif;
+  --lux-font-serif: 'Italiana', 'Cormorant Garamond', 'Playfair Display', Georgia, serif;
+  --lux-font-display: 'Italiana', 'Cinzel', 'Playfair Display', Georgia, serif;
+  --lux-font-script: 'Alex Brush', 'Great Vibes', cursive;
+  --lux-font-sans: 'Montserrat', system-ui, -apple-system, sans-serif;
+}
+
+.lux-root {
+  font-family: var(--lux-font-sans);
+  background-color: var(--lux-bg-dark);
+  color: var(--lux-accent);
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+  position: relative;
+}
+
+/* Custom Display & Secondary Title Font Classes */
+.font-custom-brand {
+  font-family: var(--lux-font-custom);
+}
+
+.font-italiana {
+  font-family: var(--lux-font-secondary);
+}
+
+.font-serif-lux {
+  font-family: var(--lux-font-serif);
+}
+
+.font-display-lux {
+  font-family: var(--lux-font-display);
+}
+
+.font-script-lux {
+  font-family: var(--lux-font-script);
+}
+
+/* Background Utilities */
+.bg-lux-dark {
+  background-color: var(--lux-bg-dark);
+}
+
+.bg-lux-surface {
+  background-color: var(--lux-bg-dark-surface);
+}
+
+/* Floating Glass Pill Navbar */
+.lux-pill-navbar {
+  background: rgba(13, 35, 28, 0.55);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(246, 239, 231, 0.16);
+  box-shadow: 0 16px 36px -6px rgba(0, 0, 0, 0.55), inset 0 1px 1px rgba(255, 255, 255, 0.15);
+}
+
+.lux-pill-active {
+  background: #F6EFE7;
+  color: #071713;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+}
+
+.lux-pill-link {
+  color: rgba(246, 239, 231, 0.75);
+  transition: all 0.25s ease;
+}
+
+.lux-pill-link:hover {
+  color: #ffffff;
+  background: rgba(246, 239, 231, 0.1);
+}
+
+/* Social Icon Buttons */
+.lux-social-btn {
+  background: rgba(18, 22, 20, 0.65);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(246, 239, 231, 0.12);
+  color: rgba(246, 239, 231, 0.85);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.lux-social-btn:hover {
+  background: rgba(13, 45, 37, 0.9);
+  border-color: var(--lux-secondary);
+  color: var(--lux-secondary);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px -2px rgba(198, 160, 95, 0.3);
+}
+
+/* Metallic Gold Gradients */
+.text-gold-gradient {
+  background: linear-gradient(135deg, #F6EFE7 0%, #dfbe82 25%, #C6A05F 60%, #e8cb93 85%, #9e7a3a 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.text-gold-subtle {
+  color: #C6A05F;
+}
+
+/* Hero Title Styling */
+.hero-editorial-title {
+  font-family: var(--lux-font-custom);
+  line-height: 0.88;
+  letter-spacing: -0.01em;
+  color: var(--lux-accent);
+}
+
+/* Vertical Scroll Indicator */
+.scroll-line-indicator {
+  width: 1px;
+  height: 48px;
+  background: linear-gradient(to bottom, rgba(246, 239, 231, 0.6), rgba(198, 160, 95, 0.8));
+  position: relative;
+  overflow: hidden;
+}
+
+.scroll-line-indicator::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(to bottom, transparent, #C6A05F, transparent);
+  animation: scrollDrop 2.2s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+}
+
+@keyframes scrollDrop {
+  0% {
+    transform: translateY(-100%);
+  }
+  100% {
+    transform: translateY(100%);
+  }
+}
+
+/* Custom Scrollbar for luxury feel */
+.lux-root ::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.lux-root ::-webkit-scrollbar-track {
+  background: #071713;
+}
+
+.lux-root ::-webkit-scrollbar-thumb {
+  background: #C6A05F;
+  border-radius: 3px;
+}
+
+.lux-root ::-webkit-scrollbar-thumb:hover {
+  background: #dfbe82;
+}

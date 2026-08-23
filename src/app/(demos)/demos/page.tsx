@@ -98,6 +98,7 @@ export default function DemosHubPage() {
           >
             {[
               { id: 'all', label: 'All Demos' },
+              { id: 'luxury-jewellery', label: 'Haute Jewellery' },
               { id: 'hotel-villa', label: 'Hotels & Villas' },
               { id: 'gym', label: 'Gym & Fitness' },
               { id: 'salon-spa', label: 'Salons & Spas' },
@@ -124,7 +125,6 @@ export default function DemosHubPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
           <AnimatePresence>
             {filteredDemos.map((demo) => {
-              const isLive = demo.status === 'ready';
               return (
                 <motion.div
                   key={demo.id}
@@ -146,7 +146,7 @@ export default function DemosHubPage() {
                       }}
                     />
 
-                    {/* Card Media Viewport (Large Cinematic 16:10 Image) */}
+                    {/* Card Media Viewport (Uncluttered, Badge-Free Image Showcase) */}
                     <div className="relative aspect-[16/10] w-full overflow-hidden bg-[#060608]">
                       <Image
                         src={demo.thumbnailUrl}
@@ -156,22 +156,9 @@ export default function DemosHubPage() {
                         sizes="(max-width: 768px) 100vw, 50vw"
                         className="object-cover object-top group-hover:scale-105 transition-transform duration-700 ease-out"
                       />
-                      {/* Subtle Top & Bottom Gradient Vignette */}
-                      <div className="absolute inset-0 bg-gradient-to-t from-[#0c0d12] via-transparent to-black/40" />
-
-                      {/* Floating Header Badges */}
-                      <div className="absolute top-4 inset-x-4 flex items-center justify-between z-10">
-                        <span className="px-3 py-1.5 rounded-full bg-[#060608]/85 border border-white/15 text-[11px] font-bold uppercase tracking-wider text-neutral-200 backdrop-blur-md shadow-lg">
-                          {demo.categoryLabel}
-                        </span>
-
-                        {isLive && (
-                          <span className="px-3 py-1.5 rounded-full bg-black/80 border border-emerald-500/40 text-emerald-400 text-[10px] font-extrabold uppercase tracking-wider flex items-center gap-1.5 backdrop-blur-md shadow-lg">
-                            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                            <span>Live Demo</span>
-                          </span>
-                        )}
-                      </div>
+                      
+                      {/* Subtle Bottom Vignette */}
+                      <div className="absolute inset-0 bg-gradient-to-t from-[#0c0d12] via-transparent to-transparent opacity-80" />
 
                       {/* Center Hover Launch Pill */}
                       <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 z-10">
@@ -185,10 +172,12 @@ export default function DemosHubPage() {
                     {/* Minimalist Editorial Bottom Bar */}
                     <div className="p-5 sm:p-6 flex items-center justify-between gap-4 bg-[#0c0d12] border-t border-white/5">
                       <div className="space-y-1 min-w-0">
+                        {/* Category Label replacing Client Concept Demo */}
                         <span className="text-[11px] font-mono uppercase tracking-widest text-[#ff6b57] font-semibold block">
-                          Client Concept Demo
+                          {demo.categoryLabel}
                         </span>
-                        <h2 className="text-lg sm:text-xl font-bold text-white group-hover:text-white transition-colors truncate">
+                        {/* Title: Brand Name Only */}
+                        <h2 className="text-xl sm:text-2xl font-bold text-white group-hover:text-white transition-colors truncate">
                           {demo.title}
                         </h2>
                       </div>

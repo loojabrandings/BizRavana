@@ -1,0 +1,32 @@
+/* ==========================================================================
+   LUXE / NEXORA • Dedicated Righteous & Lexend Font Setup
+   ========================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700;800;900&family=Righteous&display=swap');
+
+.clothing-root {
+  --font-righteous: 'Righteous', cursive, sans-serif;
+  --font-lexend: 'Lexend', sans-serif;
+
+  --primary-purple: #8F72F8;
+  --primary-purple-dark: #7958F3;
+  --bg-canvas: #FFFFFF;
+  --text-dark: #120F1D;
+  background-color: #FFFFFF !important;
+  color: var(--text-dark);
+  font-family: 'Lexend', sans-serif;
+}
+
+.font-righteous {
+  font-family: 'Righteous', cursive, sans-serif !important;
+}
+
+.font-lexend {
+  font-family: 'Lexend', sans-serif !important;
+}
+
+body:has(.clothing-root),
+html:has(.clothing-root) {
+  background-color: #FFFFFF !important;
+  font-family: 'Lexend', sans-serif !important;
+}
