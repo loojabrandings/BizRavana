@@ -132,5 +132,23 @@ export const DEMO_SITES: DemoSite[] = [
       '60-120 FPS High-Performance Scroll Reveal Architecture',
     ],
   },
+  {
+    id: 'demo-dental',
+    slug: 'dental',
+    category: 'dental-clinic',
+    categoryLabel: 'Dental & Aesthetics',
+    title: 'LUMIDENT',
+    tagline: 'Gentle, modern dental care clinic in Colombo with interactive 3D crystal tooth experience',
+    thumbnailUrl: '/demos/dental/demo-card.png',
+    liveUrl: '/demos/dental',
+    accentColor: '#05c989',
+    status: 'ready',
+    features: [
+      'High-Impact 3D Crystal Tooth Hero & Scroll Journey',
+      'Gentle & Pain-Free Dental Care in Colombo',
+      'Interactive Online Appointment Booking Engine',
+      'Before & After Smile Transformation Studio',
+    ],
+  },
 ];
 

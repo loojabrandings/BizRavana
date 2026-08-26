@@ -1,0 +1,50 @@
+@layer utilities {
+  /* Lumident Custom Dental Styles & Glows with Primary #05c989 */
+  .dental-glass {
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.9);
+  }
+
+  .dental-glass-card {
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(226, 232, 240, 0.8);
+    box-shadow: 0 20px 40px -15px rgba(15, 23, 42, 0.05);
+  }
+
+  .dental-glow {
+    box-shadow: 0 10px 25px -5px rgba(5, 201, 137, 0.35), 0 8px 10px -6px rgba(5, 201, 137, 0.2);
+  }
+
+  .dental-glow-hover:hover {
+    box-shadow: 0 15px 30px -5px rgba(5, 201, 137, 0.45), 0 10px 15px -5px rgba(5, 201, 137, 0.25);
+  }
+
+  .text-navy {
+    color: #071A2E;
+  }
+
+  .text-dental-primary {
+    color: #05c989;
+  }
+
+  .bg-dental-primary {
+    background-color: #05c989;
+  }
+}
+
+@keyframes subtle-float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+.animate-subtle-float {
+  animation: subtle-float 6s ease-in-out infinite;
+}
