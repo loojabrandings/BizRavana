@@ -1,0 +1,38 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400&family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400;1,500&display=swap');
+
+/* ── Real Estate Luxury Light Theme Styling ────────────────────── */
+:root {
+  --re-bg: #FAF9F6;
+  --re-bg-alt: #F3F1ED;
+  --re-card: #FFFFFF;
+  --re-accent: #C5A880;
+  --re-accent-dark: #A8895E;
+  --re-text-main: #141416;
+  --re-text-muted: #6E7178;
+  --re-border: #E8E5DF;
+  --re-font-sans: 'Plus Jakarta Sans', var(--font-poppins), sans-serif;
+  --re-font-serif: 'Playfair Display', var(--font-lora), Georgia, serif;
+}
+
+.realestate-root {
+  background-color: var(--re-bg);
+  color: var(--re-text-main);
+  font-family: var(--re-font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+.re-font-sans {
+  font-family: var(--re-font-sans);
+}
+
+.re-font-serif {
+  font-family: var(--re-font-serif);
+}
+
+/* Smooth motion utilities */
+.re-glass-panel {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+}
