@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
-import { motion } from 'framer-motion';
+import React, { useState, useRef } from 'react';
+import { motion, useScroll, useTransform, useSpring } from 'framer-motion';
 import {
   Sparkles,
   MapPin,
@@ -47,11 +47,25 @@ const TREATMENTS = [
 ];
 
 export function DentalContact({ onOpenBooking }: DentalContactProps) {
+  const contactRef = useRef<HTMLDivElement>(null);
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [treatment, setTreatment] = useState(TREATMENTS[0]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+
+  // Parallax scrolling with spring smoothing
+  const { scrollYProgress } = useScroll({
+    target: contactRef,
+    offset: ['start end', 'end start'],
+  });
+
+  const smoothProgress = useSpring(scrollYProgress, { stiffness: 90, damping: 20, restDelta: 0.001 });
+
+  const headerY = useTransform(smoothProgress, [0, 1], [50, -50]);
+  const leftY = useTransform(smoothProgress, [0, 1], [70, -70]);
+  const rightY = useTransform(smoothProgress, [0, 1], [-50, 50]);
+  const bgGlowY = useTransform(smoothProgress, [0, 1], [-120, 120]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -63,48 +77,89 @@ export function DentalContact({ onOpenBooking }: DentalContactProps) {
   };
 
   return (
-    <section id="contact" className="relative w-full py-20 sm:py-28 bg-[#FAFCFE]/60 backdrop-blur-md overflow-hidden select-none border-t border-slate-100/60 z-40">
-      
-      {/* Background Subtle Accent */}
+    <section
+      ref={contactRef}
+      id="contact"
+      className="relative w-full py-20 sm:py-28 lg:py-36 bg-[#FAFCFE]/60 backdrop-blur-md overflow-hidden select-none border-t border-slate-100/60 z-40"
+    >
+      {/* Background Subtle Accent with Parallax */}
       <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-1/2 left-1/4 -translate-y-1/2 w-[500px] h-[500px] bg-emerald-50/50 rounded-full blur-3xl opacity-60" />
+        <motion.div
+          style={{ y: bgGlowY }}
+          className="absolute top-1/2 left-1/4 -translate-y-1/2 w-[550px] h-[550px] bg-emerald-100/40 rounded-full blur-3xl opacity-70 will-change-transform"
+        />
       </div>
 
       <div className="relative w-full max-w-[1440px] mx-auto px-6 sm:px-10 lg:px-16 z-10">
         
-        {/* ── Section Header ───────────────────────────────────────── */}
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 pb-12 sm:pb-16 border-b border-slate-200/80">
-          <div className="flex flex-col items-start gap-3.5 sm:gap-4">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-50/80 backdrop-blur-sm border border-emerald-200/60 text-xs font-semibold text-[#05c989] tracking-wider uppercase">
+        {/* ── Section Header with Parallax & Viewport Entrance ── */}
+        <motion.div
+          style={{ y: headerY }}
+          className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 pb-10 sm:pb-14 lg:pb-16 border-b border-slate-200/80 will-change-transform"
+        >
+          <div className="flex flex-col items-start gap-3 sm:gap-4">
+            <motion.div
+              initial={{ opacity: 0, y: 15 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: '-40px' }}
+              transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+              className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-50/80 backdrop-blur-sm border border-emerald-200/60 text-xs font-semibold text-[#05c989] tracking-wider uppercase"
+            >
               <Sparkles className="w-3.5 h-3.5" />
               <span>CONTACT US</span>
-            </div>
+            </motion.div>
 
-            <h2 className="font-bold tracking-[-0.035em] text-[#111827] text-[34px] leading-[1.05] sm:text-[46px] sm:leading-[1.02] lg:text-[54px] lg:leading-[1.0]">
+            <motion.h2
+              initial={{ opacity: 0, y: 25 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: '-40px' }}
+              transition={{ duration: 0.55, delay: 0.08, ease: [0.22, 1, 0.36, 1] }}
+              className="font-bold tracking-[-0.035em] text-[#111827] text-[30px] leading-[1.08] sm:text-[42px] sm:leading-[1.02] lg:text-[54px] lg:leading-[1.0]"
+            >
               Get in Touch.<br />
               <span className="text-[#05c989]">We&apos;re Here in Colombo.</span>
-            </h2>
+            </motion.h2>
           </div>
 
-          <div className="max-w-[380px] text-left sm:text-right flex flex-col items-start sm:items-end gap-2">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: '-40px' }}
+            transition={{ duration: 0.55, delay: 0.16, ease: [0.22, 1, 0.36, 1] }}
+            className="max-w-[380px] text-left sm:text-right flex flex-col items-start sm:items-end gap-2"
+          >
             <p className="text-slate-500 text-xs sm:text-sm lg:text-[14px] leading-relaxed font-normal">
               Have a question or looking to schedule a consultation? Reach out to our friendly Colombo clinic team.
             </p>
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
 
-        {/* ── 2-Column Grid ───────────────────────────────────────── */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 pt-12 sm:pt-16 items-start">
+        {/* ── 2-Column Grid with Parallax ─────────────────────────────────── */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-16 pt-8 sm:pt-14 items-start">
           
-          {/* Left Column: Direct Info & Hours (lg:col-span-5) */}
-          <div className="lg:col-span-5 flex flex-col gap-8">
+          {/* Left Column: Direct Info & Hours with Parallax (lg:col-span-5) */}
+          <motion.div
+            style={{ y: leftY }}
+            className="col-span-1 lg:col-span-5 flex flex-col gap-6 sm:gap-8 will-change-transform"
+          >
             
             {/* Contact Items */}
-            <div className="flex flex-col gap-6">
-              {CLINIC_DETAILS.map((item) => {
+            <div className="flex flex-col gap-5 sm:gap-6">
+              {CLINIC_DETAILS.map((item, idx) => {
                 const IconC = item.icon;
                 return (
-                  <div key={item.title} className="flex items-start gap-4">
+                  <motion.div
+                    key={item.title}
+                    initial={{ opacity: 0, x: -20 }}
+                    whileInView={{ opacity: 1, x: 0 }}
+                    viewport={{ once: true, margin: '-30px' }}
+                    transition={{
+                      duration: 0.45,
+                      delay: 0.15 + idx * 0.08,
+                      ease: [0.22, 1, 0.36, 1],
+                    }}
+                    className="flex items-start gap-4"
+                  >
                     <div className="w-11 h-11 rounded-2xl bg-white/70 backdrop-blur-md border border-white/80 text-[#05c989] flex items-center justify-center shrink-0 shadow-xs">
                       <IconC className="w-5 h-5" />
                     </div>
@@ -119,13 +174,19 @@ export function DentalContact({ onOpenBooking }: DentalContactProps) {
                         {item.desc}
                       </span>
                     </div>
-                  </div>
+                  </motion.div>
                 );
               })}
             </div>
 
             {/* Clean Opening Hours Box (Frosted Glassmorphism) */}
-            <div className="p-6 rounded-2xl bg-white/60 backdrop-blur-2xl border border-white/80 shadow-lg flex flex-col gap-3">
+            <motion.div
+              initial={{ opacity: 0, y: 20, scale: 0.97 }}
+              whileInView={{ opacity: 1, y: 0, scale: 1 }}
+              viewport={{ once: true, margin: '-30px' }}
+              transition={{ duration: 0.5, delay: 0.4, ease: [0.22, 1, 0.36, 1] }}
+              className="p-5 sm:p-6 rounded-2xl bg-white/60 backdrop-blur-2xl border border-white/80 shadow-lg flex flex-col gap-3"
+            >
               <div className="flex items-center gap-2 text-xs font-bold text-[#111827] uppercase tracking-wider pb-2 border-b border-slate-100">
                 <Clock className="w-4 h-4 text-[#05c989]" />
                 <span>Clinic Hours</span>
@@ -139,136 +200,129 @@ export function DentalContact({ onOpenBooking }: DentalContactProps) {
                 <span className="font-semibold text-[#111827]">09:00 AM – 04:00 PM</span>
               </div>
               <div className="flex justify-between text-xs sm:text-sm text-slate-600">
-                <span>Sunday</span>
-                <span className="font-semibold text-[#05c989]">Emergency On-Call</span>
+                <span>Sunday &amp; Poya Days</span>
+                <span className="font-semibold text-emerald-600">Emergency Appointments Only</span>
               </div>
+            </motion.div>
+
+          </motion.div>
+
+          {/* Right Column: Interactive Quick Inquiry Card (lg:col-span-7) */}
+          <motion.div
+            style={{ y: rightY }}
+            initial={{ opacity: 0, y: 30, scale: 0.98 }}
+            whileInView={{ opacity: 1, y: 0, scale: 1 }}
+            viewport={{ once: true, margin: '-40px' }}
+            transition={{ duration: 0.6, delay: 0.25, ease: [0.22, 1, 0.36, 1] }}
+            className="col-span-1 lg:col-span-7 rounded-3xl bg-white/70 backdrop-blur-2xl border border-white/80 shadow-xl p-6 sm:p-10 flex flex-col gap-6 will-change-transform"
+          >
+            
+            <div className="flex flex-col gap-1">
+              <h3 className="text-xl sm:text-2xl font-bold text-[#111827] tracking-tight">
+                Send a Quick Message
+              </h3>
+              <p className="text-xs sm:text-sm text-slate-500 font-normal">
+                Leave your contact details and our Colombo team will get back to you shortly.
+              </p>
             </div>
 
-          </div>
-
-          {/* Right Column: Clean Direct Inquiry Form (lg:col-span-7 Frosted Glass) */}
-          <div className="lg:col-span-7">
-            <div className="rounded-3xl bg-white/65 backdrop-blur-2xl border border-white/80 shadow-[0_30px_90px_-20px_rgba(0,0,0,0.08)] p-8 sm:p-10">
-              
-              {isSubmitted ? (
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  className="py-12 flex flex-col items-center text-center gap-4"
+            {isSubmitted ? (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="py-12 flex flex-col items-center justify-center text-center gap-3"
+              >
+                <div className="w-14 h-14 rounded-full bg-emerald-50 text-[#05c989] flex items-center justify-center border border-emerald-200/60 shadow-xs">
+                  <CheckCircle2 className="w-8 h-8" />
+                </div>
+                <h4 className="text-xl font-bold text-[#111827]">Message Received!</h4>
+                <p className="text-xs sm:text-sm text-slate-500 max-w-[320px]">
+                  Thank you, <strong>{name || 'valued patient'}</strong>. Our Colombo receptionist will contact you on <strong>{phone}</strong> shortly.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setIsSubmitted(false)}
+                  className="mt-4 px-6 py-2 rounded-full border border-slate-200 text-xs font-semibold text-slate-600 hover:text-black hover:bg-slate-50"
                 >
-                  <div className="w-14 h-14 rounded-full bg-emerald-50 text-[#05c989] flex items-center justify-center shadow-inner">
-                    <CheckCircle2 className="w-8 h-8" />
-                  </div>
-                  <h3 className="font-bold text-2xl text-[#111827]">
-                    Message Sent!
-                  </h3>
-                  <p className="text-xs sm:text-sm text-slate-500 max-w-[340px] leading-relaxed">
-                    Thank you {name}. Our clinic coordination team will contact you within 2 business hours.
-                  </p>
-                  <button
-                    onClick={() => {
-                      setIsSubmitted(false);
-                      setName('');
-                      setPhone('');
-                    }}
-                    className="mt-2 text-xs font-semibold text-[#05c989] hover:underline cursor-pointer"
+                  Send another inquiry
+                </button>
+              </motion.div>
+            ) : (
+              <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+                
+                {/* Name */}
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                    Full Name
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Kasun Perera"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    className="w-full px-4 py-3 rounded-2xl bg-white/80 border border-slate-200/80 focus:border-[#05c989] focus:bg-white focus:outline-none text-xs sm:text-sm font-medium transition-colors shadow-2xs placeholder:text-slate-400"
+                  />
+                </div>
+
+                {/* Phone */}
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                    Mobile Phone Number (Sri Lanka)
+                  </label>
+                  <input
+                    type="tel"
+                    required
+                    placeholder="e.g. 077 123 4567 or +94 77 123 4567"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    className="w-full px-4 py-3 rounded-2xl bg-white/80 border border-slate-200/80 focus:border-[#05c989] focus:bg-white focus:outline-none text-xs sm:text-sm font-medium transition-colors shadow-2xs placeholder:text-slate-400"
+                  />
+                </div>
+
+                {/* Treatment Select */}
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                    Interested Treatment
+                  </label>
+                  <select
+                    value={treatment}
+                    onChange={(e) => setTreatment(e.target.value)}
+                    className="w-full px-4 py-3 rounded-2xl bg-white/80 border border-slate-200/80 focus:border-[#05c989] focus:bg-white focus:outline-none text-xs sm:text-sm font-medium transition-colors shadow-2xs text-slate-700 cursor-pointer"
                   >
-                    Send another inquiry
-                  </button>
-                </motion.div>
-              ) : (
-                <form onSubmit={handleSubmit} className="flex flex-col gap-5">
-                  <div className="flex flex-col">
-                    <h3 className="font-bold text-xl sm:text-2xl text-[#111827] tracking-tight">
-                      Quick Consultation Inquiry
-                    </h3>
-                    <p className="text-xs text-slate-500 mt-0.5">
-                      Fill out the form below or book directly online
-                    </p>
-                  </div>
+                    {TREATMENTS.map((t) => (
+                      <option key={t} value={t}>
+                        {t}
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
-                  {/* Name Input */}
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-xs font-semibold text-slate-700">
-                      Full Name
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="e.g. Sarah Jenkins"
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      className="w-full px-4 py-3 rounded-2xl border border-white/80 bg-white/50 backdrop-blur-sm hover:bg-white/80 text-xs sm:text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#05c989] focus:border-transparent transition-all"
-                    />
-                  </div>
-
-                  {/* Phone Input */}
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-xs font-semibold text-slate-700">
-                      Phone Number
-                    </label>
-                    <input
-                      type="tel"
-                      required
-                      placeholder="e.g. +41 79 123 4567"
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                      className="w-full px-4 py-3 rounded-2xl border border-white/80 bg-white/50 backdrop-blur-sm hover:bg-white/80 text-xs sm:text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#05c989] focus:border-transparent transition-all"
-                    />
-                  </div>
-
-                  {/* Treatment Selector */}
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-xs font-semibold text-slate-700">
-                      Interested Treatment
-                    </label>
-                    <select
-                      value={treatment}
-                      onChange={(e) => setTreatment(e.target.value)}
-                      className="w-full px-4 py-3 rounded-2xl border border-white/80 bg-white/50 backdrop-blur-sm hover:bg-white/80 text-xs sm:text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#05c989] focus:border-transparent transition-all cursor-pointer"
-                    >
-                      {TREATMENTS.map((t) => (
-                        <option key={t} value={t}>
-                          {t}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* Submit CTA */}
+                {/* Submit Action */}
+                <div className="pt-2 flex flex-col sm:flex-row items-center gap-3">
                   <button
                     type="submit"
                     disabled={isSubmitting}
-                    className="mt-2 w-full py-3.5 rounded-2xl bg-[#05c989] hover:bg-[#04b37a] disabled:bg-emerald-300 text-white font-semibold text-xs sm:text-sm transition-all shadow-md active:scale-98 flex items-center justify-center gap-2 cursor-pointer group"
+                    className="w-full sm:w-auto flex-1 py-3.5 rounded-full bg-[#111827] hover:bg-[#05c989] text-white text-xs sm:text-sm font-bold tracking-wide transition-all shadow-md hover:shadow-emerald-500/25 active:scale-95 flex items-center justify-center gap-2 cursor-pointer group disabled:opacity-50"
                   >
-                    {isSubmitting ? (
-                      <span>Sending...</span>
-                    ) : (
-                      <>
-                        <span>Submit Inquiry</span>
-                        <Send className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
-                      </>
-                    )}
+                    <span>{isSubmitting ? 'Sending...' : 'Send Message'}</span>
+                    <Send className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
                   </button>
 
-                  {/* Direct Online Scheduler Link */}
-                  <div className="pt-2 text-center">
-                    <span className="text-xs text-slate-400">Prefer instant booking? </span>
-                    <button
-                      type="button"
-                      onClick={onOpenBooking}
-                      className="text-xs font-semibold text-[#05c989] hover:underline cursor-pointer inline-flex items-center gap-1"
-                    >
-                      <span>Open Live Calendar</span>
-                      <ArrowRight className="w-3 h-3" />
-                    </button>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={onOpenBooking}
+                    className="w-full sm:w-auto px-6 py-3.5 rounded-full bg-emerald-50 text-[#05c989] hover:bg-emerald-100/70 border border-emerald-200/60 text-xs sm:text-sm font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                  >
+                    <span>Instant Booking</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
 
-                </form>
-              )}
+              </form>
+            )}
 
-            </div>
-          </div>
+          </motion.div>
 
         </div>
 

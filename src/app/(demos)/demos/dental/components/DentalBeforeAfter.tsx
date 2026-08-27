@@ -1,39 +1,44 @@
 'use client';
 
-import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { Sparkles, ArrowRight, ShieldCheck, CheckCircle2, Sliders, Eye, Zap, HeartHandshake } from 'lucide-react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { motion, useScroll, useTransform, useSpring } from 'framer-motion';
+import { Sparkles, MoveHorizontal, CheckCircle2, ArrowRight } from 'lucide-react';
 
 interface DentalBeforeAfterProps {
   onOpenBooking?: () => void;
 }
 
 export function DentalBeforeAfter({ onOpenBooking }: DentalBeforeAfterProps) {
-  const [sliderPos, setSliderPos] = useState<number>(50); // percentage 0 - 100
-  const [isDragging, setIsDragging] = useState<boolean>(false);
+  const sectionRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const handleMove = useCallback(
-    (clientX: number) => {
-      if (!containerRef.current) return;
-      const rect = containerRef.current.getBoundingClientRect();
-      const x = clientX - rect.left;
-      const percentage = Math.max(0, Math.min(100, (x / rect.width) * 100));
-      setSliderPos(percentage);
-    },
-    []
-  );
+  // Parallax scrolling with spring smoothing
+  const { scrollYProgress } = useScroll({
+    target: sectionRef,
+    offset: ['start end', 'end start'],
+  });
 
-  const handleMouseDown = (e: React.MouseEvent) => {
-    setIsDragging(true);
-    handleMove(e.clientX);
-  };
+  const smoothProgress = useSpring(scrollYProgress, { stiffness: 90, damping: 20, restDelta: 0.001 });
 
-  const handleTouchStart = (e: React.TouchEvent) => {
-    setIsDragging(true);
-    if (e.touches.length > 0) {
-      handleMove(e.touches[0].clientX);
-    }
-  };
+  const headerY = useTransform(smoothProgress, [0, 1], [60, -60]);
+  const canvasY = useTransform(smoothProgress, [0, 1], [90, -90]);
+  const bgGlowY = useTransform(smoothProgress, [0, 1], [-130, 130]);
+
+  // Slider position: 0 (all After) to 100 (all Before)
+  const [sliderPos, setSliderPos] = useState<number>(50);
+  const [isDragging, setIsDragging] = useState<boolean>(false);
+
+  // Calculate slider percentage from pointer/touch coordinate
+  const handleMove = useCallback((clientX: number) => {
+    if (!containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    const x = clientX - rect.left;
+    const percentage = (x / rect.width) * 100;
+    setSliderPos(Math.max(0, Math.min(100, percentage)));
+  }, []);
+
+  const handleMouseDown = () => setIsDragging(true);
+  const handleTouchStart = () => setIsDragging(true);
 
   useEffect(() => {
     const handleGlobalMouseUp = () => setIsDragging(false);
@@ -59,27 +64,55 @@ export function DentalBeforeAfter({ onOpenBooking }: DentalBeforeAfterProps) {
 
   return (
     <section
+      ref={sectionRef}
       id="results"
-      className="relative w-full py-24 sm:py-32 bg-white/40 backdrop-blur-md flex flex-col justify-center overflow-hidden border-t border-slate-100/60 select-none z-40"
+      className="relative w-full py-20 sm:py-28 lg:py-36 bg-white/40 backdrop-blur-md flex flex-col justify-center overflow-hidden border-t border-slate-100/60 select-none z-40"
     >
+      {/* Background Soft Accent Glow with Parallax */}
+      <motion.div
+        style={{ y: bgGlowY }}
+        className="absolute top-1/3 right-1/4 w-[550px] h-[550px] bg-emerald-100/45 rounded-full blur-3xl opacity-70 pointer-events-none will-change-transform"
+      />
+
       <div className="relative w-full max-w-[1440px] mx-auto px-6 sm:px-10 lg:px-16 z-40">
         
-        {/* ── Section Header ───────────────────────────────────────── */}
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 pb-12 sm:pb-16 border-b border-slate-200/80">
-          <div className="flex flex-col items-start gap-3.5 sm:gap-4">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-50/80 backdrop-blur-sm border border-emerald-200/60 text-xs font-semibold text-[#05c989] tracking-wider uppercase">
+        {/* ── Section Header with Parallax & Viewport Entrance ── */}
+        <motion.div
+          style={{ y: headerY }}
+          className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 pb-10 sm:pb-14 lg:pb-16 border-b border-slate-200/80 will-change-transform"
+        >
+          <div className="flex flex-col items-start gap-3 sm:gap-4">
+            <motion.div
+              initial={{ opacity: 0, y: 15 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: '-40px' }}
+              transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+              className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-50/80 backdrop-blur-sm border border-emerald-200/60 text-xs font-semibold text-[#05c989] tracking-wider uppercase"
+            >
               <Sparkles className="w-3.5 h-3.5" />
               <span>SMILE TRANSFORMATIONS</span>
-            </div>
+            </motion.div>
 
-            <h2 className="font-bold tracking-[-0.035em] text-[#111827] text-[34px] leading-[1.05] sm:text-[46px] sm:leading-[1.02] lg:text-[54px] lg:leading-[1.0]">
+            <motion.h2
+              initial={{ opacity: 0, y: 25 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: '-40px' }}
+              transition={{ duration: 0.55, delay: 0.08, ease: [0.22, 1, 0.36, 1] }}
+              className="font-bold tracking-[-0.035em] text-[#111827] text-[30px] leading-[1.08] sm:text-[42px] sm:leading-[1.02] lg:text-[54px] lg:leading-[1.0]"
+            >
               Real Results.<br />
               <span className="text-[#05c989]">Healthy, Bright Smiles.</span>
-            </h2>
+            </motion.h2>
           </div>
 
           {/* Quick Preset Selector */}
-          <div className="flex flex-col items-start sm:items-end gap-3">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: '-40px' }}
+            transition={{ duration: 0.55, delay: 0.16, ease: [0.22, 1, 0.36, 1] }}
+            className="flex flex-col items-start sm:items-end gap-3"
+          >
             <div className="flex items-center gap-1.5 p-1 rounded-full bg-white/70 backdrop-blur-xl border border-white/80 shadow-xs">
               <button
                 type="button"
@@ -118,11 +151,18 @@ export function DentalBeforeAfter({ onOpenBooking }: DentalBeforeAfterProps) {
             <p className="text-slate-500 text-xs sm:text-sm font-normal text-left sm:text-right">
               Drag the center slider or click the buttons above to compare.
             </p>
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
 
-        {/* ── Main Comparison Frame (Frosted Glass Outer Shell) ───── */}
-        <div className="pt-10 sm:pt-14 max-w-[1140px] mx-auto flex flex-col gap-6 relative z-40">
+        {/* ── Main Comparison Frame with Parallax ───── */}
+        <motion.div
+          style={{ y: canvasY }}
+          initial={{ opacity: 0, scale: 0.97, y: 30 }}
+          whileInView={{ opacity: 1, scale: 1, y: 0 }}
+          viewport={{ once: true, margin: '-40px' }}
+          transition={{ duration: 0.6, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
+          className="pt-8 sm:pt-12 max-w-[1140px] mx-auto flex flex-col gap-6 relative z-40 will-change-transform"
+        >
           
           {/* Main Comparison Canvas */}
           <div
@@ -138,95 +178,68 @@ export function DentalBeforeAfter({ onOpenBooking }: DentalBeforeAfterProps) {
               className="absolute inset-0 w-full h-full object-cover pointer-events-none select-none"
             />
 
-            {/* AFTER Corner Badge */}
-            <div className="absolute top-4 sm:top-6 right-4 sm:right-6 px-4 py-2 rounded-2xl bg-slate-950/80 backdrop-blur-md border border-white/20 text-white text-xs sm:text-sm font-bold tracking-wide flex items-center gap-2 z-10 pointer-events-none shadow-xl">
-              <span className="w-2 h-2 rounded-full bg-[#05c989] shadow-[0_0_8px_#05c989]" />
-              <span>AFTER • Clean &amp; Bright</span>
+            {/* After Pill (Bottom Right) */}
+            <div className="absolute bottom-5 right-5 inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-slate-950/80 backdrop-blur-md border border-white/20 text-white font-bold text-xs uppercase tracking-wider shadow-lg pointer-events-none z-10">
+              <span className="w-2 h-2 rounded-full bg-[#05c989] shadow-[0_0_6px_#05c989]" />
+              <span>AFTER TREATMENT</span>
             </div>
 
-            {/* ── Layer 2: BEFORE Image (Exact 1:1 Pixel Clip) ── */}
+            {/* ── Layer 2: BEFORE Image (Clipped with inset) ── */}
             <div
+              className="absolute inset-0 pointer-events-none"
               style={{
                 clipPath: `inset(0 ${100 - sliderPos}% 0 0)`,
+                WebkitClipPath: `inset(0 ${100 - sliderPos}% 0 0)`,
               }}
-              className="absolute inset-0 w-full h-full pointer-events-none select-none"
             >
               <img
                 src="/demos/dental/smile-before.jpg"
-                alt="Before Teeth Cleaning"
-                className="absolute inset-0 w-full h-full object-cover"
+                alt="Before Teeth Cleaning & Whitening"
+                className="absolute inset-0 w-full h-full object-cover pointer-events-none select-none"
               />
 
-              {/* BEFORE Corner Badge */}
-              <div className="absolute top-4 sm:top-6 left-4 sm:left-6 px-4 py-2 rounded-2xl bg-black/80 backdrop-blur-md border border-white/20 text-white text-xs sm:text-sm font-bold tracking-wide flex items-center gap-2 pointer-events-none shadow-xl">
-                <span className="w-2 h-2 rounded-full bg-amber-400 shadow-[0_0_8px_#fbbf24]" />
-                <span>BEFORE • Stains &amp; Plaque</span>
+              {/* Before Pill (Bottom Left) */}
+              <div className="absolute bottom-5 left-5 inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-slate-950/80 backdrop-blur-md border border-white/20 text-amber-300 font-bold text-xs uppercase tracking-wider shadow-lg pointer-events-none z-10">
+                <span className="w-2 h-2 rounded-full bg-amber-400 shadow-[0_0_6px_#f59e0b]" />
+                <span>BEFORE</span>
               </div>
             </div>
 
-            {/* ── Vertical Divider Bar & Ergonomic Drag Pill ──────── */}
+            {/* ── Slider Divider Line & Floating Handle ── */}
             <div
+              className="absolute top-0 bottom-0 pointer-events-none z-30 flex items-center justify-center -translate-x-1/2 transition-none"
               style={{ left: `${sliderPos}%` }}
-              className="absolute top-0 bottom-0 w-[2px] bg-white shadow-[0_0_15px_rgba(255,255,255,0.8)] z-20 pointer-events-none -translate-x-1/2 flex items-center justify-center"
             >
-              {/* Central Floating Controller Handle */}
-              <div className="w-11 h-11 sm:w-13 sm:h-13 rounded-full bg-white shadow-[0_10px_25px_rgba(0,0,0,0.3)] border-2 border-[#05c989] text-[#111827] flex items-center justify-center gap-1 group-hover:scale-110 active:scale-95 transition-all">
-                <span className="text-[12px] font-extrabold tracking-tighter text-[#05c989]">◄►</span>
+              {/* Vertical Glowing Line */}
+              <div className="w-[3px] h-full bg-white shadow-[0_0_12px_rgba(255,255,255,0.9),0_0_24px_rgba(5,201,137,0.8)]" />
+
+              {/* Center Draggable Floating Knob */}
+              <div className="absolute w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-white/95 backdrop-blur-xl border-2 border-white shadow-[0_10px_25px_rgba(0,0,0,0.3)] flex items-center justify-center text-[#111827] group-hover:scale-110 group-active:scale-95 transition-transform duration-200">
+                <MoveHorizontal className="w-5 h-5 sm:w-6 sm:h-6 text-[#05c989]" />
               </div>
             </div>
 
-            {/* Bottom Guidance Pill */}
-            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 px-4 py-1.5 rounded-full bg-black/60 backdrop-blur-md border border-white/20 text-white/90 text-[11px] font-medium tracking-wide pointer-events-none shadow-md">
-              Drag left or right to compare
-            </div>
           </div>
 
-          {/* ── Clinical Case Highlights Strip (Frosted Glassmorphism) ── */}
-          <div className="p-6 sm:p-8 rounded-3xl bg-white/60 backdrop-blur-2xl border border-white/80 shadow-xl grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 items-center">
-            
-            <div className="flex flex-col">
-              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                Procedure
+          {/* Bottom Narrative Badge Strip */}
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-5 sm:p-6 rounded-3xl bg-white/70 backdrop-blur-2xl border border-white/80 shadow-md">
+            <div className="flex items-center gap-3">
+              <CheckCircle2 className="w-5 h-5 text-[#05c989] shrink-0" />
+              <span className="text-xs sm:text-sm font-semibold text-[#111827] leading-snug text-left">
+                Immediate Results • Stain Removal &amp; Laser Whitening • Pain-Free
               </span>
-              <span className="font-bold text-sm sm:text-base text-[#111827] mt-0.5">
-                Deep Clean &amp; Polish
-              </span>
-              <span className="text-xs text-slate-500 mt-0.5">100% Stain &amp; Plaque Removal</span>
             </div>
 
-            <div className="flex flex-col">
-              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                Technology
-              </span>
-              <span className="font-bold text-sm sm:text-base text-[#111827] mt-0.5">
-                Gentle Ultrasonic Care
-              </span>
-              <span className="text-xs text-slate-500 mt-0.5">Pain-Free &amp; Enamel Safe</span>
-            </div>
-
-            <div className="flex flex-col">
-              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                Duration
-              </span>
-              <span className="font-bold text-sm sm:text-base text-[#111827] mt-0.5">
-                Single 45-Min Session
-              </span>
-              <span className="text-xs text-slate-500 mt-0.5">Instant visible results</span>
-            </div>
-
-            <div className="flex items-center sm:justify-end">
-              <button
-                onClick={onOpenBooking}
-                className="w-full sm:w-auto px-7 py-3.5 rounded-full bg-[#05c989] hover:bg-[#04b37a] text-white font-bold text-xs sm:text-sm transition-all shadow-md active:scale-95 flex items-center justify-center gap-2 cursor-pointer group"
-              >
-                <span>Book Your Clean</span>
-                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-              </button>
-            </div>
-
+            <button
+              onClick={onOpenBooking}
+              className="px-6 py-2.5 rounded-full bg-[#111827] hover:bg-[#05c989] text-white text-xs font-semibold tracking-wide transition-all shadow-sm hover:shadow-md active:scale-95 flex items-center gap-1.5 shrink-0 cursor-pointer group"
+            >
+              <span>Get This Smile</span>
+              <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+            </button>
           </div>
 
-        </div>
+        </motion.div>
 
       </div>
     </section>

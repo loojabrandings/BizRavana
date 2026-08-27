@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useState, useRef } from 'react';
+import { motion, AnimatePresence, useScroll, useTransform, useSpring } from 'framer-motion';
 import { ShieldCheck, Cpu, Sparkles, HeartPulse, ArrowUpRight } from 'lucide-react';
 
 interface DentalServicesProps {
@@ -58,8 +58,20 @@ const SERVICES: ServiceItem[] = [
 ];
 
 export function DentalServices({ onOpenBooking }: DentalServicesProps) {
-  // Active expanded card index
+  const servicesRef = useRef<HTMLDivElement>(null);
   const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
+
+  // Parallax scrolling for section elements with smooth physics
+  const { scrollYProgress } = useScroll({
+    target: servicesRef,
+    offset: ['start end', 'end start'],
+  });
+
+  const smoothProgress = useSpring(scrollYProgress, { stiffness: 90, damping: 20, restDelta: 0.001 });
+
+  const headerY = useTransform(smoothProgress, [0, 1], [60, -60]);
+  const cardsY = useTransform(smoothProgress, [0, 1], [90, -90]);
+  const bgGlowY = useTransform(smoothProgress, [0, 1], [-130, 130]);
 
   const handleCardClick = (idx: number) => {
     if (typeof window !== 'undefined' && window.innerWidth < 1024) {
@@ -80,28 +92,58 @@ export function DentalServices({ onOpenBooking }: DentalServicesProps) {
   };
 
   return (
-    <section id="services" className="relative w-full py-16 sm:py-24 lg:py-28 flex flex-col justify-center overflow-hidden border-t border-slate-100/60 select-none bg-white/40 backdrop-blur-md z-40">
-      
+    <section
+      ref={servicesRef}
+      id="services"
+      className="relative w-full py-20 sm:py-28 lg:py-36 flex flex-col justify-center overflow-hidden border-t border-slate-100/60 select-none bg-white/40 backdrop-blur-md z-40"
+    >
+      {/* Background Parallax Ambient Glow */}
+      <motion.div
+        style={{ y: bgGlowY }}
+        className="absolute -top-10 left-1/3 w-[600px] h-[600px] bg-emerald-100/50 rounded-full blur-3xl opacity-70 pointer-events-none will-change-transform"
+      />
+
       <div className="relative w-full max-w-[1440px] mx-auto z-10 flex flex-col gap-10 sm:gap-12 lg:gap-16">
         
-        {/* ── Section Header ───────────────────────────────────────── */}
-        <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6 sm:gap-8 pb-10 sm:pb-12 lg:pb-16 border-b border-slate-200/80 px-6 sm:px-10 lg:px-16">
+        {/* ── Section Header with Parallax & Viewport Entrance ── */}
+        <motion.div
+          style={{ y: headerY }}
+          className="flex flex-col lg:flex-row lg:items-end justify-between gap-6 sm:gap-8 pb-10 sm:pb-12 lg:pb-16 border-b border-slate-200/80 px-6 sm:px-10 lg:px-16 will-change-transform"
+        >
           
           {/* Left: Eyebrow + Headline */}
           <div className="flex flex-col items-start gap-3 sm:gap-4 max-w-[580px]">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-50/80 backdrop-blur-sm border border-emerald-200/60 text-xs font-semibold text-[#05c989] tracking-wider uppercase">
+            <motion.div
+              initial={{ opacity: 0, y: 15 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: '-40px' }}
+              transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+              className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-50/80 backdrop-blur-sm border border-emerald-200/60 text-xs font-semibold text-[#05c989] tracking-wider uppercase"
+            >
               <Sparkles className="w-3.5 h-3.5" />
               <span>SERVICES</span>
-            </div>
+            </motion.div>
 
-            <h2 className="font-bold tracking-[-0.035em] text-[#111827] text-[30px] leading-[1.08] sm:text-[42px] sm:leading-[1.02] lg:text-[54px] lg:leading-[1.0]">
+            <motion.h2
+              initial={{ opacity: 0, y: 25 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: '-40px' }}
+              transition={{ duration: 0.55, delay: 0.08, ease: [0.22, 1, 0.36, 1] }}
+              className="font-bold tracking-[-0.035em] text-[#111827] text-[30px] leading-[1.08] sm:text-[42px] sm:leading-[1.02] lg:text-[54px] lg:leading-[1.0]"
+            >
               Expert Dental Care,<br />
               <span className="text-[#05c989]">Simple &amp; Gentle.</span>
-            </h2>
+            </motion.h2>
           </div>
 
           {/* Right: Narrative + Explore Button */}
-          <div className="max-w-[420px] flex flex-col items-start lg:items-end text-left lg:text-right gap-3.5 sm:gap-4">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: '-40px' }}
+            transition={{ duration: 0.55, delay: 0.16, ease: [0.22, 1, 0.36, 1] }}
+            className="max-w-[420px] flex flex-col items-start lg:items-end text-left lg:text-right gap-3.5 sm:gap-4"
+          >
             <p className="text-slate-500 text-xs sm:text-sm lg:text-[13.5px] leading-relaxed font-normal">
               From routine cleanings to complete smile transformations, our experienced team provides gentle, modern dental treatments for the whole family.
             </p>
@@ -113,14 +155,15 @@ export function DentalServices({ onOpenBooking }: DentalServicesProps) {
               <span>Explore More</span>
               <ArrowUpRight className="w-4 h-4 text-emerald-400 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
             </button>
-          </div>
+          </motion.div>
 
-        </div>
+        </motion.div>
 
-        {/* ── Interactive Cards Section (Click-to-Expand on Mobile, Hover on Desktop) ── */}
-        <div 
+        {/* ── Interactive Cards Section with Parallax Drift & Stagger Entrance ── */}
+        <motion.div 
+          style={{ y: cardsY }}
           onMouseLeave={handleMouseLeave}
-          className="w-full px-5 sm:px-8 lg:px-12"
+          className="w-full px-5 sm:px-8 lg:px-12 will-change-transform"
         >
           <div className="flex flex-col lg:flex-row gap-4 sm:gap-5 lg:gap-6 items-stretch w-full lg:h-[460px]">
             {SERVICES.map((service, idx) => {
@@ -131,11 +174,15 @@ export function DentalServices({ onOpenBooking }: DentalServicesProps) {
                 <motion.div
                   key={service.id}
                   layout
+                  initial={{ opacity: 0, y: 30 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, margin: '-30px' }}
                   onClick={() => handleCardClick(idx)}
                   onMouseEnter={() => handleMouseEnter(idx)}
                   transition={{
                     layout: { type: 'spring', stiffness: 260, damping: 28 },
-                    opacity: { duration: 0.2 },
+                    opacity: { duration: 0.4, delay: idx * 0.08 },
+                    y: { duration: 0.5, delay: idx * 0.08, ease: [0.22, 1, 0.36, 1] },
                   }}
                   className={`cursor-pointer rounded-3xl relative overflow-hidden transition-all duration-300 ${
                     isExpanded
@@ -249,7 +296,7 @@ export function DentalServices({ onOpenBooking }: DentalServicesProps) {
               );
             })}
           </div>
-        </div>
+        </motion.div>
 
       </div>
     </section>
