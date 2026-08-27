@@ -1,34 +1,49 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { usePathname } from "next/navigation";
 import { ArrowRight, Menu, X, PhoneCall, MessageSquare } from "lucide-react";
 
-const NAV_ITEMS = [
-  { label: "Portfolio", href: "#showcase", id: "showcase" },
-  { label: "Process", href: "#solutions", id: "solutions" },
-  { label: "Features", href: "#features", id: "features" },
-  { label: "Pricing", href: "#pricing", id: "pricing" },
-  { label: "Contact", href: "#contact", id: "contact" },
-];
-
 export default function WebDesignNav() {
-  const [activeTab, setActiveTab] = useState("Works");
+  const pathname = usePathname();
+  const isPortfolioPage = pathname === "/portfolio";
+  const [activeTab, setActiveTab] = useState(isPortfolioPage ? "Portfolio" : "Portfolio");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
+  const getHref = (hash: string) => {
+    return isPortfolioPage ? `/services/web-design${hash}` : hash;
+  };
+
+  const navItems = [
+    { label: "Portfolio", href: "/portfolio", isDirect: true },
+    { label: "Process", href: getHref("#solutions"), id: "solutions" },
+    { label: "Features", href: getHref("#features"), id: "features" },
+    { label: "Pricing", href: getHref("#pricing"), id: "pricing" },
+    { label: "Contact", href: getHref("#contact"), id: "contact" },
+  ];
+
   useEffect(() => {
+    if (isPortfolioPage) {
+      setActiveTab("Portfolio");
+      return;
+    }
+
     const handleScroll = () => {
       const scrollPosition = window.scrollY + 240;
 
-      for (let i = NAV_ITEMS.length - 1; i >= 0; i--) {
-        const section = document.getElementById(NAV_ITEMS[i].id);
-        if (section) {
-          const top = section.offsetTop;
-          const height = section.offsetHeight;
-          if (scrollPosition >= top && scrollPosition < top + height) {
-            setActiveTab(NAV_ITEMS[i].label);
-            return;
+      for (let i = navItems.length - 1; i >= 0; i--) {
+        const id = navItems[i].id;
+        if (id) {
+          const section = document.getElementById(id);
+          if (section) {
+            const top = section.offsetTop;
+            const height = section.offsetHeight;
+            if (scrollPosition >= top && scrollPosition < top + height) {
+              setActiveTab(navItems[i].label);
+              return;
+            }
           }
         }
       }
@@ -42,7 +57,7 @@ export default function WebDesignNav() {
     window.addEventListener("scroll", handleScroll, { passive: true });
     handleScroll();
     return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
+  }, [isPortfolioPage, navItems]);
 
   return (
     <>
@@ -72,10 +87,27 @@ export default function WebDesignNav() {
           </div>
         </Link>
 
-        {/* Center: Dynamic Scroll-Spy Nav Capsule */}
+        {/* Center: Dynamic Scroll-Spy / Route Nav Capsule */}
         <nav className="hidden md:flex items-center p-1.5 rounded-full bg-[#12131a]/85 backdrop-blur-2xl border border-white/[0.08] shadow-2xl shadow-black/80">
-          {NAV_ITEMS.map((item) => {
-            const isActive = activeTab === item.label;
+          {navItems.map((item) => {
+            const isActive = isPortfolioPage ? item.label === "Portfolio" : activeTab === item.label;
+
+            if (item.isDirect || isPortfolioPage) {
+              return (
+                <Link
+                  key={item.label}
+                  href={item.href}
+                  className={`px-5 py-2 rounded-full text-xs font-semibold tracking-wide transition-all duration-300 ${
+                    isActive
+                      ? "bg-[#fd3a25] text-white font-bold shadow-[0_0_20px_rgba(253,58,37,0.6)] scale-105"
+                      : "text-neutral-300 hover:text-white hover:bg-white/[0.04]"
+                  }`}
+                >
+                  {item.label}
+                </Link>
+              );
+            }
+
             return (
               <a
                 key={item.label}
@@ -83,7 +115,7 @@ export default function WebDesignNav() {
                 onClick={() => setActiveTab(item.label)}
                 className={`px-5 py-2 rounded-full text-xs font-semibold tracking-wide transition-all duration-300 ${
                   isActive
-                    ? "bg-[#fd3a25] text-white font-bold shadow-[0_0_20px_rgba(111,197,155,0.6)] scale-105"
+                    ? "bg-[#fd3a25] text-white font-bold shadow-[0_0_20px_rgba(253,58,37,0.6)] scale-105"
                     : "text-neutral-300 hover:text-white hover:bg-white/[0.04]"
                 }`}
               >
@@ -95,20 +127,20 @@ export default function WebDesignNav() {
 
         {/* Right: High-Impact "Start Project" Action Button */}
         <div className="flex items-center gap-3">
-          <a
-            href="#contact"
-            className="hidden sm:inline-flex items-center gap-2 px-6 py-2.5 rounded-full bg-gradient-to-r from-[#ff6b57] via-[#fd3a25] to-[#d42c1a] hover:from-[#ff8a7a] hover:to-[#e8321e] text-white text-xs font-black tracking-wide shadow-[0_0_25px_rgba(253, 58, 37, 0.4)] hover:scale-105 transition-all"
+          <Link
+            href="/services/web-design#pricing"
+            className="hidden sm:inline-flex items-center gap-2 px-6 py-2.5 rounded-full bg-gradient-to-r from-[#ff6b57] via-[#fd3a25] to-[#d42c1a] hover:from-[#ff8a7a] hover:to-[#e8321e] text-white text-xs font-black tracking-wide shadow-[0_0_25px_rgba(253,58,37,0.4)] hover:scale-105 transition-all"
           >
             <span>Start Project</span>
             <ArrowRight className="w-3.5 h-3.5 stroke-[2.5]" />
-          </a>
+          </Link>
 
           {/* Mobile Hamburger Menu Toggle Button */}
           <button
             type="button"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             aria-label="Toggle Mobile Menu"
-            className="md:hidden p-2.5 rounded-full bg-white/[0.06] border border-white/10 text-white flex items-center justify-center hover:bg-white/[0.12] transition-colors"
+            className="md:hidden p-2.5 rounded-full bg-white/[0.06] border border-white/10 text-white flex items-center justify-center hover:bg-white/[0.12] transition-colors cursor-pointer"
           >
             <Menu className="w-5 h-5 text-[#ff6b57]" />
           </button>
@@ -122,7 +154,7 @@ export default function WebDesignNav() {
             type="button"
             onClick={() => setMobileMenuOpen(false)}
             aria-label="Close Mobile Menu"
-            className="absolute top-8 right-8 p-3 rounded-full bg-white/5 border border-white/10 text-neutral-300 hover:text-white"
+            className="absolute top-8 right-8 p-3 rounded-full bg-white/5 border border-white/10 text-neutral-300 hover:text-white cursor-pointer"
           >
             <X className="w-6 h-6" />
           </button>
@@ -134,54 +166,54 @@ export default function WebDesignNav() {
               </div>
 
               <nav className="flex flex-col gap-6 text-2xl sm:text-3xl font-extrabold text-white">
-                <a
-                  href="#"
+                <Link
+                  href="/services/web-design"
                   onClick={() => setMobileMenuOpen(false)}
                   className="hover:text-[#ff6b57] transition-colors flex items-center justify-between"
                 >
-                  <span>01. Home</span>
+                  <span>01. Web Design</span>
                   <span className="text-xs font-mono text-neutral-500">OVERVIEW</span>
-                </a>
-                <a
-                  href="#showcase"
+                </Link>
+                <Link
+                  href="/portfolio"
                   onClick={() => setMobileMenuOpen(false)}
                   className="hover:text-[#ff6b57] transition-colors flex items-center justify-between"
                 >
-                  <span>02. Works</span>
-                  <span className="text-xs font-mono text-neutral-500">PORTFOLIO</span>
-                </a>
-                <a
-                  href="#solutions"
+                  <span>02. Portfolio</span>
+                  <span className="text-xs font-mono text-[#ff6b57]">LIVE DEMOS ↗</span>
+                </Link>
+                <Link
+                  href={getHref("#solutions")}
                   onClick={() => setMobileMenuOpen(false)}
                   className="hover:text-[#ff6b57] transition-colors flex items-center justify-between"
                 >
                   <span>03. Process</span>
                   <span className="text-xs font-mono text-neutral-500">5 STEPS</span>
-                </a>
-                <a
-                  href="#features"
+                </Link>
+                <Link
+                  href={getHref("#features")}
                   onClick={() => setMobileMenuOpen(false)}
                   className="hover:text-[#ff6b57] transition-colors flex items-center justify-between"
                 >
                   <span>04. Features</span>
                   <span className="text-xs font-mono text-neutral-500">CAPABILITIES</span>
-                </a>
-                <a
-                  href="#pricing"
+                </Link>
+                <Link
+                  href={getHref("#pricing")}
                   onClick={() => setMobileMenuOpen(false)}
                   className="hover:text-[#ff6b57] transition-colors flex items-center justify-between"
                 >
                   <span>05. Pricing</span>
                   <span className="text-xs font-mono text-neutral-500">PLANS</span>
-                </a>
-                <a
-                  href="#contact"
+                </Link>
+                <Link
+                  href={getHref("#contact")}
                   onClick={() => setMobileMenuOpen(false)}
                   className="hover:text-[#ff6b57] transition-colors flex items-center justify-between text-[#ff6b57]"
                 >
                   <span>06. Contact Us</span>
                   <span className="text-xs font-mono text-[#ff6b57]">GET IN TOUCH</span>
-                </a>
+                </Link>
 
                 <Link
                   href="/"

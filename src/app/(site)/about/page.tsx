@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Image from "next/image";
+import { SITE_URL } from "@/config/site";
 import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
 import Button from "@/components/button";
@@ -10,6 +11,23 @@ export const metadata: Metadata = {
   title: "About — BizRavana",
   description:
     "BizRavana is a modern business management platform built to help Sri Lankan businesses manage their day-to-day operations, stay organized, and grow with confidence.",
+  alternates: {
+    canonical: `${SITE_URL}/about`,
+  },
+  openGraph: {
+    title: "About BizRavana — Built for Sri Lankan Commerce",
+    description:
+      "BizRavana is a modern business management platform built to help Sri Lankan businesses manage day-to-day operations and grow with confidence.",
+    type: "website",
+    url: `${SITE_URL}/about`,
+    locale: "en_LK",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "About BizRavana — Built for Sri Lankan Commerce",
+    description:
+      "BizRavana is a modern business management platform built to help Sri Lankan businesses manage day-to-day operations and grow with confidence.",
+  },
 };
 
 /** The Story — the things a small business juggles every day. */

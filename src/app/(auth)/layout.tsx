@@ -1,5 +1,13 @@
+import type { Metadata } from "next";
 import "../landing.css";
 import { Poiret_One, Quicksand } from "next/font/google";
+
+export const metadata: Metadata = {
+  robots: {
+    index: false,
+    follow: false,
+  },
+};
 
 // The landing site's typography, exposed as CSS variables so the login page
 // (styled with landing.css tokens) uses the same display/body fonts as the

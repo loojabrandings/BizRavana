@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import Image from "next/image";
-import { ArrowUpRight } from "lucide-react";
+import Link from "next/link";
+import { ArrowUpRight, Sparkles } from "lucide-react";
 
 const PROJECTS = [
   {
@@ -283,24 +284,38 @@ export default function ShowcaseStack() {
           ))}
         </div>
 
-        {/* Bottom CTA */}
+        {/* Bottom CTA to /portfolio */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.5 }}
-          className="mt-16 sm:mt-20 flex flex-col items-center justify-center text-center space-y-5 pt-10 border-t border-white/[0.04]"
+          className="mt-16 sm:mt-20 flex flex-col items-center justify-center text-center space-y-6 pt-10 border-t border-white/[0.04]"
         >
-          <h3 className="text-xl sm:text-2xl font-extrabold text-white tracking-tight">
-            Like what you see? Let&apos;s build yours.
-          </h3>
-          <a
-            href="#pricing"
-            className="px-8 py-3.5 rounded-full bg-gradient-to-r from-[#ff6b57] via-[#fd3a25] to-[#d42c1a] hover:from-[#ff8a7a] hover:to-[#e8321e] text-white text-sm font-black shadow-[0_10px_30px_rgba(253, 58, 37, 0.35)] hover:scale-105 transition-all flex items-center gap-2"
-          >
-            <span>Start Your Website</span>
-            <ArrowUpRight className="w-4 h-4 text-white" />
-          </a>
+          <div className="space-y-2">
+            <h3 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+              Want to see our live industry demos & concepts?
+            </h3>
+            <p className="text-sm text-neutral-400 max-w-lg mx-auto">
+              Explore high-converting client concept websites built across Fitness, Healthcare, Hotels, Jewellery, and more.
+            </p>
+          </div>
+
+          <div className="flex flex-col sm:flex-row items-center gap-4">
+            <Link
+              href="/portfolio"
+              className="px-8 py-3.5 rounded-full bg-gradient-to-r from-[#ff6b57] via-[#fd3a25] to-[#d42c1a] hover:from-[#ff8a7a] hover:to-[#e8321e] text-white text-sm font-black shadow-[0_10px_30px_rgba(253,58,37,0.35)] hover:scale-105 transition-all flex items-center gap-2 cursor-pointer"
+            >
+              <span>Explore Full Portfolio & Demos</span>
+              <ArrowUpRight className="w-4 h-4 text-white" />
+            </Link>
+            <a
+              href="#pricing"
+              className="px-8 py-3.5 rounded-full bg-white/[0.06] hover:bg-white/10 text-white text-sm font-bold border border-white/15 transition-all"
+            >
+              View Web Design Pricing
+            </a>
+          </div>
         </motion.div>
       </div>
     </section>

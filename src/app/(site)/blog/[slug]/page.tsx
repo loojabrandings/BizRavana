@@ -30,9 +30,30 @@ export async function generateMetadata({
   const { slug } = await params;
   const post = getPost(slug);
   if (!post) return { title: "Post not found" };
+
+  const postUrl = `${SITE_URL}/blog/${post.meta.slug}`;
+
   return {
     title: `${post.meta.title} — BizRavana Blog`,
     description: post.meta.excerpt,
+    alternates: {
+      canonical: postUrl,
+    },
+    openGraph: {
+      type: "article",
+      title: post.meta.title,
+      description: post.meta.excerpt,
+      url: postUrl,
+      publishedTime: post.meta.date,
+      authors: ["BizRavana"],
+      siteName: "BizRavana",
+      locale: "en_LK",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: post.meta.title,
+      description: post.meta.excerpt,
+    },
   };
 }
 

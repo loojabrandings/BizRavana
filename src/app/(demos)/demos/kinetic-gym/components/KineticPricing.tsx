@@ -66,7 +66,7 @@ export function KineticPricing({ onOpenModal }: KineticPricingProps) {
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[500px] bg-[#E10600]/10 rounded-full blur-[170px] pointer-events-none" />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-        
+
         {/* Section Header with Billing Toggle */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12 sm:mb-16 pb-6 border-b border-white/10">
           <div>
@@ -88,21 +88,19 @@ export function KineticPricing({ onOpenModal }: KineticPricingProps) {
           <div className="p-1.5 rounded-full bg-black/80 border border-white/15 flex items-center self-start md:self-auto">
             <button
               onClick={() => setBillingCycle('monthly')}
-              className={`px-5 py-2 rounded-full font-poppins text-xs font-semibold tracking-wider uppercase transition-all duration-300 ${
-                billingCycle === 'monthly'
+              className={`px-5 py-2 rounded-full font-poppins text-xs font-semibold tracking-wider uppercase transition-all duration-300 ${billingCycle === 'monthly'
                   ? 'bg-[#E10600] text-white shadow-lg shadow-[#E10600]/30'
                   : 'text-[#9A9A9A] hover:text-white'
-              }`}
+                }`}
             >
               MONTHLY
             </button>
             <button
               onClick={() => setBillingCycle('yearly')}
-              className={`px-5 py-2 rounded-full font-poppins text-xs font-semibold tracking-wider uppercase transition-all duration-300 flex items-center gap-1.5 ${
-                billingCycle === 'yearly'
+              className={`px-5 py-2 rounded-full font-poppins text-xs font-semibold tracking-wider uppercase transition-all duration-300 flex items-center gap-1.5 ${billingCycle === 'yearly'
                   ? 'bg-[#E10600] text-white shadow-lg shadow-[#E10600]/30'
                   : 'text-[#9A9A9A] hover:text-white'
-              }`}
+                }`}
             >
               YEARLY
               <span className="text-[10px] bg-white/20 text-white px-1.5 py-0.5 rounded-full">
@@ -125,11 +123,10 @@ export function KineticPricing({ onOpenModal }: KineticPricingProps) {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, margin: '-50px' }}
                 transition={{ duration: 0.5, delay: idx * 0.1 }}
-                className={`relative rounded-3xl p-7 sm:p-8 flex flex-col justify-between transition-all duration-500 ${
-                  isPopular
+                className={`relative rounded-3xl p-7 sm:p-8 flex flex-col justify-between transition-all duration-500 ${isPopular
                     ? 'bg-black border-2 border-[#E10600] shadow-[0_0_40px_rgba(225,6,0,0.3)] lg:-translate-y-2'
                     : 'bg-black/70 backdrop-blur-xl border border-white/10 hover:border-white/25 shadow-xl'
-                }`}
+                  }`}
               >
                 {/* Popular Badge */}
                 {isPopular && (
@@ -160,11 +157,10 @@ export function KineticPricing({ onOpenModal }: KineticPricingProps) {
                   {/* CTA Button */}
                   <button
                     onClick={() => onOpenModal(`${plan.name} (Rs. ${price}/mo)`)}
-                    className={`w-full mt-6 py-3.5 rounded-full font-poppins text-xs font-semibold uppercase tracking-wider transition-all duration-300 flex items-center justify-center gap-2 cursor-pointer ${
-                      isPopular
+                    className={`w-full mt-6 py-3.5 rounded-full font-poppins text-xs font-semibold uppercase tracking-wider transition-all duration-300 flex items-center justify-center gap-2 cursor-pointer ${isPopular
                         ? 'bg-[#E10600] text-white shadow-lg shadow-[#E10600]/40 hover:shadow-[#E10600]/70 hover:scale-[1.02]'
                         : 'bg-white/5 text-white border border-white/20 hover:border-white hover:bg-white/10'
-                    }`}
+                      }`}
                   >
                     <span>ENROLL NOW</span>
                     <ArrowUpRight className="w-4 h-4" />

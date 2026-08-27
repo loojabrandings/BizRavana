@@ -5,6 +5,7 @@ import { ThemeProvider } from "@/providers/theme-provider";
 import { PreferencesProvider } from "@/providers/preferences-provider";
 import { QueryProvider } from "@/providers/query-provider";
 import { Toaster } from "@/components/ui/sonner";
+import { SITE_URL } from "@/config/site";
 
 
 const poppins = Poppins({
@@ -57,11 +58,15 @@ const accentInitScript = `(function () {
 })();`;
 
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
   title: {
     template: "%s | BizRavana",
     default: "BizRavana - Business Dashboard",
   },
   description: "Multi-tenant SaaS dashboard for small and medium businesses",
+  alternates: {
+    canonical: "./",
+  },
   icons: {
     icon: [
       { url: "/favicon.ico", sizes: "16x16 32x32 48x48", type: "image/x-icon" },

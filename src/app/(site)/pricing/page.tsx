@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { SITE_URL } from "@/config/site";
 import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
 import Button from "@/components/button";
@@ -10,6 +11,23 @@ export const metadata: Metadata = {
   title: "Pricing — BizRavana",
   description:
     "Simple, transparent pricing for Sri Lankan businesses. Start with a free 3-day trial and upgrade when you're ready — from Basic to Enterprise.",
+  alternates: {
+    canonical: `${SITE_URL}/pricing`,
+  },
+  openGraph: {
+    title: "Pricing Plans — BizRavana",
+    description:
+      "Simple, transparent pricing for Sri Lankan businesses. Start with a free 3-day trial and upgrade when you're ready.",
+    type: "website",
+    url: `${SITE_URL}/pricing`,
+    locale: "en_LK",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Pricing Plans — BizRavana",
+    description:
+      "Simple, transparent pricing for Sri Lankan businesses. Start with a free 3-day trial and upgrade when you're ready.",
+  },
 };
 
 /** Hero copy — one centered statement, matching the Features/Contact rhythm. */

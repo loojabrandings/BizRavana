@@ -5,12 +5,51 @@ import Footer from "@/components/footer";
 import Card from "@/components/card";
 import Reveal from "@/components/reveal";
 import ContactForm from "@/components/contact-form";
-import { CONTACT } from "@/config/site";
+import JsonLd from "@/components/json-ld";
+import { CONTACT, SITE_URL } from "@/config/site";
 
 export const metadata: Metadata = {
   title: "Contact — BizRavana",
   description:
     "Get in touch with the BizRavana team — ask a question or book a demo for your business. We typically respond within a few hours.",
+  alternates: {
+    canonical: `${SITE_URL}/contact`,
+  },
+  openGraph: {
+    title: "Contact BizRavana — Sales & Support",
+    description:
+      "Have a question or want a demo for your business? Reach out to the BizRavana team via WhatsApp, phone, or email.",
+    type: "website",
+    url: `${SITE_URL}/contact`,
+    locale: "en_LK",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Contact BizRavana — Sales & Support",
+    description:
+      "Have a question or want a demo for your business? Reach out to the BizRavana team via WhatsApp, phone, or email.",
+  },
+};
+
+const contactPageJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "ContactPage",
+  name: "Contact BizRavana",
+  url: `${SITE_URL}/contact`,
+  description: "Get in touch with BizRavana for sales, demos, and support.",
+  mainEntity: {
+    "@type": "Organization",
+    name: "BizRavana",
+    telephone: `+94${CONTACT.phone.slice(1)}`,
+    email: CONTACT.email,
+    contactPoint: {
+      "@type": "ContactPoint",
+      telephone: `+94${CONTACT.phone.slice(1)}`,
+      contactType: "customer service",
+      email: CONTACT.email,
+      availableLanguage: ["en", "si", "ta"],
+    },
+  },
 };
 
 /** Hero copy — one centered statement, matching the Features page rhythm. */
@@ -142,6 +181,9 @@ export default function ContactPage() {
           </Reveal>
         </div>
       </section>
+
+      {/* Structured data — ContactPage */}
+      <JsonLd data={contactPageJsonLd} />
 
       <Footer />
     </main>

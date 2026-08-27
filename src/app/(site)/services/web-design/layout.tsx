@@ -1,15 +1,20 @@
 import type { Metadata } from "next";
+import { SITE_URL } from "@/config/site";
 import "./web-design.css";
 
 export const metadata: Metadata = {
   title: "Web Design & Development Services | BizRavana",
   description:
     "Custom, sub-second web platforms, landing pages, and web apps engineered for Sri Lankan business leaders and global brands. Zero generic templates, 100% conversion-obsessed Next.js architecture.",
+  alternates: {
+    canonical: `${SITE_URL}/services/web-design`,
+  },
   openGraph: {
     title: "Bespoke Web Design & Development Services | BizRavana",
     description:
       "Custom, sub-second web platforms, landing pages, and web apps engineered for Sri Lankan business leaders and global brands.",
     type: "website",
+    url: `${SITE_URL}/services/web-design`,
     locale: "en_LK",
   },
   twitter: {
