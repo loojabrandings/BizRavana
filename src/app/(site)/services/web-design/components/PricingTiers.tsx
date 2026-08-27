@@ -96,10 +96,10 @@ export default function PricingTiers() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.5, delay: idx * 0.1 }}
-              className={`relative flex flex-col rounded-[36px] sm:rounded-[48px] p-7 sm:p-9 transition-all duration-300 ${
+              className={`relative flex flex-col rounded-[36px] sm:rounded-[48px] p-7 sm:p-9 transition-all duration-300 group cursor-pointer ${
                 tier.popular
-                  ? "border-2 border-[#fd3a25] bg-[#120807] shadow-[0_0_70px_rgba(253,58,37,0.25),0_30px_70px_rgba(0,0,0,0.8)] lg:-translate-y-3 z-10"
-                  : "border-2 border-[#D7E2EA]/25 bg-[#0C0C0C] hover:border-white/50 shadow-[0_25px_60px_rgba(0,0,0,0.85)]"
+                  ? "border-2 border-[#fd3a25] hover:border-white bg-[#120807] shadow-[0_0_70px_rgba(253,58,37,0.25),0_30px_70px_rgba(0,0,0,0.8)] lg:-translate-y-3 hover:lg:-translate-y-5 hover:-translate-y-2 z-10"
+                  : "border-2 border-[#D7E2EA]/30 bg-[#0C0C0C] hover:border-white shadow-[0_25px_60px_rgba(0,0,0,0.85)] hover:-translate-y-2"
               }`}
             >
               {/* Popular Highlight Tag */}
@@ -116,7 +116,7 @@ export default function PricingTiers() {
                 <div>
                   {/* Top header row */}
                   <div className="flex items-start justify-between gap-3 mb-6">
-                    <h3 className="text-2xl sm:text-3xl font-black font-kanit uppercase text-white tracking-tight">
+                    <h3 className="text-2xl sm:text-3xl font-black font-kanit uppercase text-white group-hover:text-[#ff8a7a] transition-colors tracking-tight">
                       {tier.name}
                     </h3>
                   </div>

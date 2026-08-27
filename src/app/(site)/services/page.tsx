@@ -23,7 +23,7 @@ const SERVICES = [
     badgeType: "active",
     icon: Globe,
     title: "Web Design & Development",
-    subtitle: "Bespoke, High-Performance Digital Flagships",
+    subtitle: "Custom, High-Performance Digital Flagships",
     desc: "Custom, sub-second web platforms, landing pages, and web applications engineered with Next.js & React for ambitious Sri Lankan businesses and global brands.",
     bullets: [
       "Sub-second loading with Next.js App Router",
@@ -134,7 +134,7 @@ export default function ServicesPage() {
               transition={{ duration: 0.6, delay: 0.1 }}
               className="text-neutral-400 text-sm sm:text-base md:text-lg font-kanit font-light max-w-2xl mx-auto leading-relaxed"
             >
-              From our flagship Order Management System to bespoke web development and cutting-edge conversational AI, BizRavana provides the technology foundation your business needs to grow.
+              From our flagship Order Management System to custom web development and cutting-edge conversational AI, BizRavana provides the technology foundation your business needs to grow.
             </motion.p>
           </div>
         </section>

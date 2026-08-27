@@ -112,7 +112,7 @@ export default function ShowcaseStack() {
           </h2>
 
           <p className="text-neutral-400 max-w-xl text-sm sm:text-base leading-relaxed font-kanit">
-            Explore bespoke digital flagships engineered for industry leaders. Every project is crafted for sub-second velocity, visual authority, and uncompromising conversion.
+            Explore custom digital flagships engineered for industry leaders. Every project is crafted for sub-second velocity, visual authority, and uncompromising conversion.
           </p>
         </div>
       </div>

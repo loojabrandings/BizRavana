@@ -18,25 +18,25 @@ import { SITE_URL, CONTACT } from "@/config/site";
 import "./services/web-design/web-design.css";
 
 export const metadata: Metadata = {
-  title: "BizRavana — Bespoke Web Design & Digital Engineering",
+  title: "BizRavana — Web Design & Digital Engineering",
   description:
-    "Bespoke, high-performance website design and Next.js web development for Sri Lankan businesses and global brands. Zero generic templates, 100% conversion-obsessed architecture.",
+    "High-performance website design and Next.js web development for Sri Lankan businesses and global brands. Zero generic templates, 100% conversion-obsessed architecture.",
   alternates: {
     canonical: SITE_URL,
   },
   openGraph: {
-    title: "BizRavana — Bespoke Web Design & Digital Engineering",
+    title: "BizRavana — Web Design & Digital Engineering",
     description:
-      "Bespoke, sub-second web platforms, landing pages, and web apps engineered for Sri Lankan business leaders and global brands.",
+      "Sub-second web platforms, landing pages, and web apps engineered for Sri Lankan business leaders and global brands.",
     type: "website",
     url: SITE_URL,
     locale: "en_LK",
   },
   twitter: {
     card: "summary_large_image",
-    title: "BizRavana — Bespoke Web Design & Digital Engineering",
+    title: "BizRavana — Web Design & Digital Engineering",
     description:
-      "Bespoke, sub-second web platforms, landing pages, and web apps engineered for Sri Lankan business leaders and global brands.",
+      "Sub-second web platforms, landing pages, and web apps engineered for Sri Lankan business leaders and global brands.",
   },
 };
 
@@ -47,7 +47,7 @@ const webDesignServiceJsonLd = {
   url: SITE_URL,
   image: `${SITE_URL}/icon-512x512.png`,
   description:
-    "Bespoke, high-performance website design and Next.js web development for Sri Lankan businesses and global brands.",
+    "High-performance website design and Next.js web development for Sri Lankan businesses and global brands.",
   telephone: `+94${CONTACT.phone.slice(1)}`,
   email: CONTACT.email,
   areaServed: [

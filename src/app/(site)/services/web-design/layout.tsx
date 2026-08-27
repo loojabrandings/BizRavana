@@ -10,7 +10,7 @@ export const metadata: Metadata = {
     canonical: `${SITE_URL}/services/web-design`,
   },
   openGraph: {
-    title: "Bespoke Web Design & Development Services | BizRavana",
+    title: "Web Design & Development Services | BizRavana",
     description:
       "Custom, sub-second web platforms, landing pages, and web apps engineered for Sri Lankan business leaders and global brands.",
     type: "website",
@@ -19,7 +19,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Bespoke Web Design & Development Services | BizRavana",
+    title: "Web Design & Development Services | BizRavana",
     description:
       "Custom, sub-second web platforms, landing pages, and web apps engineered for Sri Lankan business leaders and global brands.",
   },

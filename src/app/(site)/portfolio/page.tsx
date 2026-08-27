@@ -118,7 +118,7 @@ function PortfolioContent() {
               transition={{ duration: 0.6, delay: 0.1 }}
               className="text-neutral-400 text-sm sm:text-base md:text-lg font-kanit font-light max-w-2xl mx-auto leading-relaxed"
             >
-              Explore our interactive showcase of bespoke websites, eCommerce platforms, and custom web applications engineered for ambitious businesses.
+              Explore our interactive showcase of high-performance websites, eCommerce platforms, and custom web applications engineered for ambitious businesses.
             </motion.p>
           </div>
         </section>
@@ -225,7 +225,7 @@ function PortfolioContent() {
                 <div className="absolute top-0 right-0 w-28 h-28 bg-[#fd3a25]/15 rounded-full blur-2xl pointer-events-none" />
                 
                 <span className="text-[10px] font-mono uppercase tracking-widest text-[#ff8a7a] font-bold">
-                  Bespoke Architecture
+                  Custom Architecture
                 </span>
                 <p className="text-xs font-kanit font-light text-neutral-300 leading-relaxed">
                   Ready for a sub-second website engineered for your specific business?
@@ -302,7 +302,7 @@ function PortfolioContent() {
                       >
                         <CardWrapper
                           {...wrapperProps}
-                          className="group relative flex flex-col justify-between rounded-[32px] border-2 border-[#D7E2EA]/20 bg-[#0C0C0C] overflow-hidden shadow-[0_25px_60px_rgba(0,0,0,0.85)] hover:border-white/50 transition-all duration-500 hover:-translate-y-1.5 h-full"
+                          className="group relative flex flex-col justify-between rounded-[32px] border-2 border-[#D7E2EA]/30 bg-[#0C0C0C] overflow-hidden shadow-[0_25px_60px_rgba(0,0,0,0.85)] hover:border-white transition-all duration-300 hover:-translate-y-1.5 h-full cursor-pointer"
                         >
                           {/* Card Media Viewport */}
                           <div className="relative aspect-[16/10] w-full overflow-hidden bg-[#060608]">

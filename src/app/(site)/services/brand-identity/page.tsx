@@ -130,14 +130,14 @@ export default function BrandIdentityServicePage() {
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
                     transition={{ duration: 0.5, delay: idx * 0.08 }}
-                    className="p-7 sm:p-9 rounded-[32px] bg-[#0C0C0C] border-2 border-[#D7E2EA]/20 shadow-[0_20px_50px_rgba(0,0,0,0.8)] flex flex-col justify-between group hover:border-white/40 transition-all duration-300"
+                    className="p-7 sm:p-9 rounded-[32px] bg-[#0C0C0C] border-2 border-[#D7E2EA]/30 hover:border-white shadow-[0_25px_60px_rgba(0,0,0,0.85)] hover:-translate-y-1.5 flex flex-col justify-between group transition-all duration-300 cursor-pointer"
                   >
                     <div>
-                      <div className="w-11 h-11 rounded-2xl bg-white/[0.06] border border-white/10 text-[#ff8a7a] flex items-center justify-center mb-5 group-hover:scale-105 transition-transform">
+                      <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-[#ff6b57] to-[#fd3a25] shadow-[0_6px_16px_rgba(253,58,37,0.3)] text-white flex items-center justify-center mb-5 group-hover:scale-110 transition-transform duration-300">
                         <Icon className="w-5 h-5 stroke-[2.2px]" />
                       </div>
 
-                      <h2 className="text-lg sm:text-xl font-bold font-kanit uppercase text-white tracking-tight mb-2">
+                      <h2 className="text-lg sm:text-xl font-bold font-kanit uppercase text-white group-hover:text-[#ff8a7a] transition-colors tracking-tight mb-2">
                         {feat.title}
                       </h2>
 
@@ -148,7 +148,7 @@ export default function BrandIdentityServicePage() {
 
                     <div className="pt-6 mt-6 border-t border-white/[0.06] flex items-center gap-2 text-xs font-mono text-neutral-500">
                       <CheckCircle2 className="w-3.5 h-3.5 text-[#ff8a7a]" />
-                      <span>Architecture Phase: Bespoke Projects</span>
+                      <span>Architecture Phase: Custom Projects</span>
                     </div>
                   </motion.div>
                 );

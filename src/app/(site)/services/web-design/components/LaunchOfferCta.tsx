@@ -44,7 +44,7 @@ export default function LaunchOfferCta() {
 
             {/* Description */}
             <p className="text-neutral-400 text-xs sm:text-sm md:text-base font-kanit font-light leading-relaxed max-w-2xl mx-auto mb-10 select-none">
-              We&apos;re opening a limited number of launch spots for Sri Lankan businesses that want a bespoke, high-converting website at our special introductory pricing.
+              We&apos;re opening a limited number of launch spots for Sri Lankan businesses that want a high-converting website at our special introductory pricing.
             </p>
 
             {/* Highlight Box */}

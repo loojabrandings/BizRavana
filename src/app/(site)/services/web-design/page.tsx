@@ -22,7 +22,7 @@ const webDesignServiceJsonLd = {
   url: `${SITE_URL}/services/web-design`,
   image: `${SITE_URL}/icon-512x512.png`,
   description:
-    "Bespoke, high-performance website design and Next.js web development for Sri Lankan businesses and global brands.",
+    "High-performance website design and Next.js web development for Sri Lankan businesses and global brands.",
   telephone: `+94${CONTACT.phone.slice(1)}`,
   email: CONTACT.email,
   areaServed: [

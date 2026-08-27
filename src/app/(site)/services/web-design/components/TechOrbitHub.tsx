@@ -64,15 +64,15 @@ function FeatureCard({ title, desc, icon: Icon, idx }: FeatureCardProps) {
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
       transition={{ duration: 0.45, delay: idx * 0.07 }}
-      className="bg-[#0C0C0C] hover:bg-[#12131a] border-2 border-[#D7E2EA]/20 hover:border-white/40 rounded-[28px] sm:rounded-[36px] p-5 sm:p-6 flex flex-col justify-between h-[180px] sm:h-[190px] w-full group transition-all duration-300 shadow-[0_20px_40px_rgba(0,0,0,0.8)]"
+      className="bg-[#0C0C0C] border-2 border-[#D7E2EA]/30 hover:border-white rounded-[28px] sm:rounded-[36px] p-5 sm:p-6 flex flex-col justify-between h-[180px] sm:h-[190px] w-full group transition-all duration-300 shadow-[0_25px_60px_rgba(0,0,0,0.85)] hover:-translate-y-1.5 cursor-pointer"
     >
       {/* Top Header: Icon + Title */}
       <div className="flex items-start gap-3.5">
-        <div className="w-10 h-10 rounded-[14px] bg-white/[0.06] border border-white/10 text-[#ff8a7a] flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-all duration-300">
-          <Icon className="w-[18px] h-[18px] stroke-[2px]" />
+        <div className="w-10 h-10 rounded-[14px] bg-gradient-to-br from-[#ff6b57] to-[#fd3a25] shadow-[0_6px_16px_rgba(253,58,37,0.3)] text-white flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform duration-300">
+          <Icon className="w-[18px] h-[18px] stroke-[2.2px]" />
         </div>
         <div>
-          <h3 className="text-base sm:text-lg font-bold font-kanit uppercase text-white tracking-tight leading-snug">
+          <h3 className="text-base sm:text-lg font-bold font-kanit uppercase text-white group-hover:text-[#ff8a7a] transition-colors tracking-tight leading-snug">
             {title}
           </h3>
         </div>
@@ -94,15 +94,15 @@ export default function TechOrbitHub() {
 
       <div className="wd-container max-w-6xl mx-auto">
         {/* Header */}
-        <div className="text-center max-w-3xl mx-auto mb-16 sm:mb-20">
+        <div className="text-center max-w-4xl mx-auto mb-16 sm:mb-20">
           <div className="wd-badge-mono mb-6">
             <Sparkles className="w-3.5 h-3.5 text-[#ff6b57]" />
             <span>[ BUILT AROUND YOUR BUSINESS ]</span>
           </div>
 
           <h2
-            className="hero-heading font-kanit font-black uppercase leading-none tracking-tight text-center select-none mb-6"
-            style={{ fontSize: "clamp(2.8rem, 11vw, 150px)" }}
+            className="hero-heading font-kanit font-black uppercase leading-none tracking-tight text-center select-none mb-6 px-2"
+            style={{ fontSize: "clamp(2.2rem, 7vw, 90px)" }}
           >
             ARCHITECTURE
           </h2>

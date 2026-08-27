@@ -23,7 +23,6 @@ import {
 
 interface SubNavItem {
   title: string;
-  desc: string;
   href: string;
   icon: React.ComponentType<{ className?: string }>;
   badge?: string;
@@ -32,44 +31,36 @@ interface SubNavItem {
 
 const SERVICES_SUBNAV: SubNavItem[] = [
   {
-    title: "Web Design & Dev",
-    desc: "Bespoke, sub-second Next.js digital flagships",
+    title: "Web Design & Development",
     href: "/#pricing",
     icon: Globe,
-    badge: "Active",
   },
   {
     title: "BizRavana OMS",
-    desc: "All-in-one orders, courier & profit tracking SaaS",
     href: "/services/bizravana-oms",
     icon: Flame,
-    badge: "Active Platform",
     highlight: true,
   },
   {
     title: "Custom ORM & CRM",
-    desc: "Tailored order & client management systems",
     href: "/services/custom-crm",
     icon: Layers,
     badge: "Coming Soon",
   },
   {
     title: "AI Chatbots",
-    desc: "24/7 intelligent WhatsApp & website sales agents",
     href: "/services/ai-chatbots",
     icon: Bot,
     badge: "Coming Soon",
   },
   {
     title: "Business Automations",
-    desc: "End-to-end receipt, invoice & operational pipelines",
     href: "/services/ai-automations",
     icon: Workflow,
     badge: "Coming Soon",
   },
   {
     title: "Brand Identity Design",
-    desc: "High-impact visual systems, logos & typography",
     href: "/services/brand-identity",
     icon: Palette,
     badge: "Coming Soon",
@@ -226,7 +217,7 @@ export default function WebDesignNav() {
                       [ WHAT WE ENGINEER ]
                     </span>
                     <span className="text-[10px] font-mono text-neutral-400">
-                      Bespoke Digital Solutions
+                      Custom Digital Solutions
                     </span>
                   </div>
 
@@ -238,43 +229,33 @@ export default function WebDesignNav() {
                           key={sub.title}
                           href={sub.href}
                           onClick={() => setServicesDropdownOpen(false)}
-                          className={`p-3 rounded-2xl border transition-all duration-200 flex items-start gap-3 group ${
+                          className={`p-3 rounded-2xl border transition-all duration-200 flex items-center justify-between gap-3 group ${
                             sub.highlight
                               ? "bg-[#140807] border-[#fd3a25]/40 hover:border-[#fd3a25] hover:bg-[#1a0b0a]"
                               : "bg-white/[0.03] border-white/[0.06] hover:border-white/25 hover:bg-white/[0.08]"
                           }`}
                         >
-                          <div
-                            className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 transition-transform group-hover:scale-110 ${
-                              sub.highlight
-                                ? "bg-[#fd3a25] text-white"
-                                : "bg-white/10 text-[#ff8a7a]"
-                            }`}
-                          >
-                            <Icon className="w-4 h-4 stroke-[2.2px]" />
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div
+                              className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 transition-transform group-hover:scale-110 ${
+                                sub.highlight
+                                  ? "bg-[#fd3a25] text-white"
+                                  : "bg-white/10 text-[#ff8a7a]"
+                              }`}
+                            >
+                              <Icon className="w-4 h-4 stroke-[2.2px]" />
+                            </div>
+
+                            <span className="text-xs font-bold font-kanit uppercase tracking-tight text-white group-hover:text-[#ff8a7a] transition-colors truncate">
+                              {sub.title}
+                            </span>
                           </div>
 
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-1.5 mb-0.5">
-                              <span className="text-xs font-bold font-kanit uppercase tracking-tight text-white group-hover:text-[#ff8a7a] transition-colors truncate">
-                                {sub.title}
-                              </span>
-                              {sub.badge && (
-                                <span
-                                  className={`px-1.5 py-0.2 rounded-full text-[8px] font-mono font-bold uppercase tracking-wider ${
-                                    sub.badge === "Coming Soon"
-                                      ? "bg-white/[0.06] text-neutral-400 border border-white/10"
-                                      : "bg-[#fd3a25]/20 text-[#ff8a7a] border border-[#fd3a25]/30"
-                                  }`}
-                                >
-                                  {sub.badge}
-                                </span>
-                              )}
-                            </div>
-                            <p className="text-[11px] text-neutral-400 font-kanit font-light leading-snug line-clamp-1">
-                              {sub.desc}
-                            </p>
-                          </div>
+                          {sub.badge && (
+                            <span className="px-2 py-0.5 rounded-full text-[8px] font-mono font-bold uppercase tracking-wider bg-white/[0.06] text-neutral-400 border border-white/10 shrink-0">
+                              {sub.badge}
+                            </span>
+                          )}
                         </Link>
                       );
                     })}
@@ -419,13 +400,7 @@ export default function WebDesignNav() {
                           >
                             <span>{sub.title}</span>
                             {sub.badge && (
-                              <span
-                                className={`text-[9px] font-mono font-bold px-1.5 py-0.5 rounded-full ${
-                                  sub.badge === "Coming Soon"
-                                    ? "text-neutral-500 bg-white/[0.04] border border-white/5"
-                                    : "text-[#ff8a7a] bg-[#fd3a25]/15 border border-[#fd3a25]/25"
-                                }`}
-                              >
+                              <span className="text-[9px] font-mono font-bold px-2 py-0.5 rounded-full text-neutral-400 bg-white/[0.06] border border-white/10 shrink-0">
                                 {sub.badge}
                               </span>
                             )}

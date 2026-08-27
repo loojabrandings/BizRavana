@@ -67,7 +67,7 @@ export default function FaqAccordion() {
                 className={`rounded-[28px] sm:rounded-[36px] border-2 transition-all duration-300 overflow-hidden ${
                   isOpen
                     ? "border-[#fd3a25] bg-[#120807] shadow-[0_20px_45px_rgba(0,0,0,0.8),0_0_35px_rgba(253,58,37,0.25)]"
-                    : "bg-[#0C0C0C] border-[#D7E2EA]/20 hover:border-white/40"
+                    : "bg-[#0C0C0C] border-[#D7E2EA]/30 hover:border-white shadow-[0_20px_40px_rgba(0,0,0,0.85)] hover:-translate-y-1"
                 }`}
               >
                 <button
