@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Poppins, Lora, Caveat, Mohave } from "next/font/google";
+import { Poppins, Lora, Caveat, Mohave, Kanit } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/providers/theme-provider";
 import { PreferencesProvider } from "@/providers/preferences-provider";
@@ -12,6 +12,13 @@ const poppins = Poppins({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
   variable: "--font-poppins",
+  display: "swap",
+});
+
+const kanit = Kanit({
+  subsets: ["latin"],
+  weight: ["300", "400", "500", "600", "700", "800", "900"],
+  variable: "--font-kanit",
   display: "swap",
 });
 
@@ -94,7 +101,7 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={`h-full antialiased ${poppins.variable} ${lora.variable} ${caveat.variable} ${mohave.variable}`}
+      className={`h-full antialiased ${poppins.variable} ${kanit.variable} ${lora.variable} ${caveat.variable} ${mohave.variable}`}
     >
       <body className="min-h-full flex flex-col">
         <script

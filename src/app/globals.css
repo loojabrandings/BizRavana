@@ -9,6 +9,7 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-poppins, "Poppins", sans-serif);
   --font-heading: var(--font-poppins, "Poppins", sans-serif);
+  --font-kanit: var(--font-kanit), "Kanit", sans-serif;
   --font-mono: var(--font-poppins, "Poppins", sans-serif);
   --text-body-lg: 0.9375rem;
   --text-hero-lg: 2.875rem;

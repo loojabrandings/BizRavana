@@ -21,9 +21,8 @@
   --wd-text-main: #ffffff;
   --wd-text-muted: #9496a1;
   --wd-text-dim: #5e606e;
-  --wd-font-sans: var(--font-poppins, "Poppins", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif);
-  --wd-font-kanit: 'Kanit', sans-serif;
-  --wd-font-heading: 'Kanit', var(--font-poppins, "Poppins", sans-serif);
+  --wd-font-kanit: var(--font-kanit), 'Kanit', sans-serif;
+  --wd-font-heading: var(--font-kanit), 'Kanit', var(--font-poppins, "Poppins", sans-serif);
   --wd-font-serif: var(--font-lora, "Lora", serif);
   --wd-font-accent: var(--font-caveat, "Caveat", cursive);
   --wd-font-condensed: var(--font-mohave, "Mohave", sans-serif);
@@ -31,7 +30,7 @@
 }
 
 .font-kanit {
-  font-family: 'Kanit', sans-serif !important;
+  font-family: var(--font-kanit), 'Kanit', sans-serif !important;
 }
 
 /* Gradient heading from design specification */
