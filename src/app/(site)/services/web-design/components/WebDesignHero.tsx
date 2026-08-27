@@ -1,157 +1,161 @@
-﻿"use client";
+"use client";
 
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import Image from "next/image";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Sparkles } from "lucide-react";
+
+// Custom Typewriter Hook with configurable speed & delay
+function useTypewriter(text: string, speed = 35, startDelay = 400) {
+  const [displayed, setDisplayed] = useState("");
+  const [done, setDone] = useState(false);
+
+  useEffect(() => {
+    setDisplayed("");
+    setDone(false);
+
+    const timeout = setTimeout(() => {
+      let i = 0;
+      const interval = setInterval(() => {
+        if (i < text.length) {
+          setDisplayed(text.slice(0, i + 1));
+          i++;
+        } else {
+          setDone(true);
+          clearInterval(interval);
+        }
+      }, speed);
+
+      return () => clearInterval(interval);
+    }, startDelay);
+
+    return () => clearTimeout(timeout);
+  }, [text, speed, startDelay]);
+
+  return { displayed, done };
+}
 
 export default function WebDesignHero() {
+  // Full Headline to Type Out
+  const headlineText = "YOUR BUSINESS\nDESERVES MORE THAN\nA FACEBOOK PAGE.";
+  const { displayed, done } = useTypewriter(headlineText, 32, 400);
+
   return (
-    <section className="relative min-h-[860px] pt-32 pb-20 lg:pt-36 lg:pb-24 overflow-hidden bg-[#000000] text-white">
-      {/* Atmospheric Ambient Glow behind mockup */}
-      <div className="absolute top-1/3 right-1/4 w-[420px] h-[420px] bg-[#fd3a25]/10 rounded-full blur-[120px] pointer-events-none -z-10" />
+    <section className="relative min-h-[850px] lg:min-h-[900px] pt-36 pb-20 lg:pt-44 lg:pb-28 overflow-hidden bg-[#0C0C0C] text-white flex flex-col justify-center">
+      {/* Ambient background glow */}
+      <div className="absolute top-1/3 right-1/4 w-[600px] h-[600px] bg-[#fd3a25]/6 rounded-full blur-[160px] pointer-events-none -z-0" />
+      <div className="absolute top-1/4 left-1/4 w-[450px] h-[450px] bg-[#ff6b57]/4 rounded-full blur-[160px] pointer-events-none -z-0" />
 
-      <div className="wd-container relative z-10">
-        {/* Hero Main Content Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-16 lg:gap-8 items-center pt-4">
+      {/* Content Container */}
+      <div className="wd-container max-w-6xl mx-auto relative z-10 w-full py-8">
+        
+        {/* Pill Badge */}
+        <motion.div
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="wd-badge-mono mb-6"
+        >
+          <Sparkles className="w-3.5 h-3.5 text-[#ff6b57]" />
+          <span>[ BESPOKE WEB ARCHITECTURE ]</span>
+        </motion.div>
 
-          {/* Left Column: Core Headline, Copy & Action Buttons */}
-          <div className="lg:col-span-5 flex flex-col items-start">
-            {/* Pill Badge */}
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/[0.04] border border-white/10 text-xs font-medium text-neutral-300 mb-8 backdrop-blur-md">
-              <span className="text-[#fd3a25]">✦</span>
-              <span>WEB DESIGN FOR SRI LANKAN BUSINESSES</span>
-            </div>
-
-            {/* Headline */}
-            <div className="relative mb-6">
-              <h1 className="text-5xl sm:text-6xl lg:text-[4.6rem] font-extrabold tracking-tight text-white leading-[1.05]">
-                Your Business Deserves <br />
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-white via-neutral-100 to-[#ff6b57]">
-                  More Than
-                </span>{" "}
+        {/* Dynamic Typewriter Headline with Kanit & Gradient Styling */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+          className="mb-8"
+        >
+          <h1
+            className="font-kanit font-black uppercase text-white tracking-tight leading-[1.02] select-none whitespace-pre-wrap"
+            style={{ fontSize: "clamp(2.6rem, 6vw, 5.4rem)" }}
+          >
+            {displayed.includes("DESERVES MORE THAN") ? (
+              <>
+                <span>YOUR BUSINESS</span>
                 <br />
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#ff8a7a] via-[#fd3a25] to-[#c72515]">
-                  a Facebook Page.
+                <span className="hero-heading">
+                  {displayed.includes("A FACEBOOK PAGE.")
+                    ? "DESERVES MORE THAN"
+                    : displayed.slice("YOUR BUSINESS\n".length)}
                 </span>
-              </h1>
-            </div>
+                {displayed.includes("A FACEBOOK PAGE.") && (
+                  <>
+                    <br />
+                    <span className="hero-heading-accent">
+                      {displayed.slice(
+                        "YOUR BUSINESS\nDESERVES MORE THAN\n".length
+                      )}
+                    </span>
+                  </>
+                )}
+              </>
+            ) : (
+              <span>{displayed}</span>
+            )}
+            
+            {/* Blinking Cursor while typing */}
+            {!done && (
+              <span className="inline-block w-[4px] h-[0.9em] bg-[#fd3a25] align-middle ml-2 animate-blink" />
+            )}
+          </h1>
+        </motion.div>
 
-            {/* Subheading */}
-            <p className="text-base sm:text-lg text-neutral-300 max-w-lg font-normal leading-relaxed mb-10">
-              We build fast, modern websites for Sri Lankan businesses that want to look professional, reach more customers, and turn visitors into real enquiries.
-            </p>
+        {/* Subheading */}
+        <motion.p
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.1 }}
+          className="text-base sm:text-lg text-neutral-300 max-w-2xl font-normal leading-relaxed mb-10 font-kanit font-light"
+        >
+          We engineer sub-second, conversion-focused websites for ambitious Sri
+          Lankan businesses that want to command authority, reach more high-value
+          clients, and scale revenue.
+        </motion.p>
 
-            {/* CTA Buttons */}
-            <div className="flex flex-wrap items-center gap-4">
-              <a
-                href="#pricing"
-                className="px-8 py-3.5 rounded-full bg-gradient-to-r from-[#ff6b57] via-[#fd3a25] to-[#d42c1a] hover:from-[#ff8a7a] hover:to-[#e8321e] text-white text-sm font-black shadow-[0_10px_35px_rgba(253, 58, 37, 0.4)] hover:scale-105 transition-all flex items-center gap-2"
-              >
-                <span>Get a Free Website Consultation →</span>
-                <ArrowRight className="w-4 h-4" />
-              </a>
+        {/* Primary CTA Action Buttons */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.2 }}
+          className="flex flex-wrap items-center gap-4 pt-2"
+        >
+          <a
+            href="#pricing"
+            className="wd-contact-pill-btn px-8 py-3.5 sm:px-10 sm:py-4 text-xs sm:text-sm md:text-base group"
+          >
+            <span className="flex items-center gap-2">
+              <span>Get Started Now</span>
+              <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+            </span>
+          </a>
 
-              <a
-                href="#showcase"
-                className="px-7 py-3.5 rounded-full bg-white/[0.06] hover:bg-white/[0.12] border border-white/15 text-white text-sm font-semibold transition-all"
-              >
-                View Our Work
-              </a>
-            </div>
+          <a
+            href="#showcase"
+            className="wd-ghost-pill-btn px-7 py-3.5 text-xs sm:text-sm tracking-widest"
+          >
+            View Our Work
+          </a>
+        </motion.div>
 
-            {/* Small Trust Line */}
-            <p className="text-[11px] sm:text-xs font-mono text-neutral-400 mt-6 flex flex-wrap items-center gap-x-2.5 gap-y-1.5 leading-none">
-              <span>Mobile-first</span>
-              <span className="text-[#fd3a25]/50 font-sans">•</span>
-              <span>SEO-friendly</span>
-              <span className="text-[#fd3a25]/50 font-sans">•</span>
-              <span>Built for your business</span>
-            </p>
-          </div>
+        {/* Small Trust Line */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.6, delay: 0.3 }}
+          className="mt-10 flex flex-wrap items-center gap-3 text-xs font-mono text-neutral-400"
+        >
+          <span className="px-3.5 py-1.5 rounded-full bg-white/[0.04] border border-white/10">
+            Mobile-First
+          </span>
+          <span className="px-3.5 py-1.5 rounded-full bg-white/[0.04] border border-white/10">
+            Sub-Second Load
+          </span>
+          <span className="px-3.5 py-1.5 rounded-full bg-white/[0.04] border border-white/10">
+            Zero Template Bloat
+          </span>
+        </motion.div>
 
-          {/* Right Column: CafeVibe Desktop & Mobile Mockup (Further Enlarged & Animated) */}
-          <div className="lg:col-span-7 flex flex-col justify-center pt-12 lg:pt-0 z-10 w-full">
-            {/* Desktop Mockup (Browser Frame) - Floating Loop */}
-            <motion.div
-              animate={{ 
-                y: [0, -10, 0] 
-              }}
-              transition={{ 
-                duration: 6,
-                repeat: Infinity,
-                ease: "easeInOut"
-              }}
-              className="relative w-full max-w-lg mx-auto lg:max-w-none pr-16 sm:pr-24"
-            >
-              {/* Browser frame container with hover lift */}
-              <motion.div
-                whileHover={{ scale: 1.01 }}
-                transition={{ duration: 0.3 }}
-                className="rounded-2xl border border-white/[0.08] bg-[#0c0d12]/80 p-2 backdrop-blur-xl shadow-2xl relative z-10"
-              >
-                {/* Browser address/top bar */}
-                <div className="flex items-center gap-1.5 px-3 pb-2 border-b border-white/[0.06] mb-2">
-                  <div className="w-2.5 h-2.5 rounded-full bg-[#ff5f56]" />
-                  <div className="w-2.5 h-2.5 rounded-full bg-[#ffbd2e]" />
-                  <div className="w-2.5 h-2.5 rounded-full bg-[#27c93f]" />
-                  <div className="h-4 px-3 py-0.5 rounded bg-white/[0.04] border border-white/[0.06] text-[8px] font-mono text-neutral-500 mx-auto w-32 text-center overflow-hidden">
-                    artofframes.lk
-                  </div>
-                </div>
-
-                {/* Browser viewport */}
-                <div className="relative aspect-[16/10] overflow-hidden rounded-lg border border-white/5 bg-neutral-900">
-                  <Image
-                    src="/images/web-design/artofframes-preview.png"
-                    alt="Art of Frames Desktop Mockup"
-                    fill
-                    className="object-cover object-top"
-                  />
-                </div>
-              </motion.div>
-
-              {/* Mobile Mockup (Overlapping Phone Frame) - Independent Floating Parallax Drift */}
-              <motion.div
-                animate={{ 
-                  y: [0, 10, 0],
-                  x: [0, -4, 0]
-                }}
-                transition={{ 
-                  duration: 5,
-                  repeat: Infinity,
-                  ease: "easeInOut"
-                }}
-                className="absolute -bottom-6 -right-2 sm:-right-6 w-[155px] sm:w-[190px] aspect-[9/19] rounded-[24px] border-[5px] border-[#1c1d22] bg-[#0c0d12] shadow-[0_25px_50px_rgba(0,0,0,0.7)] p-1 overflow-hidden z-20 flex flex-col"
-              >
-                {/* Mobile screen */}
-                <div className="rounded-[18px] overflow-hidden w-full h-full relative border border-white/5 bg-[#000000]">
-                  {/* Camera Notch */}
-                  <div className="absolute top-1 left-1/2 -translate-x-1/2 w-10 h-2 bg-black rounded-full z-30" />
-                  <Image
-                    src="/images/web-design/artofframes-mobile.png"
-                    alt="Art of Frames Mobile Mockup"
-                    fill
-                    className="object-cover object-top"
-                  />
-                </div>
-              </motion.div>
-            </motion.div>
-
-            {/* Badge under mockup */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.5, delay: 0.4 }}
-              className="mt-12 flex justify-center lg:justify-start lg:pl-4"
-            >
-              <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-white/[0.04] border border-white/10 text-[9px] sm:text-[10px] font-mono font-bold text-neutral-400 tracking-widest uppercase shadow-md backdrop-blur-md">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#fd3a25]" />
-                <span>Built by BizRavana</span>
-              </div>
-            </motion.div>
-          </div>
-
-        </div>
       </div>
     </section>
   );

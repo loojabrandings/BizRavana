@@ -1,29 +1,109 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { ArrowRight, Menu, X, PhoneCall, MessageSquare } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  ChevronDown,
+  ArrowRight,
+  Menu,
+  X,
+  Globe,
+  Layers,
+  Bot,
+  Workflow,
+  Palette,
+  Sparkles,
+  PhoneCall,
+  MessageSquare,
+  Flame,
+} from "lucide-react";
+
+interface SubNavItem {
+  title: string;
+  desc: string;
+  href: string;
+  icon: React.ComponentType<{ className?: string }>;
+  badge?: string;
+  highlight?: boolean;
+}
+
+const SERVICES_SUBNAV: SubNavItem[] = [
+  {
+    title: "Web Design & Dev",
+    desc: "Bespoke, sub-second Next.js digital flagships",
+    href: "/#pricing",
+    icon: Globe,
+    badge: "Active",
+  },
+  {
+    title: "BizRavana OMS",
+    desc: "All-in-one orders, courier & profit tracking SaaS",
+    href: "/services/bizravana-oms",
+    icon: Flame,
+    badge: "Active Platform",
+    highlight: true,
+  },
+  {
+    title: "Custom ORM & CRM",
+    desc: "Tailored order & client management systems",
+    href: "/services/custom-crm",
+    icon: Layers,
+    badge: "Coming Soon",
+  },
+  {
+    title: "AI Chatbots",
+    desc: "24/7 intelligent WhatsApp & website sales agents",
+    href: "/services/ai-chatbots",
+    icon: Bot,
+    badge: "Coming Soon",
+  },
+  {
+    title: "Business Automations",
+    desc: "End-to-end receipt, invoice & operational pipelines",
+    href: "/services/ai-automations",
+    icon: Workflow,
+    badge: "Coming Soon",
+  },
+  {
+    title: "Brand Identity Design",
+    desc: "High-impact visual systems, logos & typography",
+    href: "/services/brand-identity",
+    icon: Palette,
+    badge: "Coming Soon",
+  },
+];
 
 export default function WebDesignNav() {
   const pathname = usePathname();
   const isPortfolioPage = pathname === "/portfolio";
-  const [activeTab, setActiveTab] = useState(isPortfolioPage ? "Portfolio" : "Portfolio");
+  const [activeTab, setActiveTab] = useState("Home");
+  const [servicesDropdownOpen, setServicesDropdownOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [mobileServicesOpen, setMobileServicesOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement | null>(null);
 
   const getHref = (hash: string) => {
-    return isPortfolioPage ? `/services/web-design${hash}` : hash;
+    return pathname === "/" ? hash : `/${hash}`;
   };
 
-  const navItems = [
-    { label: "Portfolio", href: "/portfolio", isDirect: true },
-    { label: "Process", href: getHref("#solutions"), id: "solutions" },
-    { label: "Features", href: getHref("#features"), id: "features" },
-    { label: "Pricing", href: getHref("#pricing"), id: "pricing" },
-    { label: "Contact", href: getHref("#contact"), id: "contact" },
-  ];
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(e.target as Node)
+      ) {
+        setServicesDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
+  // Scrollspy for active tab
   useEffect(() => {
     if (isPortfolioPage) {
       setActiveTab("Portfolio");
@@ -31,221 +111,400 @@ export default function WebDesignNav() {
     }
 
     const handleScroll = () => {
-      const scrollPosition = window.scrollY + 240;
+      const scrollPosition = window.scrollY + 250;
 
-      for (let i = navItems.length - 1; i >= 0; i--) {
-        const id = navItems[i].id;
-        if (id) {
-          const section = document.getElementById(id);
-          if (section) {
-            const top = section.offsetTop;
-            const height = section.offsetHeight;
-            if (scrollPosition >= top && scrollPosition < top + height) {
-              setActiveTab(navItems[i].label);
-              return;
-            }
-          }
-        }
+      if (window.scrollY < 300) {
+        setActiveTab("Home");
+        return;
       }
 
-      // If at the very top of the page
-      if (window.scrollY < 400) {
-        setActiveTab("Works");
+      const sections = [
+        { id: "solutions", label: "Process" },
+        { id: "features", label: "Features" },
+        { id: "pricing", label: "Pricing" },
+        { id: "contact", label: "Contact" },
+      ];
+
+      for (let i = sections.length - 1; i >= 0; i--) {
+        const el = document.getElementById(sections[i].id);
+        if (el) {
+          const top = el.offsetTop;
+          const height = el.offsetHeight;
+          if (scrollPosition >= top && scrollPosition < top + height) {
+            setActiveTab(sections[i].label);
+            return;
+          }
+        }
       }
     };
 
     window.addEventListener("scroll", handleScroll, { passive: true });
     handleScroll();
     return () => window.removeEventListener("scroll", handleScroll);
-  }, [isPortfolioPage, navItems]);
+  }, [isPortfolioPage, pathname]);
 
   return (
     <>
-      <header className="fixed top-6 left-0 right-0 z-50 px-4 sm:px-8 max-w-7xl mx-auto flex items-center justify-between">
-        {/* Left: Official BizRavana Logo linking to Main Platform */}
+      <header className="fixed top-5 left-0 right-0 z-50 px-4 sm:px-8 max-w-6xl mx-auto flex items-center justify-between">
+        {/* Left: Official Brand Logo */}
         <Link
           href="/"
-          title="Return to BizRavana Main Platform"
-          className="flex items-center gap-2.5 group"
+          className="flex items-center gap-3 group py-1"
+          title="BizRavana Home"
         >
-          <div className="relative w-8 h-8 flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
+          <div className="relative w-8 h-8 flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform duration-300">
             <Image
               src="/images/bizravana-logo.png"
-              alt="BizRavana Logo"
+              alt="BizRavana"
               width={32}
               height={32}
-              className="w-full h-full object-contain"
+              className="w-full h-full object-contain drop-shadow"
             />
           </div>
           <div className="flex flex-col">
-            <span className="font-extrabold text-lg sm:text-xl tracking-tight text-white group-hover:text-[#ff6b57] transition-colors leading-none">
+            <span className="font-kanit font-black text-lg sm:text-xl uppercase tracking-tight text-white group-hover:text-[#ff8a7a] transition-colors leading-none">
               BizRavana
             </span>
-            <span className="text-[9px] font-mono text-neutral-400 group-hover:text-[#ff6b57] transition-colors mt-0.5 tracking-wider hidden sm:block">
-              &larr; Main Site
+            <span className="text-[9px] font-mono text-neutral-400 group-hover:text-[#ff8a7a] transition-colors mt-0.5 tracking-wider hidden sm:block">
+              Web &amp; Digital Engineering
             </span>
           </div>
         </Link>
 
-        {/* Center: Dynamic Scroll-Spy / Route Nav Capsule */}
-        <nav className="hidden md:flex items-center p-1.5 rounded-full bg-[#12131a]/85 backdrop-blur-2xl border border-white/[0.08] shadow-2xl shadow-black/80">
-          {navItems.map((item) => {
-            const isActive = isPortfolioPage ? item.label === "Portfolio" : activeTab === item.label;
-
-            if (item.isDirect || isPortfolioPage) {
-              return (
-                <Link
-                  key={item.label}
-                  href={item.href}
-                  className={`px-5 py-2 rounded-full text-xs font-semibold tracking-wide transition-all duration-300 ${
-                    isActive
-                      ? "bg-[#fd3a25] text-white font-bold shadow-[0_0_20px_rgba(253,58,37,0.6)] scale-105"
-                      : "text-neutral-300 hover:text-white hover:bg-white/[0.04]"
-                  }`}
-                >
-                  {item.label}
-                </Link>
-              );
-            }
-
-            return (
-              <a
-                key={item.label}
-                href={item.href}
-                onClick={() => setActiveTab(item.label)}
-                className={`px-5 py-2 rounded-full text-xs font-semibold tracking-wide transition-all duration-300 ${
-                  isActive
-                    ? "bg-[#fd3a25] text-white font-bold shadow-[0_0_20px_rgba(253,58,37,0.6)] scale-105"
-                    : "text-neutral-300 hover:text-white hover:bg-white/[0.04]"
-                }`}
-              >
-                {item.label}
-              </a>
-            );
-          })}
-        </nav>
-
-        {/* Right: High-Impact "Start Project" Action Button */}
-        <div className="flex items-center gap-3">
+        {/* Center: Dynamic Capsule Navbar */}
+        <nav className="hidden md:flex items-center p-1.5 rounded-full bg-[#0C0C0C]/90 backdrop-blur-2xl border-2 border-[#D7E2EA]/20 shadow-[0_20px_50px_rgba(0,0,0,0.85)] relative">
+          
+          {/* Home Link */}
           <Link
-            href="/services/web-design#pricing"
-            className="hidden sm:inline-flex items-center gap-2 px-6 py-2.5 rounded-full bg-gradient-to-r from-[#ff6b57] via-[#fd3a25] to-[#d42c1a] hover:from-[#ff8a7a] hover:to-[#e8321e] text-white text-xs font-black tracking-wide shadow-[0_0_25px_rgba(253,58,37,0.4)] hover:scale-105 transition-all"
+            href="/"
+            onClick={() => setActiveTab("Home")}
+            className={`px-4 py-1.5 rounded-full text-xs font-kanit font-semibold uppercase tracking-wider transition-all duration-300 ${
+              activeTab === "Home" && !isPortfolioPage
+                ? "bg-[#fd3a25] text-white shadow-[0_0_20px_rgba(253,58,37,0.6)] scale-105"
+                : "text-neutral-300 hover:text-white hover:bg-white/[0.06]"
+            }`}
           >
-            <span>Start Project</span>
-            <ArrowRight className="w-3.5 h-3.5 stroke-[2.5]" />
+            Home
           </Link>
 
-          {/* Mobile Hamburger Menu Toggle Button */}
+          {/* Services with Dropdown */}
+          <div
+            ref={dropdownRef}
+            className="relative"
+            onMouseEnter={() => setServicesDropdownOpen(true)}
+            onMouseLeave={() => setServicesDropdownOpen(false)}
+          >
+            <button
+              type="button"
+              onClick={() => setServicesDropdownOpen(!servicesDropdownOpen)}
+              className={`px-4 py-1.5 rounded-full text-xs font-kanit font-semibold uppercase tracking-wider transition-all duration-300 flex items-center gap-1.5 cursor-pointer ${
+                servicesDropdownOpen
+                  ? "bg-white/10 text-white"
+                  : "text-neutral-300 hover:text-white hover:bg-white/[0.06]"
+              }`}
+            >
+              <span>Services</span>
+              <ChevronDown
+                className={`w-3.5 h-3.5 transition-transform duration-300 ${
+                  servicesDropdownOpen ? "rotate-180 text-[#ff8a7a]" : ""
+                }`}
+              />
+            </button>
+
+            {/* Desktop Dropdown Card */}
+            <AnimatePresence>
+              {servicesDropdownOpen && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10, scale: 0.96 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 8, scale: 0.96 }}
+                  transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+                  className="absolute top-full left-1/2 -translate-x-1/2 mt-3 w-[560px] p-4 rounded-[32px] bg-[#0C0C0C]/95 backdrop-blur-3xl border-2 border-[#D7E2EA]/30 shadow-[0_30px_70px_rgba(0,0,0,0.95)] z-50"
+                >
+                  <div className="px-3 py-2 border-b border-white/[0.08] mb-3 flex items-center justify-between">
+                    <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-[#ff8a7a]">
+                      [ WHAT WE ENGINEER ]
+                    </span>
+                    <span className="text-[10px] font-mono text-neutral-400">
+                      Bespoke Digital Solutions
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    {SERVICES_SUBNAV.map((sub) => {
+                      const Icon = sub.icon;
+                      return (
+                        <Link
+                          key={sub.title}
+                          href={sub.href}
+                          onClick={() => setServicesDropdownOpen(false)}
+                          className={`p-3 rounded-2xl border transition-all duration-200 flex items-start gap-3 group ${
+                            sub.highlight
+                              ? "bg-[#140807] border-[#fd3a25]/40 hover:border-[#fd3a25] hover:bg-[#1a0b0a]"
+                              : "bg-white/[0.03] border-white/[0.06] hover:border-white/25 hover:bg-white/[0.08]"
+                          }`}
+                        >
+                          <div
+                            className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 transition-transform group-hover:scale-110 ${
+                              sub.highlight
+                                ? "bg-[#fd3a25] text-white"
+                                : "bg-white/10 text-[#ff8a7a]"
+                            }`}
+                          >
+                            <Icon className="w-4 h-4 stroke-[2.2px]" />
+                          </div>
+
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-1.5 mb-0.5">
+                              <span className="text-xs font-bold font-kanit uppercase tracking-tight text-white group-hover:text-[#ff8a7a] transition-colors truncate">
+                                {sub.title}
+                              </span>
+                              {sub.badge && (
+                                <span
+                                  className={`px-1.5 py-0.2 rounded-full text-[8px] font-mono font-bold uppercase tracking-wider ${
+                                    sub.badge === "Coming Soon"
+                                      ? "bg-white/[0.06] text-neutral-400 border border-white/10"
+                                      : "bg-[#fd3a25]/20 text-[#ff8a7a] border border-[#fd3a25]/30"
+                                  }`}
+                                >
+                                  {sub.badge}
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-[11px] text-neutral-400 font-kanit font-light leading-snug line-clamp-1">
+                              {sub.desc}
+                            </p>
+                          </div>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
+          {/* Portfolio */}
+          <Link
+            href="/portfolio"
+            onClick={() => setActiveTab("Portfolio")}
+            className={`px-4 py-1.5 rounded-full text-xs font-kanit font-semibold uppercase tracking-wider transition-all duration-300 ${
+              isPortfolioPage
+                ? "bg-[#fd3a25] text-white shadow-[0_0_20px_rgba(253,58,37,0.6)] scale-105"
+                : "text-neutral-300 hover:text-white hover:bg-white/[0.06]"
+            }`}
+          >
+            Portfolio
+          </Link>
+
+          {/* Process */}
+          <a
+            href={getHref("#solutions")}
+            onClick={() => setActiveTab("Process")}
+            className={`px-4 py-1.5 rounded-full text-xs font-kanit font-semibold uppercase tracking-wider transition-all duration-300 ${
+              activeTab === "Process" && !isPortfolioPage
+                ? "bg-[#fd3a25] text-white shadow-[0_0_20px_rgba(253,58,37,0.6)] scale-105"
+                : "text-neutral-300 hover:text-white hover:bg-white/[0.06]"
+            }`}
+          >
+            Process
+          </a>
+
+          {/* Pricing */}
+          <a
+            href={getHref("#pricing")}
+            onClick={() => setActiveTab("Pricing")}
+            className={`px-4 py-1.5 rounded-full text-xs font-kanit font-semibold uppercase tracking-wider transition-all duration-300 ${
+              activeTab === "Pricing" && !isPortfolioPage
+                ? "bg-[#fd3a25] text-white shadow-[0_0_20px_rgba(253,58,37,0.6)] scale-105"
+                : "text-neutral-300 hover:text-white hover:bg-white/[0.06]"
+            }`}
+          >
+            Pricing
+          </a>
+
+          {/* Contact */}
+          <a
+            href={getHref("#contact")}
+            onClick={() => setActiveTab("Contact")}
+            className={`px-4 py-1.5 rounded-full text-xs font-kanit font-semibold uppercase tracking-wider transition-all duration-300 ${
+              activeTab === "Contact" && !isPortfolioPage
+                ? "bg-[#fd3a25] text-white shadow-[0_0_20px_rgba(253,58,37,0.6)] scale-105"
+                : "text-neutral-300 hover:text-white hover:bg-white/[0.06]"
+            }`}
+          >
+            Contact
+          </a>
+        </nav>
+
+        {/* Right: CTA Pill & Mobile Toggle */}
+        <div className="flex items-center gap-3">
+          <a
+            href={getHref("#pricing")}
+            className="hidden sm:inline-flex wd-contact-pill-btn px-6 py-2.5 text-xs tracking-wider"
+          >
+            <span className="flex items-center gap-1.5">
+              <span>Start Project</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </span>
+          </a>
+
+          {/* Mobile Hamburger Toggle Button */}
           <button
             type="button"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             aria-label="Toggle Mobile Menu"
-            className="md:hidden p-2.5 rounded-full bg-white/[0.06] border border-white/10 text-white flex items-center justify-center hover:bg-white/[0.12] transition-colors cursor-pointer"
+            className="md:hidden p-2.5 rounded-full bg-[#0C0C0C]/90 border-2 border-[#D7E2EA]/25 text-white flex items-center justify-center hover:bg-white/[0.1] transition-colors cursor-pointer"
           >
-            <Menu className="w-5 h-5 text-[#ff6b57]" />
+            {mobileMenuOpen ? (
+              <X className="w-5 h-5 text-[#ff8a7a]" />
+            ) : (
+              <Menu className="w-5 h-5 text-[#ff8a7a]" />
+            )}
           </button>
         </div>
       </header>
 
-      {/* Fullscreen Drawer for Mobile */}
-      {mobileMenuOpen && (
-        <div className="fixed inset-0 z-50 bg-[#050507]/95 backdrop-blur-3xl flex flex-col p-8 pt-28">
-          <button
-            type="button"
-            onClick={() => setMobileMenuOpen(false)}
-            aria-label="Close Mobile Menu"
-            className="absolute top-8 right-8 p-3 rounded-full bg-white/5 border border-white/10 text-neutral-300 hover:text-white cursor-pointer"
+      {/* Fullscreen Animated Mobile Navigation Drawer */}
+      <AnimatePresence>
+        {mobileMenuOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.3 }}
+            className="fixed inset-0 z-40 bg-[#0C0C0C]/98 backdrop-blur-3xl flex flex-col p-6 pt-24 overflow-y-auto"
           >
-            <X className="w-6 h-6" />
-          </button>
+            <div className="max-w-md mx-auto w-full flex flex-col justify-between flex-1">
+              <div>
+                <div className="text-xs font-mono uppercase tracking-widest text-[#ff8a7a] font-bold mb-6 pb-2 border-b border-white/10 flex items-center justify-between">
+                  <span>[ MENU PORTAL ]</span>
+                  <Sparkles className="w-3.5 h-3.5" />
+                </div>
 
-          <div className="max-w-xl mx-auto w-full flex flex-col justify-between h-full">
-            <div>
-              <div className="text-xs font-mono uppercase tracking-widest text-[#fd3a25] font-bold mb-8">
-                [ NAVIGATION PORTAL ]
+                <nav className="flex flex-col gap-4 font-kanit font-bold text-xl uppercase tracking-tight">
+                  {/* Home */}
+                  <Link
+                    href="/"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="p-3 rounded-2xl bg-white/[0.03] border border-white/10 hover:border-[#fd3a25] flex items-center justify-between text-white"
+                  >
+                    <span>01. Home</span>
+                    <span className="text-xs font-mono text-neutral-500">ROOT</span>
+                  </Link>
+
+                  {/* Services Accordion */}
+                  <div className="rounded-2xl bg-white/[0.03] border border-white/10 overflow-hidden">
+                    <button
+                      type="button"
+                      onClick={() => setMobileServicesOpen(!mobileServicesOpen)}
+                      className="w-full p-3 flex items-center justify-between text-white cursor-pointer"
+                    >
+                      <span>02. Services</span>
+                      <ChevronDown
+                        className={`w-4 h-4 transition-transform duration-300 text-[#ff8a7a] ${
+                          mobileServicesOpen ? "rotate-180" : ""
+                        }`}
+                      />
+                    </button>
+
+                    {mobileServicesOpen && (
+                      <div className="p-3 pt-0 space-y-2 border-t border-white/[0.06]">
+                        {SERVICES_SUBNAV.map((sub) => (
+                          <Link
+                            key={sub.title}
+                            href={sub.href}
+                            onClick={() => setMobileMenuOpen(false)}
+                            className="p-2.5 rounded-xl bg-white/[0.02] hover:bg-white/[0.06] flex items-center justify-between text-sm font-normal normal-case text-neutral-300"
+                          >
+                            <span>{sub.title}</span>
+                            {sub.badge && (
+                              <span
+                                className={`text-[9px] font-mono font-bold px-1.5 py-0.5 rounded-full ${
+                                  sub.badge === "Coming Soon"
+                                    ? "text-neutral-500 bg-white/[0.04] border border-white/5"
+                                    : "text-[#ff8a7a] bg-[#fd3a25]/15 border border-[#fd3a25]/25"
+                                }`}
+                              >
+                                {sub.badge}
+                              </span>
+                            )}
+                          </Link>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Portfolio */}
+                  <Link
+                    href="/portfolio"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="p-3 rounded-2xl bg-white/[0.03] border border-white/10 hover:border-[#fd3a25] flex items-center justify-between text-white"
+                  >
+                    <span>03. Portfolio</span>
+                    <span className="text-xs font-mono text-[#ff8a7a]">LIVE DEMOS ↗</span>
+                  </Link>
+
+                  {/* Process */}
+                  <a
+                    href={getHref("#solutions")}
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="p-3 rounded-2xl bg-white/[0.03] border border-white/10 hover:border-[#fd3a25] flex items-center justify-between text-white"
+                  >
+                    <span>04. Process</span>
+                    <span className="text-xs font-mono text-neutral-500">ROADMAP</span>
+                  </a>
+
+                  {/* Pricing */}
+                  <a
+                    href={getHref("#pricing")}
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="p-3 rounded-2xl bg-white/[0.03] border border-white/10 hover:border-[#fd3a25] flex items-center justify-between text-white"
+                  >
+                    <span>05. Pricing</span>
+                    <span className="text-xs font-mono text-neutral-500">PACKAGES</span>
+                  </a>
+
+                  {/* Contact */}
+                  <a
+                    href={getHref("#contact")}
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="p-3 rounded-2xl bg-white/[0.03] border border-white/10 hover:border-[#fd3a25] flex items-center justify-between text-[#ff8a7a]"
+                  >
+                    <span>06. Contact Us</span>
+                    <span className="text-xs font-mono text-[#ff8a7a]">INQUIRE</span>
+                  </a>
+                </nav>
               </div>
 
-              <nav className="flex flex-col gap-6 text-2xl sm:text-3xl font-extrabold text-white">
-                <Link
-                  href="/services/web-design"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="hover:text-[#ff6b57] transition-colors flex items-center justify-between"
+              {/* Bottom Mobile Action Buttons */}
+              <div className="pt-6 mt-6 border-t border-white/10 flex flex-col gap-3">
+                <a
+                  href="https://wa.me/94750350109?text=Hi%20BizRavana,%20I%20am%20interested%20in%20a%20website%20project."
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="wd-contact-pill-btn w-full py-3.5 text-xs"
                 >
-                  <span>01. Web Design</span>
-                  <span className="text-xs font-mono text-neutral-500">OVERVIEW</span>
-                </Link>
-                <Link
-                  href="/portfolio"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="hover:text-[#ff6b57] transition-colors flex items-center justify-between"
-                >
-                  <span>02. Portfolio</span>
-                  <span className="text-xs font-mono text-[#ff6b57]">LIVE DEMOS ↗</span>
-                </Link>
-                <Link
-                  href={getHref("#solutions")}
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="hover:text-[#ff6b57] transition-colors flex items-center justify-between"
-                >
-                  <span>03. Process</span>
-                  <span className="text-xs font-mono text-neutral-500">5 STEPS</span>
-                </Link>
-                <Link
-                  href={getHref("#features")}
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="hover:text-[#ff6b57] transition-colors flex items-center justify-between"
-                >
-                  <span>04. Features</span>
-                  <span className="text-xs font-mono text-neutral-500">CAPABILITIES</span>
-                </Link>
-                <Link
-                  href={getHref("#pricing")}
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="hover:text-[#ff6b57] transition-colors flex items-center justify-between"
-                >
-                  <span>05. Pricing</span>
-                  <span className="text-xs font-mono text-neutral-500">PLANS</span>
-                </Link>
-                <Link
-                  href={getHref("#contact")}
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="hover:text-[#ff6b57] transition-colors flex items-center justify-between text-[#ff6b57]"
-                >
-                  <span>06. Contact Us</span>
-                  <span className="text-xs font-mono text-[#ff6b57]">GET IN TOUCH</span>
-                </Link>
+                  <span className="flex items-center justify-center gap-2">
+                    <MessageSquare className="w-4 h-4" />
+                    <span>WhatsApp Inquiry</span>
+                  </span>
+                </a>
 
-                <Link
-                  href="/"
-                  className="pt-4 mt-2 border-t border-white/10 hover:text-[#ff6b57] transition-colors flex items-center justify-between text-base font-semibold text-neutral-400 font-mono"
+                <a
+                  href="tel:+94750350109"
+                  className="wd-ghost-pill-btn w-full py-3 text-xs"
                 >
-                  <span>&larr; Return to Main Platform</span>
-                  <span className="text-xs text-neutral-500">BIZRAVANA.COM</span>
-                </Link>
-              </nav>
+                  <span className="flex items-center justify-center gap-2">
+                    <PhoneCall className="w-3.5 h-3.5" />
+                    <span>0750 350 109</span>
+                  </span>
+                </a>
+              </div>
             </div>
-
-            <div className="pt-8 border-t border-white/10 flex flex-col sm:flex-row gap-4">
-              <a
-                href="https://wa.me/94750350109?text=Hi%20BizRavana,%20I%20am%20interested%20in%20a%20high-performance%20website%20for%20my%20business."
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex-1 py-3.5 rounded-full bg-[#fd3a25] text-white text-center font-bold text-sm shadow-xl shadow-[#fd3a25]/30 flex items-center justify-center gap-2"
-              >
-                <MessageSquare className="w-4 h-4" />
-                <span>WhatsApp Consultation</span>
-              </a>
-              <a
-                href="tel:+94750350109"
-                className="flex-1 py-3.5 rounded-full bg-white/[0.04] border border-white/10 text-white text-center font-semibold text-sm flex items-center justify-center gap-2"
-              >
-                <PhoneCall className="w-4 h-4 text-[#ff6b57]" />
-                <span>0750 350 109</span>
-              </a>
-            </div>
-          </div>
-        </div>
-      )}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </>
   );
 }

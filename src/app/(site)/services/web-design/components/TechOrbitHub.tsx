@@ -10,6 +10,7 @@ import {
   Search,
   Zap,
   TrendingUp,
+  Sparkles,
 } from "lucide-react";
 
 const LEFT_FEATURES = [
@@ -63,44 +64,51 @@ function FeatureCard({ title, desc, icon: Icon, idx }: FeatureCardProps) {
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
       transition={{ duration: 0.45, delay: idx * 0.07 }}
-      className="bg-white hover:bg-neutral-50 border border-neutral-200/60 rounded-[22px] p-5 xl:p-6 flex flex-col gap-3 group transition-all duration-300 shadow-sm"
+      className="bg-[#0C0C0C] hover:bg-[#12131a] border-2 border-[#D7E2EA]/20 hover:border-white/40 rounded-[28px] sm:rounded-[36px] p-5 sm:p-6 flex flex-col justify-between h-[180px] sm:h-[190px] w-full group transition-all duration-300 shadow-[0_20px_40px_rgba(0,0,0,0.8)]"
     >
-      {/* Icon */}
-      <div className="w-10 h-10 rounded-[13px] bg-neutral-100 border border-neutral-200 text-neutral-800 flex items-center justify-center flex-shrink-0 transition-all duration-300">
-        <Icon className="w-[18px] h-[18px] stroke-[2px]" />
+      {/* Top Header: Icon + Title */}
+      <div className="flex items-start gap-3.5">
+        <div className="w-10 h-10 rounded-[14px] bg-white/[0.06] border border-white/10 text-[#ff8a7a] flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-all duration-300">
+          <Icon className="w-[18px] h-[18px] stroke-[2px]" />
+        </div>
+        <div>
+          <h3 className="text-base sm:text-lg font-bold font-kanit uppercase text-white tracking-tight leading-snug">
+            {title}
+          </h3>
+        </div>
       </div>
 
-      {/* Text */}
-      <div>
-        <h3 className="text-[15px] xl:text-[16px] font-bold text-neutral-900 tracking-tight mb-1.5">
-          {title}
-        </h3>
-        <p className="text-neutral-500 text-[12px] xl:text-[13px] leading-relaxed font-normal">
-          {desc}
-        </p>
-      </div>
+      {/* Description */}
+      <p className="text-neutral-400 text-xs sm:text-sm leading-relaxed font-light mt-auto">
+        {desc}
+      </p>
     </motion.div>
   );
 }
 
 export default function TechOrbitHub() {
   return (
-    <section id="features" className="py-24 relative overflow-hidden bg-[#040406]">
-      <div className="wd-container">
+    <section id="features" className="py-28 relative overflow-hidden bg-[#0C0C0C] border-t border-white/[0.06]">
+      {/* Ambient background glow */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[400px] bg-[#fd3a25]/5 rounded-full blur-[160px] pointer-events-none -z-10" />
+
+      <div className="wd-container max-w-6xl mx-auto">
         {/* Header */}
-        <div className="text-center max-w-3xl mx-auto mb-14">
-          <div className="wd-badge-mono mb-4">
-            <span className="wd-dot-pulse" />
+        <div className="text-center max-w-3xl mx-auto mb-16 sm:mb-20">
+          <div className="wd-badge-mono mb-6">
+            <Sparkles className="w-3.5 h-3.5 text-[#ff6b57]" />
             <span>[ BUILT AROUND YOUR BUSINESS ]</span>
           </div>
-          <h2 className="text-3xl sm:text-5xl font-extrabold text-white tracking-tight leading-tight mb-4">
-            Everything Your Business <br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#ff6b57] via-[#fd3a25] to-white">
-              Needs to Get Online.
-            </span>
+
+          <h2
+            className="hero-heading font-kanit font-black uppercase leading-none tracking-tight text-center select-none mb-6"
+            style={{ fontSize: "clamp(2.8rem, 11vw, 150px)" }}
+          >
+            ARCHITECTURE
           </h2>
-          <p className="text-neutral-400 text-sm sm:text-base leading-relaxed max-w-2xl mx-auto mt-2">
-            Every website is built around your business — with the essential tools, integrations, and experiences your customers need to discover, trust, and contact you.
+
+          <p className="text-neutral-400 text-sm sm:text-base font-kanit max-w-xl mx-auto leading-relaxed">
+            Every website is built around your business — with the essential tools, speed, and funnels your customers need to trust and buy.
           </p>
         </div>
 
@@ -121,20 +129,12 @@ export default function TechOrbitHub() {
               className="absolute inset-0 w-full h-full pointer-events-none overflow-visible"
               xmlns="http://www.w3.org/2000/svg"
             >
-              {/* Left side lines — 3 horizontal from center to left cards */}
-              {/* These use percentage-based positioning relative to card centers */}
-              {/* Top-left line */}
-              <line x1="50%" y1="50%" x2="0%" y2="16.7%" stroke="rgba(253, 58, 37, 0.2)" strokeWidth="1" strokeDasharray="4 4" />
-              {/* Mid-left line */}
-              <line x1="50%" y1="50%" x2="0%" y2="50%" stroke="rgba(253, 58, 37, 0.2)" strokeWidth="1" strokeDasharray="4 4" />
-              {/* Bottom-left line */}
-              <line x1="50%" y1="50%" x2="0%" y2="83.3%" stroke="rgba(253, 58, 37, 0.2)" strokeWidth="1" strokeDasharray="4 4" />
-              {/* Top-right line */}
-              <line x1="50%" y1="50%" x2="100%" y2="16.7%" stroke="rgba(253, 58, 37, 0.2)" strokeWidth="1" strokeDasharray="4 4" />
-              {/* Mid-right line */}
-              <line x1="50%" y1="50%" x2="100%" y2="50%" stroke="rgba(253, 58, 37, 0.2)" strokeWidth="1" strokeDasharray="4 4" />
-              {/* Bottom-right line */}
-              <line x1="50%" y1="50%" x2="100%" y2="83.3%" stroke="rgba(253, 58, 37, 0.2)" strokeWidth="1" strokeDasharray="4 4" />
+              <line x1="50%" y1="50%" x2="0%" y2="16.7%" stroke="rgba(253, 58, 37, 0.25)" strokeWidth="1" strokeDasharray="4 4" />
+              <line x1="50%" y1="50%" x2="0%" y2="50%" stroke="rgba(253, 58, 37, 0.25)" strokeWidth="1" strokeDasharray="4 4" />
+              <line x1="50%" y1="50%" x2="0%" y2="83.3%" stroke="rgba(253, 58, 37, 0.25)" strokeWidth="1" strokeDasharray="4 4" />
+              <line x1="50%" y1="50%" x2="100%" y2="16.7%" stroke="rgba(253, 58, 37, 0.25)" strokeWidth="1" strokeDasharray="4 4" />
+              <line x1="50%" y1="50%" x2="100%" y2="50%" stroke="rgba(253, 58, 37, 0.25)" strokeWidth="1" strokeDasharray="4 4" />
+              <line x1="50%" y1="50%" x2="100%" y2="83.3%" stroke="rgba(253, 58, 37, 0.25)" strokeWidth="1" strokeDasharray="4 4" />
             </svg>
 
             {/* Center Logo Card */}
@@ -143,10 +143,10 @@ export default function TechOrbitHub() {
               whileInView={{ opacity: 1, scale: 1 }}
               viewport={{ once: true }}
               transition={{ duration: 0.6, delay: 0.1 }}
-              className="relative z-10 w-[140px] h-[140px] rounded-[30px] bg-gradient-to-br from-[#fd3a25] via-[#d42c1a] to-[#b31f10] shadow-[0_0_60px_rgba(253, 58, 37, 0.4),0_0_120px_rgba(253, 58, 37, 0.18)] flex flex-col items-center justify-center gap-3"
+              className="relative z-10 w-[140px] h-[140px] rounded-[32px] bg-gradient-to-br from-[#fd3a25] via-[#d42c1a] to-[#b31f10] shadow-[0_0_60px_rgba(253,58,37,0.45),0_0_120px_rgba(253,58,37,0.2)] flex flex-col items-center justify-center gap-3 border-2 border-white/20"
             >
               {/* Ambient inner glow */}
-              <div className="absolute inset-0 rounded-[30px] bg-gradient-to-br from-white/20 to-transparent pointer-events-none" />
+              <div className="absolute inset-0 rounded-[32px] bg-gradient-to-br from-white/20 to-transparent pointer-events-none" />
               <Image
                 src="/images/bizravana-crown-white.png"
                 alt="BizRavana"
@@ -154,7 +154,7 @@ export default function TechOrbitHub() {
                 height={60}
                 className="object-contain relative z-10 drop-shadow-lg"
               />
-              <span className="text-white/90 text-[11px] font-bold font-mono tracking-widest uppercase relative z-10">
+              <span className="text-white text-[11px] font-bold font-kanit tracking-widest uppercase relative z-10">
                 BizRavana
               </span>
             </motion.div>
@@ -168,18 +168,17 @@ export default function TechOrbitHub() {
           </div>
         </div>
 
-        {/* Mobile fallback — brand badge at top, then 2-col card grid */}
+        {/* Mobile fallback */}
         <div className="lg:hidden">
-          {/* Mobile center brand badge — shown at top */}
           <div className="flex justify-center mb-8">
             <motion.div
               initial={{ opacity: 0, scale: 0.85 }}
               whileInView={{ opacity: 1, scale: 1 }}
               viewport={{ once: true }}
               transition={{ duration: 0.5 }}
-              className="relative w-[110px] h-[110px] rounded-[26px] bg-gradient-to-br from-[#fd3a25] via-[#d42c1a] to-[#b31f10] shadow-[0_0_40px_rgba(253,58,37,0.35)] flex flex-col items-center justify-center gap-2"
+              className="relative w-[110px] h-[110px] rounded-[28px] bg-gradient-to-br from-[#fd3a25] via-[#d42c1a] to-[#b31f10] shadow-[0_0_40px_rgba(253,58,37,0.35)] flex flex-col items-center justify-center gap-2 border border-white/20"
             >
-              <div className="absolute inset-0 rounded-[26px] bg-gradient-to-br from-white/20 to-transparent pointer-events-none" />
+              <div className="absolute inset-0 rounded-[28px] bg-gradient-to-br from-white/20 to-transparent pointer-events-none" />
               <Image
                 src="/images/bizravana-crown-white.png"
                 alt="BizRavana"
@@ -187,13 +186,12 @@ export default function TechOrbitHub() {
                 height={44}
                 className="object-contain drop-shadow-lg relative z-10"
               />
-              <span className="text-white/90 text-[10px] font-bold font-mono tracking-widest uppercase relative z-10">
+              <span className="text-white text-[10px] font-bold font-kanit tracking-widest uppercase relative z-10">
                 BizRavana
               </span>
             </motion.div>
           </div>
 
-          {/* Feature cards grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {[...LEFT_FEATURES, ...RIGHT_FEATURES].map((feat, idx) => (
               <FeatureCard key={idx} title={feat.title} desc={feat.desc} icon={feat.icon} side="left" idx={idx} />

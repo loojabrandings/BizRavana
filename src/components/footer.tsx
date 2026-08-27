@@ -23,10 +23,10 @@ const FOOTER_LINKS: { heading: string; links: { label: string; href?: string; ta
   {
     heading: "Services",
     links: [
-      { label: "Web Design & Dev", href: "/services/web-design", target: "_blank" },
-      { label: "BizRavana OMS", href: "/features" },
-      { label: "AI Chatbots", href: "/services/ai-chatbots", target: "_blank" },
-      { label: "AI Automations", href: "/services/ai-automations", target: "_blank" },
+      { label: "Web Design & Dev", href: "/" },
+      { label: "BizRavana OMS", href: "/services/bizravana-oms" },
+      { label: "AI Chatbots", href: "/services/ai-chatbots" },
+      { label: "AI Automations", href: "/services/ai-automations" },
       { label: "Pricing", href: "/pricing" },
     ],
   },

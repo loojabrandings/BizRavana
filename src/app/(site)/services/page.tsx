@@ -1,28 +1,46 @@
-import type { Metadata } from "next";
+"use client";
+
+import React from "react";
+import Link from "next/link";
+import { motion } from "framer-motion";
 import {
   Layers,
   Globe,
   Bot,
   Workflow,
   ArrowRight,
+  Sparkles,
   CheckCircle2,
+  Flame,
 } from "lucide-react";
-import Navbar from "@/components/navbar";
-import Footer from "@/components/footer";
-import Button from "@/components/button";
-import Reveal from "@/components/reveal";
-
-export const metadata: Metadata = {
-  title: "Services — BizRavana",
-  description:
-    "Explore BizRavana's full business solutions ecosystem — BizRavana OMS for order and business management, custom web design & development, intelligent AI chatbots, and automated business workflows.",
-};
+import WebDesignNav from "@/app/(site)/services/web-design/components/WebDesignNav";
+import WebDesignFooter from "@/app/(site)/services/web-design/components/WebDesignFooter";
+import "@/app/(site)/services/web-design/web-design.css";
 
 const SERVICES = [
   {
+    badge: "Active Service",
+    badgeType: "active",
+    icon: Globe,
+    title: "Web Design & Development",
+    subtitle: "Bespoke, High-Performance Digital Flagships",
+    desc: "Custom, sub-second web platforms, landing pages, and web applications engineered with Next.js & React for ambitious Sri Lankan businesses and global brands.",
+    bullets: [
+      "Sub-second loading with Next.js App Router",
+      "Interactive 3D showcases & scroll experiences",
+      "WhatsApp ordering & lead automation funnels",
+      "Tailored for mobile, tablet, and ultra-wide screens",
+      "Full technical SEO and Google schema architecture",
+    ],
+    ctaText: "Explore Web Design Packages",
+    ctaHref: "/#pricing",
+    isExternal: false,
+    highlight: true,
+  },
+  {
     badge: "Active Platform",
     badgeType: "active",
-    icon: Layers,
+    icon: Flame,
     title: "BizRavana OMS",
     subtitle: "Order & Business Management System",
     desc: "The all-in-one operating system for Sri Lankan commerce. Real-time order tracking, automated invoicing, inventory control, expense logging, and 1-click courier integrations with Royal Express & Koombiyo.",
@@ -34,8 +52,9 @@ const SERVICES = [
       "Team collaboration with role permissions",
     ],
     ctaText: "Explore Features & Demo",
-    ctaHref: "/features",
+    ctaHref: "/services/bizravana-oms",
     isExternal: false,
+    highlight: true,
   },
   {
     badge: "Coming Soon",
@@ -53,6 +72,7 @@ const SERVICES = [
     ctaText: "Learn More & Join Waitlist",
     ctaHref: "/services/ai-chatbots",
     isExternal: false,
+    highlight: false,
   },
   {
     badge: "Coming Soon",
@@ -70,178 +90,145 @@ const SERVICES = [
     ctaText: "Learn More & Inquire",
     ctaHref: "/services/ai-automations",
     isExternal: false,
+    highlight: false,
   },
 ];
 
 export default function ServicesPage() {
   return (
-    <main>
-      <Navbar />
+    <div className="wd-standalone-root">
+      <main className="relative min-h-screen bg-[#0C0C0C] text-white selection:bg-[#fd3a25] selection:text-white flex flex-col justify-between">
+        {/* Atmosphere */}
+        <div className="wd-bg-grid" />
+        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[800px] h-[500px] bg-[#fd3a25]/8 rounded-full blur-[160px] pointer-events-none -z-0" />
 
-      {/* Ambient background accent blobs */}
-      <div className="scene-blobs" aria-hidden="true" />
+        {/* Global Nav */}
+        <WebDesignNav />
 
-      {/* Hero */}
-      <section className="feat-hero" aria-labelledby="services-hub-heading">
-        <div className="feat-hero__inner">
-          <Reveal>
-            <p className="about-eyebrow">Solutions Ecosystem</p>
-            <h1 id="services-hub-heading" className="feat-hero__title">
-              Services built to scale your business.
-            </h1>
-            <p className="feat-hero__desc">
+        {/* Hero Section */}
+        <section className="pt-36 sm:pt-44 pb-16 relative z-10">
+          <div className="wd-container max-w-6xl mx-auto text-center flex flex-col items-center">
+            <motion.div
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+              className="wd-badge-mono mb-6"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-[#ff6b57]" />
+              <span>[ SOLUTIONS ECOSYSTEM ]</span>
+            </motion.div>
+
+            <motion.h1
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6 }}
+              className="hero-heading font-kanit font-black uppercase leading-none tracking-tight text-center select-none mb-6"
+              style={{ fontSize: "clamp(2.8rem, 10vw, 130px)" }}
+            >
+              SERVICES
+            </motion.h1>
+
+            <motion.p
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.1 }}
+              className="text-neutral-400 text-sm sm:text-base md:text-lg font-kanit font-light max-w-2xl mx-auto leading-relaxed"
+            >
               From our flagship Order Management System to bespoke web development and cutting-edge conversational AI, BizRavana provides the technology foundation your business needs to grow.
-            </p>
-          </Reveal>
-        </div>
-      </section>
+            </motion.p>
+          </div>
+        </section>
 
-      {/* Service Cards Grid */}
-      <section className="about-section pt-0" aria-label="Services list">
-        <div className="about-section__inner about-section__inner--center">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-left">
-            {SERVICES.map((service, i) => (
-              <Reveal key={service.title} delay={i * 90}>
-                <div className="card p-6 md:p-8 h-full flex flex-col justify-between relative overflow-hidden">
-                  <div className="card__glow" aria-hidden="true" />
-                  <div className="card__shimmer" aria-hidden="true" />
-                  <div className="card__line" aria-hidden="true" />
+        {/* Services Grid */}
+        <section className="pb-24 relative z-10">
+          <div className="wd-container max-w-6xl mx-auto">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-stretch">
+              {SERVICES.map((service, idx) => {
+                const Icon = service.icon;
+                return (
+                  <motion.div
+                    key={service.title}
+                    initial={{ opacity: 0, y: 30 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.5, delay: idx * 0.1 }}
+                    className={`p-7 sm:p-9 rounded-[36px] sm:rounded-[48px] flex flex-col justify-between transition-all duration-300 shadow-[0_25px_60px_rgba(0,0,0,0.85)] ${
+                      service.highlight
+                        ? "border-2 border-[#fd3a25]/40 bg-[#120807] hover:border-[#fd3a25]"
+                        : "border-2 border-[#D7E2EA]/20 bg-[#0C0C0C] hover:border-white/40"
+                    }`}
+                  >
+                    <div>
+                      {/* Top Row: Icon + Badge */}
+                      <div className="flex items-center justify-between gap-4 mb-6">
+                        <div
+                          className={`w-12 h-12 rounded-2xl flex items-center justify-center ${
+                            service.highlight
+                              ? "bg-[#fd3a25] text-white shadow-lg shadow-[#fd3a25]/30"
+                              : "bg-white/[0.06] border border-white/10 text-[#ff8a7a]"
+                          }`}
+                        >
+                          <Icon className="w-6 h-6 stroke-[2.2px]" />
+                        </div>
 
-                  <div>
-                    {/* Badge */}
-                    <div className="flex items-center justify-between mb-4">
-                      <span className="card__badge">
-                        <service.icon size={22} strokeWidth={1.9} aria-hidden="true" />
-                      </span>
-                      <span
-                        className={`px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider ${
-                          service.badgeType === "active"
-                            ? "border border-emerald-500/30 bg-emerald-500/10 text-emerald-400"
-                            : "border border-amber-500/30 bg-amber-500/10 text-amber-300"
-                        }`}
-                      >
-                        {service.badge}
-                      </span>
+                        <span
+                          className={`px-3 py-1 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider ${
+                            service.badgeType === "active"
+                              ? "bg-[#fd3a25]/20 text-[#ff8a7a] border border-[#fd3a25]/30"
+                              : "bg-white/[0.04] text-neutral-400 border border-white/10"
+                          }`}
+                        >
+                          {service.badge}
+                        </span>
+                      </div>
+
+                      <h2 className="text-xl sm:text-2xl font-black font-kanit uppercase text-white tracking-tight mb-1">
+                        {service.title}
+                      </h2>
+                      <p className="text-xs font-mono font-semibold text-[#ff8a7a] mb-4">
+                        {service.subtitle}
+                      </p>
+                      <p className="text-xs sm:text-sm text-neutral-300 font-kanit font-light leading-relaxed mb-6">
+                        {service.desc}
+                      </p>
+
+                      {/* Bullet points */}
+                      <ul className="space-y-2.5 mb-8 pt-5 border-t border-white/[0.08]">
+                        {service.bullets.map((bullet) => (
+                          <li
+                            key={bullet}
+                            className="flex items-start gap-2.5 text-xs text-neutral-300 font-light font-kanit"
+                          >
+                            <CheckCircle2 className="w-3.5 h-3.5 text-[#ff8a7a] shrink-0 mt-0.5" />
+                            <span>{bullet}</span>
+                          </li>
+                        ))}
+                      </ul>
                     </div>
 
-                    <h2 className="text-xl md:text-2xl font-bold text-[var(--foreground)] tracking-tight mb-1">
-                      {service.title}
-                    </h2>
-                    <p className="text-xs font-semibold text-[var(--accent)] mb-3">
-                      {service.subtitle}
-                    </p>
-                    <p className="text-sm text-[var(--text-secondary)] leading-relaxed mb-6">
-                      {service.desc}
-                    </p>
-
-                    <ul className="space-y-2 mb-8 pt-4 border-t border-[var(--border-subtle)] text-xs text-[var(--text-secondary)]">
-                      {service.bullets.map((bullet) => (
-                        <li key={bullet} className="flex items-start gap-2">
-                          <CheckCircle2 className="w-3.5 h-3.5 text-[var(--accent)] shrink-0 mt-0.5" />
-                          <span>{bullet}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-
-                  <div className="pt-2">
-                    <Button
-                      variant={service.badgeType === "active" ? "primary" : "secondary"}
-                      href={service.ctaHref}
-                      className="w-full justify-center"
-                    >
-                      <span>{service.ctaText}</span>
-                      <ArrowRight className="w-4 h-4 ml-2" />
-                    </Button>
-                  </div>
-                </div>
-              </Reveal>
-            ))}
+                    <div className="pt-2">
+                      <Link
+                        href={service.ctaHref}
+                        className={`w-full py-3.5 rounded-full font-kanit font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all ${
+                          service.highlight
+                            ? "wd-contact-pill-btn"
+                            : "wd-ghost-pill-btn"
+                        }`}
+                      >
+                        <span>{service.ctaText}</span>
+                        <ArrowRight className="w-4 h-4" />
+                      </Link>
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* Synergistic Ecosystem Section */}
-      <section className="about-section" aria-labelledby="ecosystem-heading">
-        <div className="about-section__inner about-section__inner--center">
-          <Reveal>
-            <p className="about-eyebrow">Connected Architecture</p>
-            <h2 id="ecosystem-heading" className="about-lead">
-              A unified operating stack for modern commerce
-            </h2>
-            <p className="about-body">
-              Instead of duct-taping five disconnected tools, BizRavana offers a cohesive platform where your website captures orders, AI chatbots converse with shoppers, and the OMS handles inventory, dispatch and profits.
-            </p>
-          </Reveal>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-10 text-left">
-            <Reveal delay={60}>
-              <div className="p-6 rounded-2xl border border-[var(--border-subtle)] bg-[var(--fill-hover)] h-full">
-                <div className="text-xs font-bold text-[var(--accent)] uppercase tracking-wider mb-2">
-                  Stage 1 · Capture
-                </div>
-                <h3 className="text-base font-bold text-[var(--foreground)] mb-2">
-                  Bespoke Website &amp; WhatsApp AI
-                </h3>
-                <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
-                  Attract shoppers with an ultrafast website while the AI Chatbot qualifies buyers and answers inquiries 24/7 on WhatsApp.
-                </p>
-              </div>
-            </Reveal>
-
-            <Reveal delay={120}>
-              <div className="p-6 rounded-2xl border border-[var(--border-subtle)] bg-[var(--fill-hover)] h-full">
-                <div className="text-xs font-bold text-[var(--accent)] uppercase tracking-wider mb-2">
-                  Stage 2 · Fulfill
-                </div>
-                <h3 className="text-base font-bold text-[var(--foreground)] mb-2">
-                  BizRavana OMS Engine
-                </h3>
-                <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
-                  All orders automatically stream into your central OMS. Generate courier waybills, reserve stock, and log customer balances with zero manual copy-pasting.
-                </p>
-              </div>
-            </Reveal>
-
-            <Reveal delay={180}>
-              <div className="p-6 rounded-2xl border border-[var(--border-subtle)] bg-[var(--fill-hover)] h-full">
-                <div className="text-xs font-bold text-[var(--accent)] uppercase tracking-wider mb-2">
-                  Stage 3 · Scale
-                </div>
-                <h3 className="text-base font-bold text-[var(--foreground)] mb-2">
-                  Analytics &amp; Profit Tracking
-                </h3>
-                <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
-                  Monitor net profit after courier fees, expense deductions, and payment reconciliations. Understand exactly what makes your business grow.
-                </p>
-              </div>
-            </Reveal>
-          </div>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section id="cta" className="section section--cta" aria-labelledby="services-cta-heading">
-        <div className="cta">
-          <h2 id="services-cta-heading" className="cta__title">
-            Ready to upgrade your business technology?
-          </h2>
-          <p className="cta__desc">
-            Start with our 3-day free trial of BizRavana OMS, or reach out to our team to discuss custom development.
-          </p>
-          <div className="cta__actions">
-            <Button variant="primary" href="/login">
-              Start 3-Day Free Trial →
-            </Button>
-            <Button variant="secondary" href="/contact">
-              Contact Our Team
-            </Button>
-          </div>
-          <p className="cta__fineprint">No credit card required · Instant setup</p>
-        </div>
-      </section>
-
-      <Footer />
-    </main>
+        {/* Global Footer */}
+        <WebDesignFooter />
+      </main>
+    </div>
   );
 }

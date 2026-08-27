@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import Link from "next/link";
 import Image from "next/image";
@@ -9,17 +9,17 @@ export default function WebDesignFooter() {
   };
 
   return (
-    <footer className="pt-28 pb-12 relative bg-[#020204] overflow-hidden text-white border-t border-white/[0.04]">
+    <footer className="pt-28 pb-12 relative bg-[#060608] overflow-hidden text-white border-t border-white/[0.06]">
       {/* Massive Background Watermark Text */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full text-center pointer-events-none select-none -z-0">
-        <span className="text-[14vw] font-black tracking-tighter text-white/[0.03] uppercase whitespace-nowrap">
+        <span className="text-[14vw] font-black font-kanit tracking-tighter text-white/[0.02] uppercase whitespace-nowrap">
           BizRavana
         </span>
       </div>
 
       <div className="wd-container relative z-10 max-w-6xl mx-auto flex flex-col items-center text-center">
         
-        {/* Center Official BizRavana Logo (Exact) */}
+        {/* Center Official BizRavana Logo */}
         <div className="relative w-16 h-16 sm:w-20 sm:h-20 flex items-center justify-center mb-6">
           <Image
             src="/images/bizravana-logo.png"
@@ -31,17 +31,16 @@ export default function WebDesignFooter() {
         </div>
 
         {/* Heading */}
-        <h2 className="text-2xl sm:text-4xl font-extrabold text-white tracking-tight mb-2">
-          Get connected <br className="sm:hidden" />
-          with BizRavana on social
+        <h2 className="text-2xl sm:text-4xl font-bold font-kanit uppercase tracking-tight text-white mb-2">
+          Connect with BizRavana on social
         </h2>
 
         {/* Subtitle */}
-        <p className="text-xs sm:text-sm text-neutral-400 font-normal mb-10">
-          Don&apos;t miss our new updates!
+        <p className="text-xs sm:text-sm text-neutral-400 font-kanit font-light mb-10">
+          Follow our latest design launches, case studies, and engineering updates.
         </p>
 
-        {/* 4 Stark White Social Pill Buttons with Real BizRavana Links */}
+        {/* 4 Stark White Social Pill Buttons */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 w-full max-w-4xl mb-24">
           
           {/* WhatsApp Direct */}
@@ -49,7 +48,7 @@ export default function WebDesignFooter() {
             href="https://wa.me/94750350109?text=Hi%20BizRavana,%20I%20am%20interested%20in%20a%20website%20project."
             target="_blank"
             rel="noopener noreferrer"
-            className="px-6 py-4 rounded-full bg-white hover:bg-neutral-100 text-[#0a0b10] font-bold text-sm shadow-xl flex items-center justify-between gap-4 transition-all duration-300 hover:scale-105 group cursor-pointer"
+            className="px-6 py-4 rounded-full bg-white hover:bg-neutral-100 text-[#0a0b10] font-bold font-kanit text-sm shadow-xl flex items-center justify-between gap-4 transition-all duration-300 hover:scale-105 group cursor-pointer"
           >
             <span>WhatsApp</span>
             <div className="w-8 h-8 rounded-full bg-[#0a0b10] text-[#25D366] group-hover:bg-[#25D366] group-hover:text-white flex items-center justify-center transition-colors flex-shrink-0">
@@ -64,7 +63,7 @@ export default function WebDesignFooter() {
             href="https://web.facebook.com/bizravana"
             target="_blank"
             rel="noopener noreferrer"
-            className="px-6 py-4 rounded-full bg-white hover:bg-neutral-100 text-[#0a0b10] font-bold text-sm shadow-xl flex items-center justify-between gap-4 transition-all duration-300 hover:scale-105 group cursor-pointer"
+            className="px-6 py-4 rounded-full bg-white hover:bg-neutral-100 text-[#0a0b10] font-bold font-kanit text-sm shadow-xl flex items-center justify-between gap-4 transition-all duration-300 hover:scale-105 group cursor-pointer"
           >
             <span>Facebook</span>
             <div className="w-8 h-8 rounded-full bg-[#0a0b10] text-[#1877F2] group-hover:bg-[#1877F2] group-hover:text-white flex items-center justify-center transition-colors flex-shrink-0">
@@ -79,7 +78,7 @@ export default function WebDesignFooter() {
             href="https://www.instagram.com/bizravana/"
             target="_blank"
             rel="noopener noreferrer"
-            className="px-6 py-4 rounded-full bg-white hover:bg-neutral-100 text-[#0a0b10] font-bold text-sm shadow-xl flex items-center justify-between gap-4 transition-all duration-300 hover:scale-105 group cursor-pointer"
+            className="px-6 py-4 rounded-full bg-white hover:bg-neutral-100 text-[#0a0b10] font-bold font-kanit text-sm shadow-xl flex items-center justify-between gap-4 transition-all duration-300 hover:scale-105 group cursor-pointer"
           >
             <span>Instagram</span>
             <div className="w-8 h-8 rounded-full bg-[#0a0b10] text-[#E4405F] group-hover:bg-[#E4405F] group-hover:text-white flex items-center justify-center transition-colors flex-shrink-0">
@@ -92,7 +91,7 @@ export default function WebDesignFooter() {
           {/* Email Support */}
           <a
             href="mailto:support@bizravana.com"
-            className="px-6 py-4 rounded-full bg-white hover:bg-neutral-100 text-[#0a0b10] font-bold text-sm shadow-xl flex items-center justify-between gap-4 transition-all duration-300 hover:scale-105 group cursor-pointer"
+            className="px-6 py-4 rounded-full bg-white hover:bg-neutral-100 text-[#0a0b10] font-bold font-kanit text-sm shadow-xl flex items-center justify-between gap-4 transition-all duration-300 hover:scale-105 group cursor-pointer"
           >
             <span>Email</span>
             <div className="w-8 h-8 rounded-full bg-[#0a0b10] text-[#fd3a25] group-hover:bg-[#fd3a25] group-hover:text-white flex items-center justify-center transition-colors flex-shrink-0">
@@ -105,20 +104,20 @@ export default function WebDesignFooter() {
         </div>
 
         {/* Bottom Sub-Bar */}
-        <div className="w-full pt-8 border-t border-white/[0.08] flex flex-col md:flex-row items-center justify-between gap-6 text-xs text-neutral-400">
+        <div className="w-full pt-8 border-t border-white/[0.08] flex flex-col md:flex-row items-center justify-between gap-6 text-xs text-neutral-400 font-kanit">
           {/* Left: Nav Links */}
           <div className="flex items-center gap-6 font-medium">
-            <Link href="/" className="text-[#ff6b57] hover:text-white transition-colors font-mono">
-              &larr; Main Site
+            <Link href="/" className="text-[#ff6b57] hover:text-white transition-colors">
+              Web Design
             </Link>
-            <a href="#why-us" className="hover:text-white transition-colors">
-              About
-            </a>
+            <Link href="/services/bizravana-oms" className="hover:text-white transition-colors">
+              BizRavana OMS
+            </Link>
             <a href="#solutions" className="hover:text-white transition-colors">
-              Services
+              Process
             </a>
             <a href="#showcase" className="hover:text-white transition-colors">
-              Works
+              Showcase
             </a>
             <a href="#pricing" className="hover:text-white transition-colors">
               Pricing

@@ -78,12 +78,12 @@ const NAV_LINKS: NavLinkItem[] = [
     children: [
       {
         label: "Web Design & Dev",
-        href: "/services/web-design",
+        href: "/",
         icon: Globe,
       },
       {
         label: "BizRavana OMS",
-        href: "/features",
+        href: "/services/bizravana-oms",
         icon: Layers,
       },
       {

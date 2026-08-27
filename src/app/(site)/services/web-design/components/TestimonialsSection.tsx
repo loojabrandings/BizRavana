@@ -1,20 +1,20 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Sparkles } from "lucide-react";
 
 const TESTIMONIALS = [
   {
-    quote: "BizRavana gave Art of Frames a website that finally feels like an extension of our brand. Customers can easily explore our products, browse our gallery, check details and get in touch with us. The overall experience feels clean, modern and professional.",
+    quote: "BizRavana gave Art of Frames a digital flagship that finally feels like an extension of our brand. Customers can easily explore our products, browse our gallery, check details and contact us instantly. The overall experience is clean, modern, and high-converting.",
     author: "Founder",
     role: "Art of Frames",
     image: "/images/web-design/artofframes-preview.png",
   },
   {
-    quote: "The new Cafe Vibe website gave our business a much stronger online presence. It presents our brand, menu and atmosphere in a simple and engaging way, while making it much easier for customers to discover and contact us.",
-    author: "Manager",
+    quote: "The new Cafe Vibe website gave our business a much stronger online presence. It presents our brand, menu, and atmosphere in a simple and engaging way, making it much easier for new customers to discover and reach us.",
+    author: "Management Team",
     role: "Cafe Vibe",
     image: "/images/web-design/cafevibe-preview.png",
   },
@@ -23,11 +23,11 @@ const TESTIMONIALS = [
 export default function TestimonialsSection() {
   const [currentIdx, setCurrentIdx] = useState(0);
 
-  // Auto-play / Rotate reviews every 5 seconds
+  // Auto-play / Rotate reviews every 6 seconds
   useEffect(() => {
     const interval = setInterval(() => {
       setCurrentIdx((prev) => (prev === TESTIMONIALS.length - 1 ? 0 : prev + 1));
-    }, 5000);
+    }, 6000);
     return () => clearInterval(interval);
   }, []);
 
@@ -42,9 +42,9 @@ export default function TestimonialsSection() {
   const activeTestimonial = TESTIMONIALS[currentIdx];
 
   return (
-    <section id="testimonials" className="py-28 relative bg-[#040406] overflow-hidden">
+    <section id="testimonials" className="py-28 relative bg-[#0C0C0C] border-t border-white/[0.06] overflow-hidden">
       {/* Background Glow */}
-      <div className="absolute top-1/2 right-1/4 -translate-y-1/2 w-[500px] h-[500px] bg-[#fd3a25]/10 rounded-full blur-[140px] pointer-events-none -z-10" />
+      <div className="absolute top-1/2 right-1/4 -translate-y-1/2 w-[600px] h-[400px] bg-[#fd3a25]/6 rounded-full blur-[160px] pointer-events-none -z-10" />
 
       <div className="wd-container max-w-6xl mx-auto">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-center">
@@ -53,19 +53,22 @@ export default function TestimonialsSection() {
           <div className="lg:col-span-6 flex flex-col justify-between space-y-8">
             <div>
               {/* Pill Tag */}
-              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/[0.04] border border-white/10 text-xs font-mono text-neutral-300 mb-8 backdrop-blur-md">
-                <span className="w-2 h-2 rounded-full bg-[#fd3a25] animate-pulse" />
-                <span className="text-[#ff6b57] font-black uppercase tracking-wider">[ CLIENT FEEDBACK ]</span>
+              <div className="wd-badge-mono mb-6">
+                <Sparkles className="w-3.5 h-3.5 text-[#ff6b57]" />
+                <span>[ CLIENT TESTIMONIALS ]</span>
               </div>
 
               {/* Large Main Heading */}
-              <h2 className="text-4xl sm:text-6xl font-normal text-white tracking-tight leading-[1.08] mb-10">
-                What Our <br />
-                Clients Say
+              <h2
+                className="font-kanit font-black uppercase text-white tracking-tight leading-none mb-8 select-none"
+                style={{ fontSize: "clamp(2.5rem, 6vw, 4.5rem)" }}
+              >
+                TRUSTED BY <br />
+                <span className="hero-heading">FOUNDERS.</span>
               </h2>
 
               {/* Dynamic Quote & Author Area */}
-              <div className="min-h-[160px] relative">
+              <div className="min-h-[180px] relative">
                 <AnimatePresence mode="wait">
                   <motion.div
                     key={currentIdx}
@@ -75,16 +78,16 @@ export default function TestimonialsSection() {
                     transition={{ duration: 0.35 }}
                     className="space-y-6"
                   >
-                    <p className="text-base sm:text-lg text-neutral-200 font-normal leading-relaxed">
+                    <p className="text-base sm:text-lg text-neutral-200 font-light font-kanit leading-relaxed">
                       &ldquo;{activeTestimonial.quote}&rdquo;
                     </p>
 
                     <div className="flex items-center gap-3 pt-2">
-                      <div className="w-1 h-5 bg-[#fd3a25] rounded-full" />
-                      <div className="text-sm font-bold text-white">
+                      <div className="w-1.5 h-6 bg-[#fd3a25] rounded-full" />
+                      <div className="text-sm font-bold font-kanit uppercase text-white tracking-wider">
                         {activeTestimonial.author}
-                        <span className="text-xs font-normal text-neutral-400 ml-2 font-mono">
-                          | {activeTestimonial.role}
+                        <span className="text-xs font-mono font-normal text-neutral-400 ml-2 tracking-normal lowercase">
+                          — {activeTestimonial.role}
                         </span>
                       </div>
                     </div>
@@ -96,22 +99,20 @@ export default function TestimonialsSection() {
             {/* Bottom Slider Navigation Controls */}
             <div className="flex items-center justify-between pt-6 border-t border-white/[0.08] max-w-md">
               <div className="flex items-center gap-3">
-                {/* Prev Button */}
                 <button
                   type="button"
                   onClick={prevSlide}
                   aria-label="Previous Testimonial"
-                  className="w-12 h-12 rounded-full bg-white/[0.05] hover:bg-white/[0.12] border border-white/10 text-white flex items-center justify-center transition-all hover:scale-105 active:scale-95 cursor-pointer"
+                  className="w-12 h-12 rounded-full bg-white/[0.06] hover:bg-white/[0.12] border border-white/10 text-white flex items-center justify-center transition-all hover:scale-105 active:scale-95 cursor-pointer"
                 >
                   <ChevronLeft className="w-5 h-5" />
                 </button>
 
-                {/* Next Button */}
                 <button
                   type="button"
                   onClick={nextSlide}
                   aria-label="Next Testimonial"
-                  className="w-12 h-12 rounded-full bg-white hover:bg-neutral-200 text-white flex items-center justify-center font-bold shadow-lg shadow-white/10 transition-all hover:scale-105 active:scale-95 cursor-pointer"
+                  className="w-12 h-12 rounded-full bg-[#fd3a25] hover:bg-[#d42c1a] text-white flex items-center justify-center font-bold shadow-lg shadow-[#fd3a25]/30 transition-all hover:scale-105 active:scale-95 cursor-pointer"
                 >
                   <ChevronRight className="w-5 h-5 stroke-[2.5]" />
                 </button>
@@ -129,8 +130,8 @@ export default function TestimonialsSection() {
 
           {/* Right Column: Frame with Live Client Website Screenshot */}
           <div className="lg:col-span-6 flex justify-center lg:justify-end">
-            <div className="w-full max-w-[540px] aspect-[16/11] rounded-[32px] sm:rounded-[36px] bg-[#0d0e14] p-3 border border-white/[0.1] shadow-2xl shadow-black/90 relative overflow-hidden group">
-              <div className="w-full h-full rounded-[24px] sm:rounded-[28px] overflow-hidden relative bg-[#000000] border border-white/5">
+            <div className="w-full max-w-[540px] aspect-[16/11] rounded-[36px] sm:rounded-[44px] bg-[#0C0C0C] p-3 border-2 border-[#D7E2EA]/30 shadow-[0_30px_70px_rgba(0,0,0,0.85)] relative overflow-hidden group">
+              <div className="w-full h-full rounded-[26px] sm:rounded-[34px] overflow-hidden relative bg-[#000000] border border-white/5">
                 <AnimatePresence mode="wait">
                   <motion.div
                     key={currentIdx}
@@ -145,7 +146,7 @@ export default function TestimonialsSection() {
                       alt={activeTestimonial.role}
                       fill
                       priority
-                      className="object-cover object-top opacity-95 group-hover:scale-102 transition-transform duration-500"
+                      className="object-cover object-top opacity-95 group-hover:scale-105 transition-transform duration-500"
                     />
                   </motion.div>
                 </AnimatePresence>

@@ -1,29 +1,29 @@
-﻿"use client";
+"use client";
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Sparkles } from "lucide-react";
 
 const FAQS = [
   {
     q: "How long does it take to build a website?",
-    a: "Most websites take around 5–21 working days, depending on the package, content and complexity.",
+    a: "Most websites take around 5–21 working days, depending on the package, content availability, and custom functionality requirements.",
   },
   {
     q: "Do you provide the domain and hosting?",
-    a: "Yes. We can help you set up your domain and hosting. Hosting and domain fees may be billed separately depending on the selected setup.",
+    a: "Yes. We help you set up and configure high-performance cloud hosting and custom domain names. Hosting fees can be included in your plan.",
   },
   {
     q: "Can you redesign my existing website?",
-    a: "Yes. We can redesign an existing website while improving its visual design, usability, mobile experience and performance.",
+    a: "Yes. We specialize in complete redesigns, improving visual elegance, load speeds, mobile responsiveness, and sales conversion rates.",
   },
   {
-    q: "Will my website work on mobile phones?",
-    a: "Yes. All websites are designed to be responsive across mobile, tablet and desktop devices.",
+    q: "Will my website work perfectly on mobile phones?",
+    a: "Absolutely. Every website is engineered mobile-first to ensure 100% responsiveness across all smartphone and tablet screen sizes.",
   },
   {
-    q: "Can I update the website myself?",
-    a: "For websites that include a CMS or admin panel, you can manage supported content yourself. Otherwise, our maintenance plans can handle ongoing updates.",
+    q: "Can I update the website myself after launch?",
+    a: "Yes. If your package includes CMS access, you can manage content with ease. Otherwise, our ongoing maintenance plans can handle all updates for you.",
   },
 ];
 
@@ -35,20 +35,26 @@ export default function FaqAccordion() {
   };
 
   return (
-    <section id="faq" className="py-24 relative bg-[#060608]">
-      <div className="wd-container max-w-3xl mx-auto">
-        {/* Header */}
-        <div className="text-center mb-16">
-          <div className="wd-badge-mono mb-4">
-            <span className="wd-dot-pulse" />
+    <section id="faq" className="py-28 relative bg-[#0C0C0C] border-t border-white/[0.06]">
+      <div className="wd-container max-w-6xl mx-auto">
+        <div className="max-w-3xl mx-auto">
+          {/* Header */}
+          <div className="text-center mb-16 sm:mb-20">
+          <div className="wd-badge-mono mb-6">
+            <Sparkles className="w-3.5 h-3.5 text-[#ff6b57]" />
             <span>[ FREQUENTLY ASKED QUESTIONS ]</span>
           </div>
-          <h2 className="text-3xl sm:text-5xl font-extrabold text-white tracking-tight leading-tight mb-4">
-            Got Questions? <br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#ff6b57] via-[#fd3a25] to-white">
-              We Have Direct Answers.
-            </span>
+
+          <h2
+            className="hero-heading font-kanit font-black uppercase leading-none tracking-tight text-center select-none mb-6"
+            style={{ fontSize: "clamp(2.8rem, 11vw, 150px)" }}
+          >
+            FAQ
           </h2>
+
+          <p className="text-neutral-400 text-sm sm:text-base font-kanit max-w-xl mx-auto leading-relaxed">
+            Direct answers to common questions about our web design process, timelines, and deliverables.
+          </p>
         </div>
 
         {/* Accordion List */}
@@ -58,27 +64,30 @@ export default function FaqAccordion() {
             return (
               <div
                 key={idx}
-                className={`rounded-2xl border transition-all duration-500 overflow-hidden ${isOpen
-                  ? "border-[#fd3a25]/60 shadow-[0_20px_45px_-10px_rgba(0,0,0,0.8),0_0_35px_-5px_rgba(253, 58, 37, 0.3)] bg-gradient-to-br from-[#200504] via-[#160302] to-[#06080c]"
-                  : "bg-[#0c0d12]/80 border-white/[0.08] hover:border-[#fd3a25]/40 hover:bg-gradient-to-br hover:from-[#1a0403] hover:via-[#120202] hover:to-[#07080c]"
-                  }`}
+                className={`rounded-[28px] sm:rounded-[36px] border-2 transition-all duration-300 overflow-hidden ${
+                  isOpen
+                    ? "border-[#fd3a25] bg-[#120807] shadow-[0_20px_45px_rgba(0,0,0,0.8),0_0_35px_rgba(253,58,37,0.25)]"
+                    : "bg-[#0C0C0C] border-[#D7E2EA]/20 hover:border-white/40"
+                }`}
               >
                 <button
                   type="button"
                   onClick={() => toggle(idx)}
-                  className="w-full p-6 text-left flex items-center justify-between gap-4 cursor-pointer"
+                  className="w-full p-6 sm:p-7 text-left flex items-center justify-between gap-4 cursor-pointer"
                 >
                   <span
-                    className={`text-base sm:text-lg font-bold tracking-tight transition-colors duration-300 ${isOpen ? "text-[#ff6b57]" : "text-white group-hover:text-white"
-                      }`}
+                    className={`text-base sm:text-lg font-bold font-kanit uppercase tracking-tight transition-colors duration-300 ${
+                      isOpen ? "text-[#ff8a7a]" : "text-white"
+                    }`}
                   >
                     {faq.q}
                   </span>
                   <div
-                    className={`w-9 h-9 rounded-full flex items-center justify-center transition-all duration-300 flex-shrink-0 ${isOpen
-                      ? "rotate-180 bg-[#fd3a25] text-white shadow-[0_0_15px_#fd3a25]"
-                      : "bg-white/[0.04] border border-white/10 text-neutral-300"
-                      }`}
+                    className={`w-9 h-9 rounded-full flex items-center justify-center transition-all duration-300 flex-shrink-0 ${
+                      isOpen
+                        ? "rotate-180 bg-[#fd3a25] text-white shadow-[0_0_15px_#fd3a25]"
+                        : "bg-white/[0.06] border border-white/10 text-neutral-300"
+                    }`}
                   >
                     <ChevronDown className="w-4 h-4 stroke-[2.5]" />
                   </div>
@@ -92,7 +101,7 @@ export default function FaqAccordion() {
                       exit={{ height: 0, opacity: 0 }}
                       transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
                     >
-                      <div className="px-6 pb-6 pt-2 text-sm sm:text-base text-neutral-200 leading-relaxed border-t border-[#fd3a25]/15">
+                      <div className="px-6 sm:px-7 pb-6 pt-1 text-sm sm:text-base text-neutral-300 font-light leading-relaxed border-t border-[#fd3a25]/20 font-kanit">
                         {faq.a}
                       </div>
                     </motion.div>
@@ -101,6 +110,7 @@ export default function FaqAccordion() {
               </div>
             );
           })}
+        </div>
         </div>
       </div>
     </section>

@@ -3,7 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { Workflow, Sparkles, MessageSquare, ArrowRight, CheckCircle2, FileCheck, Layers, RefreshCw, Send } from "lucide-react";
+import { Layers, Sparkles, MessageSquare, CheckCircle2, Database, Users, Shield, BarChart3 } from "lucide-react";
 import WebDesignNav from "@/app/(site)/services/web-design/components/WebDesignNav";
 import WebDesignFooter from "@/app/(site)/services/web-design/components/WebDesignFooter";
 import { CONTACT } from "@/config/site";
@@ -11,30 +11,30 @@ import "@/app/(site)/services/web-design/web-design.css";
 
 const FEATURES = [
   {
-    icon: FileCheck,
-    title: "Bank Slip OCR & Instant Reconciliation",
-    desc: "AI vision models that extract transaction reference numbers, amounts, and dates from customer bank slips to verify payments in seconds.",
+    icon: Database,
+    title: "Tailored Data Architecture",
+    desc: "Custom database schema and relationship models built precisely around your company's operational workflow, orders, and clients.",
   },
   {
-    icon: Layers,
-    title: "Multi-Channel CRM Lead Routing",
-    desc: "Collects customer inquiries across WhatsApp, Facebook Ads, and web forms into one unified pipeline without manual data entry.",
+    icon: Users,
+    title: "Client & Lead Pipelines",
+    desc: "Manage customer history, follow-up reminders, quotation stages, and team assignment with zero bloat or unnecessary subscriptions.",
   },
   {
-    icon: RefreshCw,
-    title: "Predictive Inventory Restock Triggers",
-    desc: "Monitors consumption velocity inside BizRavana OMS and automatically alerts your team before key products run out of stock.",
+    icon: BarChart3,
+    title: "Real-Time Executive Dashboards",
+    desc: "Interactive financial reporting, sales rep performance tracking, and branch-level analytics rendered with sub-second speed.",
   },
   {
-    icon: Send,
-    title: "Automated WhatsApp Post-Purchase Flows",
-    desc: "Sends real-time tracking waybills, delivery updates, feedback requests, and reorder prompts to boost repeat business.",
+    icon: Shield,
+    title: "Role-Based Access & Security",
+    desc: "Granular permission controls ensuring team members only access the specific records and financial data they are authorized to see.",
   },
 ];
 
-export default function AIAutomationsServicePage() {
+export default function CustomCRMServicePage() {
   const whatsappUrl = `https://wa.me/${CONTACT.whatsapp}?text=${encodeURIComponent(
-    "Hi BizRavana team! I am interested in early access for the upcoming AI Automations service. Please notify me."
+    "Hi BizRavana team! I am interested in a Custom ORM / CRM system for my business. Please share details."
   )}`;
 
   return (
@@ -69,7 +69,7 @@ export default function AIAutomationsServicePage() {
               transition={{ duration: 0.5, delay: 0.05 }}
               className="w-16 h-16 sm:w-20 sm:h-20 rounded-[28px] bg-gradient-to-br from-[#fd3a25] via-[#d42c1a] to-[#8f190c] border-2 border-white/25 flex items-center justify-center text-white shadow-[0_0_50px_rgba(253,58,37,0.35)] mb-8"
             >
-              <Workflow className="w-8 h-8 sm:w-10 sm:h-10" />
+              <Layers className="w-8 h-8 sm:w-10 sm:h-10" />
             </motion.div>
 
             {/* Massive .hero-heading Title */}
@@ -78,9 +78,9 @@ export default function AIAutomationsServicePage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.1 }}
               className="hero-heading font-kanit font-black uppercase leading-none tracking-tight text-center select-none mb-6"
-              style={{ fontSize: "clamp(2.8rem, 8.5vw, 110px)" }}
+              style={{ fontSize: "clamp(2.5rem, 8vw, 105px)" }}
             >
-              AI AUTOMATIONS
+              CUSTOM ORM &amp; CRM
             </motion.h1>
 
             <motion.p
@@ -89,7 +89,7 @@ export default function AIAutomationsServicePage() {
               transition={{ duration: 0.6, delay: 0.15 }}
               className="text-neutral-300 text-sm sm:text-base md:text-lg font-kanit font-light max-w-2xl mx-auto leading-relaxed mb-10"
             >
-              End-to-end intelligent business workflow and operational pipeline automation. Eliminating manual copy-pasting, receipt checking, and dispatch bottlenecks.
+              Tailored order and customer relationship management systems built for high-growth enterprises that have outgrown spreadsheets and generic off-the-shelf software.
             </motion.p>
 
             {/* CTA Buttons */}
@@ -107,15 +107,15 @@ export default function AIAutomationsServicePage() {
               >
                 <span className="flex items-center gap-2">
                   <MessageSquare className="w-4 h-4" />
-                  <span>Join Early Access on WhatsApp</span>
+                  <span>Request Custom CRM Proposal</span>
                 </span>
               </a>
 
               <Link
-                href="/#pricing"
+                href="/services/bizravana-oms"
                 className="wd-ghost-pill-btn px-7 py-3.5 text-xs sm:text-sm tracking-widest"
               >
-                Explore Live Web Design
+                Explore BizRavana OMS
               </Link>
             </motion.div>
 
@@ -148,7 +148,7 @@ export default function AIAutomationsServicePage() {
 
                     <div className="pt-6 mt-6 border-t border-white/[0.06] flex items-center gap-2 text-xs font-mono text-neutral-500">
                       <CheckCircle2 className="w-3.5 h-3.5 text-[#ff8a7a]" />
-                      <span>Architecture Phase: In Development</span>
+                      <span>Architecture Phase: Custom Builds by Request</span>
                     </div>
                   </motion.div>
                 );
