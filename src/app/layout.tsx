@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Script from "next/script";
 import { Poppins, Lora, Caveat, Mohave } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/providers/theme-provider";
@@ -92,14 +91,12 @@ export default function RootLayout({
       suppressHydrationWarning
       className={`h-full antialiased ${poppins.variable} ${lora.variable} ${caveat.variable} ${mohave.variable}`}
     >
-      <head>
-        <Script
+      <body className="min-h-full flex flex-col">
+        <script
           id="accent-init"
-          strategy="beforeInteractive"
+          suppressHydrationWarning
           dangerouslySetInnerHTML={{ __html: accentInitScript }}
         />
-      </head>
-      <body className="min-h-full flex flex-col">
         <ThemeProvider defaultTheme="system" accent="bizravana">
           <PreferencesProvider>
             <QueryProvider>

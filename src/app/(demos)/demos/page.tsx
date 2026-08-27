@@ -1,14 +1,67 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Share2, Check } from 'lucide-react';
 import { DEMO_SITES } from '@/data/demo-sites';
 import '@/app/(site)/services/web-design/web-design.css';
 
-export default function DemosHubPage() {
-  const [activeCategory, setActiveCategory] = useState<string>('all');
+function DemosContent() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const [copied, setCopied] = useState(false);
+
+  // Initialize category from URL query param if present
+  const categoryParam = searchParams.get('category') || searchParams.get('cat') || 'all';
+  const [activeCategory, setActiveCategory] = useState<string>(categoryParam);
+
+  // Sync state if URL search param changes
+  useEffect(() => {
+    const currentParam = searchParams.get('category') || searchParams.get('cat') || 'all';
+    setActiveCategory(currentParam);
+  }, [searchParams]);
+
+  // Handle category selection and sync with URL query param
+  const handleSelectCategory = (categoryId: string) => {
+    setActiveCategory(categoryId);
+    const params = new URLSearchParams(searchParams.toString());
+
+    if (categoryId === 'all') {
+      params.delete('category');
+      params.delete('cat');
+    } else {
+      params.set('category', categoryId);
+    }
+
+    const newQueryString = params.toString();
+    const newUrl = newQueryString ? `${pathname}?${newQueryString}` : pathname;
+    router.replace(newUrl, { scroll: false });
+  };
+
+  // Copy shareable link to clipboard
+  const handleCopyShareLink = () => {
+    if (typeof window !== 'undefined') {
+      navigator.clipboard.writeText(window.location.href);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  const categories = [
+    { id: 'all', label: 'All Demos' },
+    { id: 'gym', label: 'Gym & Strength' },
+    { id: 'luxury-jewellery', label: 'Haute Jewellery' },
+    { id: 'hotel-villa', label: 'Hotels & Villas' },
+    { id: 'salon-spa', label: 'Salons & Spas' },
+    { id: 'fashion-clothing', label: 'Fashion & Apparel' },
+    { id: 'real-estate', label: 'Luxury Real Estate' },
+    { id: 'hospital-wellness', label: 'Hospital & Healthcare' },
+    { id: 'dental-clinic', label: 'Dental & Aesthetics' },
+  ];
 
   const filteredDemos =
     activeCategory === 'all'
@@ -61,7 +114,7 @@ export default function DemosHubPage() {
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
-            className="wd-badge-mono mb-6"
+            className="wd-badge-mono mb-6 inline-flex items-center gap-2"
           >
             <span className="wd-dot-pulse" />
             <span>CLIENT CONCEPT SHOWCASE</span>
@@ -89,28 +142,22 @@ export default function DemosHubPage() {
             BizRavana for client outreach and maximum conversion impact.
           </motion.p>
 
-          {/* Category Filter Tabs */}
+          {/* Category Filter Tabs with Shareable Link Sync */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, delay: 0.3 }}
             className="flex items-center justify-center gap-2 flex-wrap"
           >
-            {[
-              { id: 'all', label: 'All Demos' },
-              { id: 'luxury-jewellery', label: 'Haute Jewellery' },
-              { id: 'hotel-villa', label: 'Hotels & Villas' },
-              { id: 'gym', label: 'Gym & Fitness' },
-              { id: 'salon-spa', label: 'Salons & Spas' },
-            ].map((tab) => {
+            {categories.map((tab) => {
               const isActive = activeCategory === tab.id;
               return (
                 <button
                   key={tab.id}
-                  onClick={() => setActiveCategory(tab.id)}
-                  className={`px-4 sm:px-5 py-2.5 rounded-full text-xs font-semibold uppercase tracking-wider transition-all duration-300 ${
+                  onClick={() => handleSelectCategory(tab.id)}
+                  className={`px-4 sm:px-5 py-2.5 rounded-full text-xs font-semibold uppercase tracking-wider transition-all duration-300 cursor-pointer ${
                     isActive
-                      ? 'bg-gradient-to-r from-[#ff6b57] to-[#fd3a25] text-[#060608] font-bold shadow-lg shadow-[#fd3a25]/30'
+                      ? 'bg-gradient-to-r from-[#ff6b57] to-[#fd3a25] text-[#060608] font-bold shadow-lg shadow-[#fd3a25]/30 scale-105'
                       : 'bg-white/[0.04] text-neutral-400 hover:text-white border border-white/10 hover:border-white/20'
                   }`}
                 >
@@ -119,11 +166,37 @@ export default function DemosHubPage() {
               );
             })}
           </motion.div>
+
+          {/* Share Filtered View Button */}
+          {activeCategory !== 'all' && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="mt-6 flex items-center justify-center"
+            >
+              <button
+                onClick={handleCopyShareLink}
+                className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/[0.06] border border-white/15 text-xs text-neutral-300 hover:text-white hover:border-white/30 transition-all shadow-sm"
+              >
+                {copied ? (
+                  <>
+                    <Check className="w-3.5 h-3.5 text-emerald-400" />
+                    <span className="text-emerald-400 font-medium">Link Copied to Clipboard!</span>
+                  </>
+                ) : (
+                  <>
+                    <Share2 className="w-3.5 h-3.5 text-[#ff6b57]" />
+                    <span>Copy Shareable Link for this Category</span>
+                  </>
+                )}
+              </button>
+            </motion.div>
+          )}
         </div>
 
         {/* Demo Cards Bento Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
-          <AnimatePresence>
+          <AnimatePresence mode="popLayout">
             {filteredDemos.map((demo) => {
               return (
                 <motion.div
@@ -132,11 +205,11 @@ export default function DemosHubPage() {
                   initial={{ opacity: 0, scale: 0.96 }}
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.96 }}
-                  transition={{ duration: 0.4 }}
+                  transition={{ duration: 0.35 }}
                 >
                   <Link
                     href={demo.liveUrl}
-                    className="group relative flex flex-col justify-between rounded-3xl border border-white/10 bg-[#0c0d12]/90 backdrop-blur-xl overflow-hidden shadow-2xl hover:border-white/25 transition-all duration-500 hover:-translate-y-1.5"
+                    className="group relative flex flex-col justify-between rounded-3xl border border-white/10 bg-[#0c0d12]/90 backdrop-blur-xl overflow-hidden shadow-2xl hover:border-white/25 transition-all duration-500 hover:-translate-y-1.5 h-full"
                   >
                     {/* Ambient Glow on Hover */}
                     <div
@@ -146,7 +219,7 @@ export default function DemosHubPage() {
                       }}
                     />
 
-                    {/* Card Media Viewport (Uncluttered, Badge-Free Image Showcase) */}
+                    {/* Card Media Viewport */}
                     <div className="relative aspect-[16/10] w-full overflow-hidden bg-[#060608]">
                       <Image
                         src={demo.thumbnailUrl}
@@ -170,9 +243,9 @@ export default function DemosHubPage() {
                     </div>
 
                     {/* Minimalist Editorial Bottom Bar */}
-                    <div className="p-5 sm:p-6 flex items-center justify-between gap-4 bg-[#0c0d12] border-t border-white/5">
+                    <div className="p-5 sm:p-6 flex items-center justify-between gap-4 bg-[#0c0d12] border-t border-white/5 mt-auto">
                       <div className="space-y-1 min-w-0">
-                        {/* Category Label replacing Client Concept Demo */}
+                        {/* Category Label */}
                         <span className="text-[11px] font-mono uppercase tracking-widest text-[#ff6b57] font-semibold block">
                           {demo.categoryLabel}
                         </span>
@@ -262,5 +335,13 @@ export default function DemosHubPage() {
         </div>
       </div>
     </main>
+  );
+}
+
+export default function DemosHubPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[#060608]" />}>
+      <DemosContent />
+    </Suspense>
   );
 }

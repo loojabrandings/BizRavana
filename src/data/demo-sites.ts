@@ -150,5 +150,25 @@ export const DEMO_SITES: DemoSite[] = [
       'Before & After Smile Transformation Studio',
     ],
   },
+  {
+    id: 'demo-kinetic-gym',
+    slug: 'kinetic-gym',
+    category: 'gym',
+    categoryLabel: 'Gym & Strength',
+    title: 'KINETIC GYM',
+    tagline: 'High-performance strength arena, body transformation programs & expert trainers in Colombo',
+    thumbnailUrl: '/demos/kinetic-gym/card-preview-kinetic.png',
+    liveUrl: '/demos/kinetic-gym',
+    accentColor: '#E10600',
+    status: 'ready',
+    features: [
+      'Bebas Neue Display Typography & High Contrast Dark Mode',
+      'Dual-Column Parallax Gallery ("Where Strength is Forged")',
+      'Interactive 3-Column Master Coach & Trainer Switcher',
+      'Flexible 3-Tier Power Membership with Monthly/Yearly Toggle',
+      'Seamless Infinite Stats Ticker & High-Impact Conversion Modal',
+    ],
+  },
 ];
+
 

@@ -9,6 +9,12 @@ const nextConfig: NextConfig = {
   images: {
     // Serve images in next-gen formats via next/image (lazy-loaded by default).
     formats: ["image/avif", "image/webp"],
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "images.unsplash.com",
+      },
+    ],
   },
   async headers() {
     return [
