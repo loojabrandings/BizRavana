@@ -1,0 +1,168 @@
+/* Visionara Eyecare Clean B/W Architectural Theme Engine */
+
+[data-theme='light'] {
+  --bg-page: #ffffff;
+  --bg-card: #f8f9fa;
+  --bg-card-hover: #ffffff;
+  --bg-card-subtle: #f1f3f5;
+  --text-main: #09090b;
+  --text-sub: #52525b;
+  --text-dim: #71717a;
+  --border-line: rgba(0, 0, 0, 0.08);
+  --border-card: rgba(0, 0, 0, 0.1);
+  --border-active: #09090b;
+  --lens-frame: rgba(9, 9, 11, 0.95);
+  --lens-shadow: 0 0 35px rgba(0, 0, 0, 0.15);
+  --lens-bg: #ffffff;
+}
+
+[data-theme='dark'] {
+  --bg-page: #000000;
+  --bg-card: #09090b;
+  --bg-card-hover: #121215;
+  --bg-card-subtle: rgba(255, 255, 255, 0.03);
+  --text-main: #ffffff;
+  --text-sub: rgba(255, 255, 255, 0.75);
+  --text-dim: rgba(255, 255, 255, 0.45);
+  --border-line: rgba(255, 255, 255, 0.1);
+  --border-card: rgba(255, 255, 255, 0.12);
+  --border-active: #ffffff;
+  --lens-frame: rgba(255, 255, 255, 0.95);
+  --lens-shadow: 0 0 45px rgba(0, 0, 0, 0.95);
+  --lens-bg: #000000;
+}
+
+/* ═══════════════════════════════════════════════
+   GLOBAL PURE B/W BACKGROUNDS
+═══════════════════════════════════════════════ */
+
+body,
+main,
+.visionara-page-canvas {
+  background: var(--bg-page) !important;
+  color: var(--text-main) !important;
+}
+
+#visionara-body-content {
+  background: transparent !important;
+}
+
+#visionara-body-content section,
+#visionara-body-content footer,
+#about,
+#treatments,
+#eyewear,
+#booking,
+#faq {
+  background: transparent !important;
+  border-color: var(--border-line) !important;
+}
+
+/* ═══════════════════════════════════════════════
+   DARK THEME PURE BLACK TONALITY
+═══════════════════════════════════════════════ */
+
+[data-theme='dark'] #visionara-body-content .bg-zinc-950,
+[data-theme='dark'] #visionara-body-content .bg-zinc-950\/80,
+[data-theme='dark'] #visionara-body-content .bg-zinc-950\/60,
+[data-theme='dark'] #visionara-body-content .bg-black,
+[data-theme='dark'] #visionara-body-content .bg-black\/50,
+[data-theme='dark'] #visionara-body-content .bg-\[\#080808\],
+[data-theme='dark'] #visionara-body-content .bg-\[\#050505\] {
+  background-color: var(--bg-card) !important;
+  border-color: var(--border-card) !important;
+}
+
+[data-theme='dark'] #visionara-body-content .border-white\/10,
+[data-theme='dark'] #visionara-body-content .border-white\/15,
+[data-theme='dark'] #visionara-body-content .border-white\/20 {
+  border-color: var(--border-line) !important;
+}
+
+/* ═══════════════════════════════════════════════
+   LIGHT THEME PURE WHITE OVERRIDES
+═══════════════════════════════════════════════ */
+
+[data-theme='light'] #visionara-body-content .bg-zinc-950,
+[data-theme='light'] #visionara-body-content .bg-zinc-950\/80,
+[data-theme='light'] #visionara-body-content .bg-zinc-950\/60,
+[data-theme='light'] #visionara-body-content .bg-black,
+[data-theme='light'] #visionara-body-content .bg-black\/50,
+[data-theme='light'] #visionara-body-content .bg-\[\#080808\],
+[data-theme='light'] #visionara-body-content .bg-\[\#050505\],
+[data-theme='light'] #visionara-body-content .bg-emerald-950\/30 {
+  background-color: var(--bg-card) !important;
+  color: var(--text-main) !important;
+  border-color: var(--border-card) !important;
+}
+
+[data-theme='light'] #visionara-body-content .bg-zinc-900,
+[data-theme='light'] #visionara-body-content .bg-zinc-900\/80 {
+  background-color: #f1f3f5 !important;
+  border-color: var(--border-line) !important;
+}
+
+[data-theme='light'] #visionara-body-content .bg-white\/\[0\.02\],
+[data-theme='light'] #visionara-body-content .bg-white\/\[0\.03\],
+[data-theme='light'] #visionara-body-content .bg-white\/\[0\.04\],
+[data-theme='light'] #visionara-body-content .bg-white\/5,
+[data-theme='light'] #visionara-body-content .bg-white\/10 {
+  background-color: #f1f3f5 !important;
+  border-color: var(--border-line) !important;
+}
+
+/* Light Theme Text */
+[data-theme='light'] #visionara-body-content .text-white,
+[data-theme='light'] #visionara-body-content h2,
+[data-theme='light'] #visionara-body-content h3,
+[data-theme='light'] #visionara-body-content h4 {
+  color: var(--text-main) !important;
+}
+
+[data-theme='light'] #visionara-body-content .text-white\/90,
+[data-theme='light'] #visionara-body-content .text-white\/80,
+[data-theme='light'] #visionara-body-content .text-white\/70,
+[data-theme='light'] #visionara-body-content p {
+  color: var(--text-sub) !important;
+}
+
+[data-theme='light'] #visionara-body-content .text-white\/60,
+[data-theme='light'] #visionara-body-content .text-white\/50,
+[data-theme='light'] #visionara-body-content .text-white\/40,
+[data-theme='light'] #visionara-body-content .text-white\/30 {
+  color: var(--text-dim) !important;
+}
+
+/* Form inputs in Light Theme */
+[data-theme='light'] input,
+[data-theme='light'] textarea,
+[data-theme='light'] select {
+  background-color: #ffffff !important;
+  color: #09090b !important;
+  border-color: #e4e4e7 !important;
+}
+
+/* ═══════════════════════════════════════════════
+   THEME-AWARE REVIEW CAROUSEL EDGE GRADIENTS (B/W)
+═══════════════════════════════════════════════ */
+
+[data-theme='light'] .review-fade-left {
+  background: linear-gradient(to right, #ffffff 0%, rgba(255, 255, 255, 0) 100%) !important;
+}
+
+[data-theme='light'] .review-fade-right {
+  background: linear-gradient(to left, #ffffff 0%, rgba(255, 255, 255, 0) 100%) !important;
+}
+
+[data-theme='dark'] .review-fade-left {
+  background: linear-gradient(to right, #000000 0%, rgba(0, 0, 0, 0) 100%) !important;
+}
+
+[data-theme='dark'] .review-fade-right {
+  background: linear-gradient(to left, #000000 0%, rgba(0, 0, 0, 0) 100%) !important;
+}
+
+/* Magnifier Lens Borders */
+[data-theme='light'] .pointer-events-none.fixed {
+  border-color: var(--lens-frame) !important;
+}
