@@ -17,17 +17,33 @@ const nextConfig: NextConfig = {
     ],
   },
   async redirects() {
+    const demoSlugs = [
+      "clothing",
+      "dental",
+      "drink",
+      "eyecare",
+      "gym",
+      "hospital",
+      "kinetic-gym",
+      "lifecare-hospital",
+      "luxury-jewellery",
+      "luxury-villa",
+      "real-estate",
+      "salon-spa",
+      "terraelix",
+    ];
+
     return [
       {
         source: "/demos",
         destination: "/portfolio",
         permanent: true,
       },
-      {
-        source: "/demos/:slug*",
-        destination: "/portfolio/:slug*",
+      ...demoSlugs.map((slug) => ({
+        source: `/demos/${slug}`,
+        destination: `/portfolio/${slug}`,
         permanent: true,
-      },
+      })),
     ];
   },
   async headers() {

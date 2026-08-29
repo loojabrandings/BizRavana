@@ -287,9 +287,11 @@ function PortfolioContent() {
                   {filteredDemos.map((demo) => {
                     const isExternal = demo.liveUrl.startsWith('http');
                     const CardWrapper = isExternal ? 'a' : Link;
-                    const wrapperProps = isExternal
-                      ? { href: demo.liveUrl, target: '_blank', rel: 'noopener noreferrer' }
-                      : { href: demo.liveUrl };
+                    const wrapperProps = {
+                      href: demo.liveUrl,
+                      target: '_blank',
+                      rel: 'noopener noreferrer',
+                    };
 
                     return (
                       <motion.div

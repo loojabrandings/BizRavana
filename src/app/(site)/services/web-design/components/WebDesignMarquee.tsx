@@ -246,7 +246,7 @@ function MarqueeCardTile({ item }: { item: MarqueeCard }) {
   }
 
   return (
-    <Link href={item.url} className="block flex-shrink-0">
+    <Link href={item.url} target="_blank" rel="noopener noreferrer" className="block flex-shrink-0">
       {content}
     </Link>
   );
