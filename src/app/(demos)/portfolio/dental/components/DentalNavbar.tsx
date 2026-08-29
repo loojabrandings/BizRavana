@@ -57,7 +57,7 @@ export function DentalNavbar({ onOpenBooking }: DentalNavbarProps) {
 
           {/* ── Brand Logo ────────────────────────────────────────── */}
           <Link
-            href="/demos/dental"
+            href="/portfolio/dental"
             className="flex items-center gap-1.5 select-none group cursor-pointer"
           >
             <div className="flex items-center">

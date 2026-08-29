@@ -137,7 +137,7 @@ export function RealEstateFooter() {
           
           {/* Brand Info (4 Cols) */}
           <div className="lg:col-span-4">
-            <Link href="/demos/real-estate" className="flex items-center gap-2.5 mb-5">
+            <Link href="/portfolio/real-estate" className="flex items-center gap-2.5 mb-5">
               <span className="w-3 h-3 rounded-full bg-[#C5A880]" />
               <span className="text-xl font-bold tracking-wider text-white uppercase">
                 AURA <span className="re-font-serif italic font-normal text-[#C5A880] lowercase text-2xl">estates</span>

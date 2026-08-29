@@ -95,7 +95,7 @@ export const VillaFooter: React.FC = () => {
                 </a>
               </li>
               <li>
-                <Link href="/demos" className="hover:text-emerald-300 transition-colors flex items-center gap-1.5">
+                <Link href="/portfolio" className="hover:text-emerald-300 transition-colors flex items-center gap-1.5">
                   <span className="text-emerald-500">›</span> All Concept Client Demos
                 </Link>
               </li>
@@ -141,10 +141,10 @@ export const VillaFooter: React.FC = () => {
 
           <div className="flex items-center gap-6">
             <Link
-              href="/demos"
+              href="/portfolio"
               className="text-xs text-emerald-400 hover:text-emerald-300 transition-colors font-medium"
             >
-              ← Back to Demos Hub
+              ← Back to Portfolio
             </Link>
 
             {/* Back to Top Button */}

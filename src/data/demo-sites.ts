@@ -21,7 +21,7 @@ export const DEMO_SITES: DemoSite[] = [
     title: 'VISIONARA',
     tagline: 'Luxury digital eyecare clinic & bespoke optics studio with interactive focus lens, frame showcase & zero-wait booking',
     thumbnailUrl: '/demos/eyecare/card-preview.png',
-    liveUrl: '/demos/eyecare',
+    liveUrl: '/portfolio/eyecare',
     accentColor: '#2563EB',
     status: 'ready',
     features: [
@@ -42,7 +42,7 @@ export const DEMO_SITES: DemoSite[] = [
     title: 'TERRAVIVA',
     tagline: 'Ultra-premium 100% organic cold-pressed botanical fruit drink & e-commerce landing page',
     thumbnailUrl: '/demos/drink/card-preview.png',
-    liveUrl: '/demos/drink',
+    liveUrl: '/portfolio/drink',
     accentColor: '#4E9A68',
     status: 'ready',
     features: [
@@ -60,7 +60,7 @@ export const DEMO_SITES: DemoSite[] = [
     title: 'KINETIC GYM',
     tagline: 'High-performance strength arena, body transformation programs & expert trainers in Colombo',
     thumbnailUrl: '/demos/kinetic-gym/card-preview-kinetic.png',
-    liveUrl: '/demos/kinetic-gym',
+    liveUrl: '/portfolio/kinetic-gym',
     accentColor: '#E10600',
     status: 'ready',
     features: [
@@ -79,7 +79,7 @@ export const DEMO_SITES: DemoSite[] = [
     title: 'LIFECARE HOSPITALS',
     tagline: 'Modern private hospital landing page with animated hero, endless doctor carousel, 24/7 emergency response & channelling booking',
     thumbnailUrl: '/demos/hospital/card-preview.png',
-    liveUrl: '/demos/hospital',
+    liveUrl: '/portfolio/hospital',
     accentColor: '#102BDC',
     status: 'ready',
     features: [
@@ -100,7 +100,7 @@ export const DEMO_SITES: DemoSite[] = [
     title: 'LUMIDENT',
     tagline: 'Gentle, modern dental care clinic in Colombo with interactive 3D crystal tooth experience',
     thumbnailUrl: '/demos/dental/demo-card.png',
-    liveUrl: '/demos/dental',
+    liveUrl: '/portfolio/dental',
     accentColor: '#05c989',
     status: 'ready',
     features: [
@@ -118,7 +118,7 @@ export const DEMO_SITES: DemoSite[] = [
     title: 'AURA ESTATES',
     tagline: 'Premier Sri Lankan architectural real estate brokerage with deed-vetted properties & VIP concierge',
     thumbnailUrl: '/demos/realestate/card-preview.png',
-    liveUrl: '/demos/real-estate',
+    liveUrl: '/portfolio/real-estate',
     accentColor: '#C5A880',
     status: 'ready',
     features: [
@@ -136,7 +136,7 @@ export const DEMO_SITES: DemoSite[] = [
     title: 'NEXORA',
     tagline: 'Modern clothing atelier with sliding pastel pods, category showcase & best sellers',
     thumbnailUrl: '/demos/clothing/card-preview-nexora.png',
-    liveUrl: '/demos/clothing',
+    liveUrl: '/portfolio/clothing',
     accentColor: '#8362F4',
     status: 'ready',
     features: [
@@ -154,7 +154,7 @@ export const DEMO_SITES: DemoSite[] = [
     title: 'MISTY PEAKS',
     tagline: 'Luxury A-frame cabana hideaway nestled in emerald tea hills with 360° cloud views',
     thumbnailUrl: '/demos/villa/card-preview.png',
-    liveUrl: '/demos/luxury-villa',
+    liveUrl: '/portfolio/luxury-villa',
     accentColor: '#10B981',
     status: 'ready',
     features: ['360° Tea Estate Views', 'Private Suspended Wooden Deck', 'Mountain Sunrise Direct Booking'],
@@ -167,7 +167,7 @@ export const DEMO_SITES: DemoSite[] = [
     title: 'SALON BOSS',
     tagline: 'High-converting unisex grooming, hair transformation & 1-click booking concept demo',
     thumbnailUrl: '/demos/salon-boss/card-preview.png',
-    liveUrl: '/demos/salon-spa',
+    liveUrl: '/portfolio/salon-spa',
     accentColor: '#ECA53D',
     status: 'ready',
     features: [
@@ -185,7 +185,7 @@ export const DEMO_SITES: DemoSite[] = [
     title: 'PULSE FIT',
     tagline: 'High-energy fitness club, personal training & membership conversion demo',
     thumbnailUrl: '/demos/gym/card-preview.png',
-    liveUrl: '/demos/gym',
+    liveUrl: '/portfolio/gym',
     accentColor: '#CCFF00',
     status: 'ready',
     features: ['Bold Dark Mode Hero with Glowing Ring', 'Membership Tiers', 'Trainer Profiles & Tour'],
@@ -198,7 +198,7 @@ export const DEMO_SITES: DemoSite[] = [
     title: 'CÂLIN',
     tagline: 'Haute joaillerie, bespoke diamonds, and fine goldsmith atelier concept demo',
     thumbnailUrl: '/demos/luxury-jewellery/card-preview.png',
-    liveUrl: '/demos/luxury-jewellery',
+    liveUrl: '/portfolio/luxury-jewellery',
     accentColor: '#C6A05F',
     status: 'ready',
     features: [

@@ -23,7 +23,7 @@ export function RealEstateNavbar() {
         
         {/* ── Brand Logo ────────────────────────────────────── */}
         <Link 
-          href="/demos/real-estate" 
+          href="/portfolio/real-estate" 
           className="group flex items-center gap-2.5 px-5 py-2.5 rounded-full bg-white/90 backdrop-blur-md border border-[#E8E5DF] shadow-md hover:shadow-lg transition-all"
         >
           <span className="w-2.5 h-2.5 rounded-full bg-[#C5A880] group-hover:scale-125 transition-transform" />

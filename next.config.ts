@@ -16,6 +16,20 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  async redirects() {
+    return [
+      {
+        source: "/demos",
+        destination: "/portfolio",
+        permanent: true,
+      },
+      {
+        source: "/demos/:slug*",
+        destination: "/portfolio/:slug*",
+        permanent: true,
+      },
+    ];
+  },
   async headers() {
     return [
       {

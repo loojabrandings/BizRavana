@@ -22,7 +22,7 @@ export function JewelleryNavbar() {
         
         {/* Left: Brand Logo in Custom Font */}
         <Link 
-          href="/demos/luxury-jewellery" 
+          href="/portfolio/luxury-jewellery" 
           className="group flex items-center transition-transform duration-300 hover:scale-105"
         >
           <span className="font-custom-brand text-3xl sm:text-4xl lg:text-5xl text-[#F6EFE7] tracking-tight lowercase">

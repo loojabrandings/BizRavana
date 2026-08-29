@@ -45,7 +45,7 @@ export const GymNav: React.FC = () => {
       <div className="max-w-7xl mx-auto px-5 sm:px-8 lg:px-12 flex items-center justify-between">
         
         {/* ── Brand Logo ─────────────────────────────────────── */}
-        <Link href="/demos/gym" className="flex items-center gap-2.5 group">
+        <Link href="/portfolio/gym" className="flex items-center gap-2.5 group">
           <div className="w-9 h-9 rounded-lg bg-[#CCFF00] flex items-center justify-center text-black shadow-lg shadow-[#CCFF00]/25 group-hover:scale-105 transition-transform">
             <Zap className="w-5 h-5 text-black fill-black" />
           </div>

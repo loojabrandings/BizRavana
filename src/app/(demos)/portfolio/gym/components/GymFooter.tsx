@@ -66,7 +66,7 @@ export const GymFooter: React.FC = () => {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-8 pb-12 border-b border-white/10">
           
           {/* Logo & Tagline */}
-          <Link href="/demos/gym" className="flex items-center gap-3 group">
+          <Link href="/portfolio/gym" className="flex items-center gap-3 group">
             <div className="w-9 h-9 rounded-lg bg-[#CCFF00] flex items-center justify-center text-black shadow-lg shadow-[#CCFF00]/25 group-hover:scale-105 transition-transform">
               <Zap className="w-5 h-5 text-black fill-black" />
             </div>

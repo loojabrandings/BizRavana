@@ -57,7 +57,7 @@ export const SalonNav: React.FC<SalonNavProps> = ({ onBookClick }) => {
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between">
         {/* Logo */}
-        <Link href="/demos/salon-spa" className="flex items-center gap-3 group">
+        <Link href="/portfolio/salon-spa" className="flex items-center gap-3 group">
           <div className="relative w-28 sm:w-36 h-10 sm:h-12 flex items-center">
             <Image
               src="/demos/salon-boss/logo.png"

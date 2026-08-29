@@ -46,7 +46,7 @@ export function ClothingNavbar() {
 
         {/* ── Center: Brand Logo ──────────────────────────────── */}
         <div className="text-center">
-          <Link href="/demos/clothing" className="inline-block">
+          <Link href="/portfolio/clothing" className="inline-block">
             <span className="font-righteous text-2xl sm:text-3xl tracking-[0.2em] text-[#120F1D] uppercase">
               NEXORA
             </span>

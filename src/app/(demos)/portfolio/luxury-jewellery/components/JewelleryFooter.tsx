@@ -97,7 +97,7 @@ export function JewelleryFooter() {
         {/* ── Bottom Bar: Brand Logo & Links ───────────────────────── */}
         <div className="pt-8 border-t border-[#0D2D25]/10 flex flex-col sm:flex-row items-center justify-between gap-6 text-center sm:text-left">
           
-          <Link href="/demos/luxury-jewellery" className="flex items-center">
+          <Link href="/portfolio/luxury-jewellery" className="flex items-center">
             <span className="font-custom-brand text-3xl text-[#0D2D25] tracking-tight lowercase">
               câlin
             </span>
