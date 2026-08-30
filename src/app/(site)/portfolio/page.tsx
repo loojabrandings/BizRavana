@@ -30,6 +30,7 @@ function PortfolioContent() {
       { id: 'fashion', label: 'Fashion & Apparel' },
       { id: 'real-estate', label: 'Real Estate' },
       { id: 'salons', label: 'Salons & Spa' },
+      { id: 'event-planner', label: 'Event Planner' },
     ],
     []
   );
