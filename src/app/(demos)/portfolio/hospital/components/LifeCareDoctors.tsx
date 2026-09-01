@@ -116,7 +116,7 @@ export function LifeCareDoctors() {
 
             {/* Primary Action Button */}
             <Link
-              href="#appointments"
+              href="/portfolio/hospital/doctors"
               className="inline-flex items-center gap-2.5 bg-[#102BDC] text-white px-7 py-4 rounded-xl font-inter font-medium text-sm sm:text-base hover:bg-[#0C22B0] active:scale-[0.98] shadow-lg shadow-[#102BDC]/25 transition-all group"
             >
               <span>View All Doctors</span>

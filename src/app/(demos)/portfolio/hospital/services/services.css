@@ -1,0 +1,110 @@
+/* ───────────────────────────────────────────────────────────────────
+   LifeCare Services Page — Futuristic Visual Layer (Light Theme)
+   Scoped to /portfolio/hospital/services only. Light clinical-tech
+   system tuned for the landing page's white surfaces: blueprint
+   grid, ECG pulse traces, ticker marquee, smooth accordion.
+   ─────────────────────────────────────────────────────────────────── */
+
+.svc-page {
+  background-color: #ffffff;
+}
+
+/* Blueprint grid backdrop (blue, on white) */
+.svc-grid-bg {
+  background-image: linear-gradient(rgba(16, 43, 220, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(16, 43, 220, 0.05) 1px, transparent 1px);
+  background-size: 54px 54px;
+  -webkit-mask-image: radial-gradient(ellipse 85% 75% at 50% 38%, black 20%, transparent 76%);
+  mask-image: radial-gradient(ellipse 85% 75% at 50% 38%, black 20%, transparent 76%);
+}
+
+/* Blueprint grid backdrop (white lines — for the dark emergency card) */
+.svc-grid-red {
+  background-image: linear-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.08) 1px, transparent 1px);
+  background-size: 54px 54px;
+  -webkit-mask-image: radial-gradient(ellipse 90% 90% at 50% 50%, black 25%, transparent 80%);
+  mask-image: radial-gradient(ellipse 90% 90% at 50% 50%, black 25%, transparent 80%);
+}
+
+/* ECG heartbeat trace — travelling pulse along a fixed path */
+.svc-ecg {
+  stroke-dasharray: 180 1020;
+  animation: svcEcgTravel 4.2s linear infinite;
+}
+
+.svc-ecg-glow {
+  filter: drop-shadow(0 0 4px rgba(37, 99, 235, 0.55))
+    drop-shadow(0 0 14px rgba(16, 43, 220, 0.3));
+}
+
+.svc-ecg-red {
+  stroke-dasharray: 160 1040;
+  animation: svcEcgTravel 3.4s linear infinite;
+}
+
+.svc-ecg-white {
+  stroke-dasharray: 160 1040;
+  animation: svcEcgTravel 3.4s linear infinite;
+}
+
+@keyframes svcEcgTravel {
+  from {
+    stroke-dashoffset: 1200;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* Services ticker marquee */
+.svc-ticker-track {
+  width: max-content;
+  animation: svcTicker 60s linear infinite;
+}
+
+.svc-ticker:hover .svc-ticker-track {
+  animation-play-state: paused;
+}
+
+@keyframes svcTicker {
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+/* Accordion expand — grid-rows technique (smooth, no JS height math) */
+.svc-panel {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.svc-panel.open {
+  grid-template-rows: 1fr;
+}
+
+.svc-panel-inner {
+  overflow: hidden;
+  min-height: 0;
+}
+
+/* Hide scrollbars on the mobile filter strip */
+.svc-no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.svc-no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Motion safety */
+@media (prefers-reduced-motion: reduce) {
+  .svc-ecg,
+  .svc-ecg-red,
+  .svc-ecg-white,
+  .svc-ticker-track {
+    animation: none;
+  }
+}

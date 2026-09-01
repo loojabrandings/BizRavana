@@ -130,3 +130,12 @@
 .delay-900, .animate-word-reveal.delay-900 > span { animation-delay: 0.9s; }
 .delay-1000, .animate-word-reveal.delay-1000 > span { animation-delay: 1s; }
 .delay-1100, .animate-word-reveal.delay-1100 > span { animation-delay: 1.1s; }
+
+/* Hide scrollbar */
+.scrollbar-hide {
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}

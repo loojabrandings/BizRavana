@@ -15,6 +15,9 @@ import { LifeCareFooter } from './components/LifeCareFooter';
 export default function LifeCareHospitalLandingPage() {
   return (
     <div className="min-h-screen w-full bg-white text-[#0D1527] selection:bg-[#102BDC] selection:text-white flex flex-col justify-start relative">
+      {/* ── Global Pill Glass Navbar ── */}
+      <LifeCareNavbar activePage="Home" />
+
       {/* ── Hero Section (Exact 100vh Full Viewport) ─────────────── */}
       <div className="h-screen min-h-[100dvh] max-h-[100dvh] w-full flex flex-col justify-between relative overflow-hidden bg-white">
         {/* Clean Hero Background Image (No color overlay) */}
@@ -23,11 +26,6 @@ export default function LifeCareHospitalLandingPage() {
           alt="LifeCare Hospital Hero Background"
           className="absolute inset-0 w-full h-full object-cover object-center z-0 select-none pointer-events-none"
         />
-
-        {/* Top Sticky Navbar */}
-        <div className="relative z-30">
-          <LifeCareNavbar />
-        </div>
 
         {/* Hero Center Content with Standard Margins */}
         <div className="relative z-10 my-auto">

@@ -149,7 +149,7 @@ export function LifeCareServices() {
             </p>
 
             <Link
-              href="#appointments"
+              href="/portfolio/hospital/services"
               className="inline-flex items-center gap-2 bg-[#102BDC] hover:bg-[#0C22B0] text-white px-5 py-3 rounded-xl font-inter font-medium text-xs sm:text-sm whitespace-nowrap shadow-md shadow-[#102BDC]/20 transition-all group flex-shrink-0 active:scale-[0.98]"
             >
               <span>Explore All Services</span>
