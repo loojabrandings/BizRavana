@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
@@ -7,18 +8,14 @@ import {
   type DashboardSession,
 } from "@/providers/dashboard-session-provider";
 
-export default async function Layout({ children }: { children: React.ReactNode }) {
+const getDashboardSessionData = cache(async () => {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect("/login?redirect=/dashboard");
-  }
-
-  if (isSuperAdmin(user)) {
-    redirect("/admin");
+    return { user: null, profile: null, business: null };
   }
 
   const { data: profile } = await supabase
@@ -29,6 +26,20 @@ export default async function Layout({ children }: { children: React.ReactNode }
 
   const businessRaw = profile?.businesses;
   const business = Array.isArray(businessRaw) ? businessRaw[0] : businessRaw;
+
+  return { user, profile, business };
+});
+
+export default async function Layout({ children }: { children: React.ReactNode }) {
+  const { user, profile, business } = await getDashboardSessionData();
+
+  if (!user) {
+    redirect("/login?redirect=/dashboard");
+  }
+
+  if (isSuperAdmin(user)) {
+    redirect("/admin");
+  }
 
   const session: DashboardSession = {
     userId: user.id,

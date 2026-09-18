@@ -31,7 +31,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { FilterBar } from "@/components/shared/filter-bar";
-import { DateRangePickerModal } from "@/components/shared/lazy-date-range-picker-modal";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { DataTable, type ColumnDef } from "@/components/shared/data-table";
@@ -40,7 +39,7 @@ import { BulkImportForm } from "@/components/products/bulk-import-form";
 import { CategoryManager, type Category } from "@/components/products/category-manager";
 import { EditableStatusBadge } from "@/components/shared/editable-status-badge";
 import { toast } from "sonner";
-import { dateFilterOptions, getDateRange } from "@/lib/date-utils";
+import { useQuery } from "@tanstack/react-query";
 
 // ─── Animations ────────────────────────────────────────────────────
 const containerVariants = {
@@ -112,16 +111,7 @@ function ProductsPageInner() {
   const { guard } = useReadOnlyMode();
   const searchParams = useSearchParams();
 
-  // Data
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
   // UI
-  const [dateFilter, setDateFilter] = useState<string>("this_month");
-  const [dateFrom, setDateFrom] = useState("");
-  const [dateTo, setDateTo] = useState("");
-  const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [activeSort, setActiveSort] = useState<{ key: string; direction: "asc" | "desc" } | null>({ key: "name", direction: "asc" });
   const [activeStatusTab, setActiveStatusTab] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -136,66 +126,77 @@ function ProductsPageInner() {
   }, [searchParams]);
 
   // ─── Business ID & Categories ───────────────────────────────────
-  const [businessId, setBusinessId] = useState<string | null>(null);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [catRefreshTrigger, setCatRefreshTrigger] = useState(0);
-
-  // ─── Refetch trigger ──────────────────────────────────────────
-  const [fetchTrigger, setFetchTrigger] = useState(0);
   const session = useDashboardSession();
+  const businessId = session.businessId;
+  const [catRefreshTrigger, setCatRefreshTrigger] = useState(0);
+  const [fetchTrigger, setFetchTrigger] = useState(0);
 
-  // ─── Data Fetching ─────────────────────────────────────────────
+  // ─── Products Query ────────────────────────────────────────────
+  const [productsState, setRawProducts] = useState<Product[] | null>(null);
+
   useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        const bizId = session.businessId;
-        if (!bizId) {
-          setLoading(false);
-          return;
-        }
-        setBusinessId(bizId);
+    setRawProducts(null);
+  }, [fetchTrigger]);
 
-        const supabase = createClient();
-        const dateRange = getDateRange(dateFilter, dateFrom, dateTo);
-        let q = supabase
-          .from("products")
-          .select("id, name, category, size_variant, selling_price, cost_price, profit_margin, is_active, created_at")
-          .eq("business_id", bizId)
-          .is("deleted_at", null)
-          .order("created_at", { ascending: false })
-          .limit(500);
-        if (dateRange) q = q.gte("created_at", dateRange.start.toISOString()).lte("created_at", dateRange.end.toISOString());
+  const {
+    data: fetchedProducts,
+    isLoading: isQueryLoading,
+    error: queryError,
+  } = useQuery({
+    queryKey: ["products", businessId, fetchTrigger],
+    queryFn: async () => {
+      if (!businessId) return [];
+      const supabase = createClient();
+      const { data, error: fetchError } = await supabase
+        .from("products")
+        .select("id, name, category, size_variant, selling_price, cost_price, profit_margin, is_active, created_at")
+        .eq("business_id", businessId)
+        .is("deleted_at", null)
+        .order("created_at", { ascending: false })
+        .limit(500);
 
-        const { data, error: fetchError } = await q;
-        if (fetchError) throw new Error(fetchError.message);
+      if (fetchError) throw new Error(fetchError.message);
 
-        setProducts((data || []).map((p) => ({
-          id: String(p.id),
-          name: String(p.name || ""),
-          category: p.category ? String(p.category) : null,
-          size_variant: p.size_variant ? String(p.size_variant) : null,
-          selling_price: Number(p.selling_price || 0),
-          cost_price: p.cost_price ? Number(p.cost_price) : null,
-          profit_margin: p.profit_margin ? Number(p.profit_margin) : null,
-          is_active: Boolean(p.is_active),
-          created_at: String(p.created_at),
-          notes: null,
-        })));
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : "An unexpected error occurred.";
-        console.error("Products fetch error", err);
-        setError(msg);
-      } finally { setLoading(false); }
-    };
-    fetchProducts();
-  }, [dateFilter, dateFrom, dateTo, fetchTrigger]);
+      return (data || []).map((p) => ({
+        id: String(p.id),
+        name: String(p.name || ""),
+        category: p.category ? String(p.category) : null,
+        size_variant: p.size_variant ? String(p.size_variant) : null,
+        selling_price: Number(p.selling_price || 0),
+        cost_price: p.cost_price ? Number(p.cost_price) : null,
+        profit_margin: p.profit_margin ? Number(p.profit_margin) : null,
+        is_active: Boolean(p.is_active),
+        created_at: String(p.created_at),
+        notes: null,
+      }));
+    },
+    enabled: Boolean(businessId),
+    staleTime: 30 * 1000,
+  });
+
+  const products = useMemo(
+    () => productsState ?? fetchedProducts ?? [],
+    [productsState, fetchedProducts],
+  );
+
+  const setProducts = useCallback(
+    (updater: Product[] | ((prev: Product[]) => Product[])) => {
+      setRawProducts((current) => {
+        const base = current ?? fetchedProducts ?? [];
+        return typeof updater === "function" ? updater(base) : updater;
+      });
+    },
+    [fetchedProducts],
+  );
+
+  const loading = isQueryLoading && !fetchedProducts && (!productsState || productsState.length === 0);
+  const error = queryError instanceof Error ? queryError.message : null;
 
   // ─── Fetch Categories ──────────────────────────────────────────
-  useEffect(() => {
-    const fetchCategories = async () => {
-      if (!businessId) return;
+  const { data: categories = [] } = useQuery({
+    queryKey: ["categories", businessId, catRefreshTrigger],
+    queryFn: async () => {
+      if (!businessId) return [];
       const supabase = createClient();
       const { data } = await supabase
         .from("categories")
@@ -203,10 +204,11 @@ function ProductsPageInner() {
         .eq("business_id", businessId)
         .order("name", { ascending: true });
 
-      setCategories((data || []).map((c) => ({ id: String(c.id), name: String(c.name) })));
-    };
-    fetchCategories();
-  }, [businessId, catRefreshTrigger]);
+      return (data || []).map((c) => ({ id: String(c.id), name: String(c.name) }));
+    },
+    enabled: Boolean(businessId),
+    staleTime: 60 * 1000,
+  });
 
   // ─── Mutations ─────────────────────────────────────────────────
   const handleStatusChange = useCallback(async (productId: string, newStatus: string) => {
@@ -222,7 +224,7 @@ function ProductsPageInner() {
         if (r) setProducts((prev) => prev.map((p) => (p.id === productId ? { ...p, is_active: Boolean(r.is_active) } : p)));
       }
     } catch (err) { console.error("Status update error:", err); }
-  }, []);
+  }, [setProducts]);
 
   const handleCategoriesChange = useCallback(() => {
     setCatRefreshTrigger((n) => n + 1);
@@ -770,16 +772,12 @@ function ProductsPageInner() {
   const activeFilterCount =
     (activeStatusTab !== "all" ? 1 : 0) +
     (activeCategoryTab !== "all" ? 1 : 0) +
-    (searchQuery.trim() !== "" ? 1 : 0) +
-    (dateFilter !== "this_month" ? 1 : 0);
+    (searchQuery.trim() !== "" ? 1 : 0);
 
   const handleClearFilters = useCallback(() => {
     setActiveStatusTab("all");
     setActiveCategoryTab("all");
     setSearchQuery("");
-    setDateFilter("this_month");
-    setDateFrom("");
-    setDateTo("");
   }, []);
 
   // ─── Pagination ───────────────────────────────────────────────
@@ -1374,31 +1372,8 @@ function ProductsPageInner() {
               options: statusTabs,
               label: "Status",
             }}
-            date={{
-              value: dateFilter,
-              onChange: (v) => {
-                if (v === "custom") setDatePickerOpen(true);
-                else if (v) setDateFilter(v);
-              },
-              options: dateFilterOptions,
-              onCalendarClick: () => setDatePickerOpen(true),
-            }}
             activeFilterCount={activeFilterCount}
             onClearFilters={handleClearFilters}
-          />
-
-          {/* Custom date range picker modal */}
-          <DateRangePickerModal
-            open={datePickerOpen}
-            onOpenChange={setDatePickerOpen}
-            from={dateFrom}
-            to={dateTo}
-            onApply={(f, t) => {
-              setDateFrom(f);
-              setDateTo(t);
-              setDateFilter("custom");
-              setDatePickerOpen(false);
-            }}
           />
         </motion.div>
       )}

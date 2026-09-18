@@ -68,6 +68,7 @@ import {
 } from "@/components/inventory/utils";
 import { toast } from "sonner";
 import { dateFilterOptions, getDateRange } from "@/lib/date-utils";
+import { useQuery } from "@tanstack/react-query";
 
 // ─── Animations ────────────────────────────────────────────────────
 const containerVariants = {
@@ -90,11 +91,6 @@ function InventoryPageInner() {
 
   // ─── Read query params for pre-applied filters ───────────────
   const searchParams = useSearchParams();
-
-  // Data
-  const [items, setItems] = useState<InventoryItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   // UI
   const [dateFilter, setDateFilter] = useState<string>("this_month");
@@ -123,67 +119,83 @@ function InventoryPageInner() {
   }, [searchParams]);
 
   // ─── Business ID & Categories ───────────────────────────────────
-  const [businessId, setBusinessId] = useState<string | null>(null);
-  const [categories, setCategories] = useState<Category[]>([]);
+  const session = useDashboardSession();
+  const businessId = session.businessId;
   const [catRefreshTrigger, setCatRefreshTrigger] = useState(0);
+  const [fetchTrigger, setFetchTrigger] = useState(0);
 
   // ─── Data Fetching ─────────────────────────────────────────────
-  const session = useDashboardSession();
+  const [itemsState, setRawItems] = useState<InventoryItem[] | null>(null);
 
   useEffect(() => {
-    const fetchItems = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        const bizId = session.businessId;
-        if (!bizId) {
-          setLoading(false);
-          return;
-        }
-        setBusinessId(bizId);
+    setRawItems(null);
+  }, [fetchTrigger, dateFilter, dateFrom, dateTo, activeCategoryTab]);
 
-        const supabase = createClient();
-        const dateRange = getDateRange(dateFilter, dateFrom, dateTo);
-        let q = supabase
-          .from("inventory_items")
-          .select("id, name, category, size_variant, current_stock, unit_cost, supplier, reorder_level, last_restocked_at, created_at")
-          .eq("business_id", bizId)
-          .is("deleted_at", null)
-          .order("created_at", { ascending: false })
-          .limit(300);
-        if (dateRange) q = q.gte("created_at", dateRange.start.toISOString()).lte("created_at", dateRange.end.toISOString());
-        if (activeCategoryTab !== "all") q = q.eq("category", activeCategoryTab);
+  const {
+    data: fetchedItems,
+    isLoading: isQueryLoading,
+    error: queryError,
+  } = useQuery({
+    queryKey: ["inventory", businessId, dateFilter, dateFrom, dateTo, activeCategoryTab, fetchTrigger],
+    queryFn: async () => {
+      if (!businessId) return [];
+      const supabase = createClient();
+      const dateRange = getDateRange(dateFilter, dateFrom, dateTo);
+      let q = supabase
+        .from("inventory_items")
+        .select("id, name, category, size_variant, current_stock, unit_cost, supplier, reorder_level, last_restocked_at, created_at")
+        .eq("business_id", businessId)
+        .is("deleted_at", null)
+        .order("created_at", { ascending: false })
+        .limit(300);
+      if (dateRange) q = q.gte("created_at", dateRange.start.toISOString()).lte("created_at", dateRange.end.toISOString());
+      if (activeCategoryTab !== "all") q = q.eq("category", activeCategoryTab);
 
-        const { data, error: fetchError } = await q;
-        if (fetchError) throw new Error(fetchError.message);
+      const { data, error: fetchError } = await q;
+      if (fetchError) throw new Error(fetchError.message);
 
-        const raw: InventoryItem[] = (data || []).map((p) => ({
-          id: String(p.id),
-          name: String(p.name || ""),
-          category: p.category ? String(p.category) : null,
-          size_variant: p.size_variant ? String(p.size_variant) : null,
-          current_stock: Number(p.current_stock || 0),
-          unit_cost: p.unit_cost ? Number(p.unit_cost) : null,
-          stock_value: null,
-          supplier: p.supplier ? String(p.supplier) : null,
-          reorder_level: Number(p.reorder_level || 0),
-          last_restocked_at: p.last_restocked_at ? String(p.last_restocked_at) : null,
-          created_at: String(p.created_at),
-        }));
-        setItems(computeStockValues(raw));
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : "An unexpected error occurred.";
-        console.error("Inventory fetch error", err);
-        setError(msg);
-      } finally { setLoading(false); }
-    };
-    fetchItems();
-  }, [dateFilter, dateFrom, dateTo, activeCategoryTab]);
+      const raw: InventoryItem[] = (data || []).map((p) => ({
+        id: String(p.id),
+        name: String(p.name || ""),
+        category: p.category ? String(p.category) : null,
+        size_variant: p.size_variant ? String(p.size_variant) : null,
+        current_stock: Number(p.current_stock || 0),
+        unit_cost: p.unit_cost ? Number(p.unit_cost) : null,
+        stock_value: null,
+        supplier: p.supplier ? String(p.supplier) : null,
+        reorder_level: Number(p.reorder_level || 0),
+        last_restocked_at: p.last_restocked_at ? String(p.last_restocked_at) : null,
+        created_at: String(p.created_at),
+      }));
+      return computeStockValues(raw);
+    },
+    enabled: Boolean(businessId),
+    staleTime: 30 * 1000,
+  });
+
+  const items = useMemo(
+    () => itemsState ?? fetchedItems ?? [],
+    [itemsState, fetchedItems],
+  );
+
+  const setItems = useCallback(
+    (updater: InventoryItem[] | ((prev: InventoryItem[]) => InventoryItem[])) => {
+      setRawItems((current) => {
+        const base = current ?? fetchedItems ?? [];
+        return typeof updater === "function" ? updater(base) : updater;
+      });
+    },
+    [fetchedItems],
+  );
+
+  const loading = isQueryLoading && !fetchedItems && (!itemsState || itemsState.length === 0);
+  const error = queryError instanceof Error ? queryError.message : null;
 
   // ─── Fetch Categories ──────────────────────────────────────────
-  useEffect(() => {
-    const fetchCategories = async () => {
-      if (!businessId) return;
+  const { data: categories = [] } = useQuery({
+    queryKey: ["inventory_categories", businessId, catRefreshTrigger],
+    queryFn: async () => {
+      if (!businessId) return [];
       const supabase = createClient();
       const { data } = await supabase
         .from("inventory_categories")
@@ -191,10 +203,11 @@ function InventoryPageInner() {
         .eq("business_id", businessId)
         .order("name", { ascending: true });
 
-      setCategories((data || []).map((c) => ({ id: String(c.id), name: String(c.name) })));
-    };
-    fetchCategories();
-  }, [businessId, catRefreshTrigger]);
+      return (data || []).map((c) => ({ id: String(c.id), name: String(c.name) }));
+    },
+    enabled: Boolean(businessId),
+    staleTime: 60 * 1000,
+  });
 
   // ─── Category tabs for FilterBar ───────────────────────────────
   const categoryTabs = useMemo(() => {

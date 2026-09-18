@@ -37,6 +37,7 @@ import type { Category } from "@/components/products/category-manager";
 import { toast } from "sonner";
 import dynamic from "next/dynamic";
 import { dateFilterOptions, getDateRange } from "@/lib/date-utils";
+import { useQuery } from "@tanstack/react-query";
 
 const CategoryManager = dynamic(
   () => import("@/components/products/category-manager").then((m) => m.CategoryManager),
@@ -140,10 +141,6 @@ function ExpensesPageInner() {
       })),
     [expenseSettings.expensePaymentMethods],
   );
-  // Data
-  const [expenses, setExpenses] = useState<Expense[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   // UI
   const [dateFilter, setDateFilter] = useState<string>("this_month");
@@ -156,9 +153,28 @@ function ExpensesPageInner() {
   const [searchQuery, setSearchQuery] = useState("");
 
   // ─── Business ID & Categories ───────────────────────────────────
-  const [businessId, setBusinessId] = useState<string | null>(null);
-  const [categories, setCategories] = useState<Category[]>([]);
+  const session = useDashboardSession();
+  const businessId = session.businessId;
   const [catRefreshTrigger, setCatRefreshTrigger] = useState(0);
+  const [fetchTrigger, setFetchTrigger] = useState(0);
+
+  // ─── Fetch Categories ──────────────────────────────────────────
+  const { data: categories = [] } = useQuery({
+    queryKey: ["expense_categories", businessId, catRefreshTrigger],
+    queryFn: async () => {
+      if (!businessId) return [];
+      const supabase = createClient();
+      const { data } = await supabase
+        .from("expense_categories")
+        .select("id, name")
+        .eq("business_id", businessId)
+        .order("name", { ascending: true });
+
+      return (data || []).map((c) => ({ id: String(c.id), name: String(c.name) }));
+    },
+    enabled: Boolean(businessId),
+    staleTime: 60 * 1000,
+  });
 
   // ─── Category Manager ──────────────────────────────────────────
   const [showCategoryManager, setShowCategoryManager] = useState(false);
@@ -192,22 +208,6 @@ function ExpensesPageInner() {
     setCatRefreshTrigger((n) => n + 1);
   }, []);
 
-  // ─── Fetch Categories ──────────────────────────────────────────
-  useEffect(() => {
-    const fetchCategories = async () => {
-      if (!businessId) return;
-      const supabase = createClient();
-      const { data } = await supabase
-        .from("expense_categories")
-        .select("id, name")
-        .eq("business_id", businessId)
-        .order("name", { ascending: true });
-
-      setCategories((data || []).map((c) => ({ id: String(c.id), name: String(c.name) })));
-    };
-    fetchCategories();
-  }, [businessId, catRefreshTrigger]);
-
   // ─── Read query params ────────────────────────────────────────
   const searchParams = useSearchParams();
 
@@ -224,59 +224,73 @@ function ExpensesPageInner() {
   }, [searchParams]);
 
   // ─── Data Fetching ─────────────────────────────────────────────
-  const session = useDashboardSession();
+  const [expensesState, setRawExpenses] = useState<Expense[] | null>(null);
 
   useEffect(() => {
-    const fetchExpenses = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        const bizId = session.businessId;
-        if (!bizId) {
-          setLoading(false);
-          return;
-        }
-        setBusinessId(bizId);
+    setRawExpenses(null);
+  }, [fetchTrigger, dateFilter, dateFrom, dateTo, activeCategoryTab, paymentStatusTab]);
 
-        const supabase = createClient();
-        const dateRange = getDateRange(dateFilter, dateFrom, dateTo);
-        let q = supabase
-          .from("expenses")
-          .select("id, expense_number, expense_date, category, supplier, item_name, quantity, unit_cost, total_cost, payment_method, payment_status, add_to_inventory, remarks, created_at")
-          .eq("business_id", bizId)
-          .order("expense_date", { ascending: false })
-          .limit(300);
-        if (dateRange) q = q.gte("expense_date", dateRange.start.toISOString().slice(0, 10)).lte("expense_date", dateRange.end.toISOString().slice(0, 10));
-        if (activeCategoryTab !== "all") q = q.eq("category", activeCategoryTab);
-        if (paymentStatusTab !== "all") q = q.eq("payment_status", paymentStatusTab);
+  const {
+    data: fetchedExpenses,
+    isLoading: isQueryLoading,
+    error: queryError,
+  } = useQuery({
+    queryKey: ["expenses", businessId, dateFilter, dateFrom, dateTo, activeCategoryTab, paymentStatusTab, fetchTrigger],
+    queryFn: async () => {
+      if (!businessId) return [];
+      const supabase = createClient();
+      const dateRange = getDateRange(dateFilter, dateFrom, dateTo);
+      let q = supabase
+        .from("expenses")
+        .select("id, expense_number, expense_date, category, supplier, item_name, quantity, unit_cost, total_cost, payment_method, payment_status, add_to_inventory, remarks, created_at")
+        .eq("business_id", businessId)
+        .order("expense_date", { ascending: false })
+        .limit(300);
+      if (dateRange) q = q.gte("expense_date", dateRange.start.toISOString().slice(0, 10)).lte("expense_date", dateRange.end.toISOString().slice(0, 10));
+      if (activeCategoryTab !== "all") q = q.eq("category", activeCategoryTab);
+      if (paymentStatusTab !== "all") q = q.eq("payment_status", paymentStatusTab);
 
-        const { data, error: fetchError } = await q;
-        if (fetchError) throw new Error(fetchError.message);
+      const { data, error: fetchError } = await q;
+      if (fetchError) throw new Error(fetchError.message);
 
-        setExpenses((data || []).map((e) => ({
-          id: String(e.id),
-          expense_number: e.expense_number ? String(e.expense_number) : null,
-          expense_date: String(e.expense_date),
-          category: String(e.category || "other"),
-          supplier: e.supplier ? String(e.supplier) : null,
-          item_name: String(e.item_name || ""),
-          quantity: Number(e.quantity || 0),
-          unit_cost: Number(e.unit_cost || 0),
-          total_cost: Number(e.total_cost || 0),
-          payment_method: e.payment_method ? String(e.payment_method) : null,
-          payment_status: String(e.payment_status || "pending"),
-          add_to_inventory: Boolean(e.add_to_inventory),
-          remarks: e.remarks ? String(e.remarks) : null,
-          created_at: String(e.created_at),
-        })));
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : "An unexpected error occurred.";
-        console.error("Expenses fetch error", err);
-        setError(msg);
-      } finally { setLoading(false); }
-    };
-    fetchExpenses();
-  }, [dateFilter, dateFrom, dateTo, activeCategoryTab, paymentStatusTab]);
+      return (data || []).map((e) => ({
+        id: String(e.id),
+        expense_number: e.expense_number ? String(e.expense_number) : null,
+        expense_date: String(e.expense_date),
+        category: String(e.category || "other"),
+        supplier: e.supplier ? String(e.supplier) : null,
+        item_name: String(e.item_name || ""),
+        quantity: Number(e.quantity || 0),
+        unit_cost: Number(e.unit_cost || 0),
+        total_cost: Number(e.total_cost || 0),
+        payment_method: e.payment_method ? String(e.payment_method) : null,
+        payment_status: String(e.payment_status || "pending"),
+        add_to_inventory: Boolean(e.add_to_inventory),
+        remarks: e.remarks ? String(e.remarks) : null,
+        created_at: String(e.created_at),
+      }));
+    },
+    enabled: Boolean(businessId),
+    staleTime: 30 * 1000,
+  });
+
+  const expenses = useMemo(
+    () => expensesState ?? fetchedExpenses ?? [],
+    [expensesState, fetchedExpenses],
+  );
+
+  const setExpenses = useCallback(
+    (updater: Expense[] | ((prev: Expense[]) => Expense[])) => {
+      setRawExpenses((current) => {
+        const base = current ?? fetchedExpenses ?? [];
+        return typeof updater === "function" ? updater(base) : updater;
+      });
+    },
+    [fetchedExpenses],
+  );
+
+  const loading = isQueryLoading && !fetchedExpenses && (!expensesState || expensesState.length === 0);
+  const error = queryError instanceof Error ? queryError.message : null;
 
   // ─── Mutations ─────────────────────────────────────────────────
   const handlePaymentChange = useCallback(async (expenseId: string, newPayment: string) => {
