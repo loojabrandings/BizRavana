@@ -241,7 +241,7 @@ export function QuotationForm({ onSubmit, onCancel, initialData, isEditing }: Qu
 
     if (!form.customer_name.trim()) errs["customer_name"] = "Required";
     if (!form.address.trim()) errs["address"] = "Required";
-    if (!form.phone.trim()) errs["phone"] = "Required";
+    if (!form.whatsapp.trim()) errs["whatsapp"] = "Required";
     if (!form.status) errs["status"] = "Required";
     if (form.items.length === 0) errs["items"] = "Add at least one item";
     else {

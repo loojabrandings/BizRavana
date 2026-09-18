@@ -217,14 +217,30 @@ export function quotationPreviewToTemplateData(data: QuotationPreviewData): Temp
   };
 }
 
-// ─── WhatsApp URL Generator ───────────────────────────────────────
+/**
+ * Normalize a phone number to international format (digits only, e.g. 94XXXXXXXXX) for wa.me.
+ * If a local Sri Lankan number is given (07XXXXXXXX or 7XXXXXXXX), automatically prepends 94.
+ */
+export function formatWhatsAppPhone(phone: string): string {
+  if (!phone) return "";
+  let digits = phone.replace(/\D/g, "");
+  // If local Sri Lankan 10 digits starting with 0: e.g. 0771234567 -> 94771234567
+  if (digits.length === 10 && digits.startsWith("0")) {
+    digits = "94" + digits.slice(1);
+  } else if (digits.length === 9 && !digits.startsWith("0") && !digits.startsWith("94")) {
+    // 9 digits without leading 0: e.g. 771234567 -> 94771234567
+    digits = "94" + digits;
+  }
+  return digits;
+}
 
 /**
  * Open WhatsApp with a rendered template message.
  */
 export function openWhatsAppWithMessage(phone: string, message: string): void {
   if (!phone) return;
-  const cleaned = phone.replace(/\D/g, "");
+  const cleaned = formatWhatsAppPhone(phone);
+  if (!cleaned) return;
   const url = `https://wa.me/${cleaned}?text=${encodeURIComponent(message)}`;
   window.open(url, "_blank", "noopener,noreferrer");
 }

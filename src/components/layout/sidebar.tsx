@@ -33,6 +33,7 @@ import { navItemVariants } from "@/components/layout/nav-item-indicator";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 import { useSidebarStore } from "@/stores/sidebar-store";
+import { useDashboardSession } from "@/providers/dashboard-session-provider";
 
 // ─── Types ─────────────────────────────────────────────────────
 
@@ -117,45 +118,39 @@ const systemLinks = systemNav.filter((item): item is NavItem => !isGroup(item));
 // ─── SidebarBrand ────────────────────────────────────────────
 
 function SidebarBrand({ collapsed, mobile }: { collapsed: boolean; mobile?: boolean }) {
-  const [businessName, setBusinessName] = useState("BizRavana");
+  const session = useDashboardSession();
+  const [businessName, setBusinessName] = useState(
+    session.businessName || "BizRavana",
+  );
   const [businessTagline, setBusinessTagline] = useState("Manage Smarter. Grow Faster");
   const [businessLogo, setBusinessLogo] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchBranding = async () => {
       try {
+        if (!session.businessId) return;
         const supabase = createClient();
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session?.user) return;
+        setBusinessName(session.businessName || "BizRavana");
+        const [businessResult, settingsResult] = await Promise.all([
+          supabase
+            .from("businesses")
+            .select("logo_url")
+            .eq("id", session.businessId)
+            .single(),
+          supabase
+            .from("business_settings")
+            .select("value")
+            .eq("business_id", session.businessId)
+            .eq("key", "tagline")
+            .single(),
+        ]);
 
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("business_id")
-          .eq("user_id", session.user.id)
-          .single();
-
-        if (!profile?.business_id) return;
-
-        const { data: business } = await supabase
-          .from("businesses")
-          .select("name, logo_url")
-          .eq("id", profile.business_id)
-          .single();
-
-        if (business) {
-          setBusinessName(business.name || "BizRavana");
-          setBusinessLogo(business.logo_url);
+        if (businessResult.data) {
+          setBusinessLogo(businessResult.data.logo_url);
         }
 
-        const { data: settings } = await supabase
-          .from("business_settings")
-          .select("value")
-          .eq("business_id", profile.business_id)
-          .eq("key", "tagline")
-          .single();
-
-        if (settings?.value) {
-          setBusinessTagline(String(settings.value));
+        if (settingsResult.data?.value) {
+          setBusinessTagline(String(settingsResult.data.value));
         }
       } catch {
         // Fall back to defaults on error
@@ -163,7 +158,7 @@ function SidebarBrand({ collapsed, mobile }: { collapsed: boolean; mobile?: bool
     };
 
     fetchBranding();
-  }, []);
+  }, [session.businessId, session.businessName]);
 
   const logoEl = (
     <div className="flex shrink-0 items-center justify-center">

@@ -306,7 +306,7 @@ export function OrderForm({ onSubmit, onCancel, initialData, isEditing }: OrderF
 
     if (!form.customer_name.trim()) errs["customer_name"] = "Required";
     if (!form.address.trim()) errs["address"] = "Required";
-    if (!form.phone.trim()) errs["phone"] = "Required";
+    if (!form.whatsapp.trim()) errs["whatsapp"] = "Required";
     if (!form.status) errs["status"] = "Required";
     if (!form.payment_status) errs["payment_status"] = "Required";
     if (!form.order_source) errs["order_source"] = "Required";

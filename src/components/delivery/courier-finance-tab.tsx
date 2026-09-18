@@ -14,6 +14,7 @@ import { LoadingStepList } from "@/components/delivery/loading-step-list";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 import { formatCurrency } from "@/lib/formatters";
+import { toast } from "sonner";
 import { loadCourierConfig, fetchOrderFinance } from "@/lib/delivery/courier-utils";
 import {
   buildLoadingSteps,
@@ -85,6 +86,7 @@ interface FinanceRecord {
   /** Invoice / finance fields (from courier API or manual entry) */
   invoiceNumber: string | null;
   invoiceStatus: "N/A" | "Deposited";
+  paymentStatus?: string | null;
 }
 
 // ─── Animations ──────────────────────────────────────────────────
@@ -156,7 +158,7 @@ export function CourierFinanceTab() {
       setLoadingSteps((prev) => markLoadingStep(prev, "orders", "Loading dispatched orders…"));
       const { data: orders } = await supabase
         .from("orders")
-        .select("id, order_number, customer_name, waybill_id, total, delivery_charge, payment_method, status, created_at")
+        .select("id, order_number, customer_name, waybill_id, total, delivery_charge, payment_method, status, payment_status, created_at")
         .eq("business_id", bizId)
         .not("waybill_id", "is", null)
         .order("created_at", { ascending: false })
@@ -170,8 +172,10 @@ export function CourierFinanceTab() {
       // ── Pre-load manually toggled statuses from localStorage ──
       const storedStatuses = loadStoredStatuses();
 
-      // ── Build finance records ─────────────────────────────
+      // ── Build finance records & collect orders needing payment_status sync ──
       setLoadingSteps((prev) => markLoadingStep(prev, "finance", "Checking invoice & payment status…"));
+      const ordersToMarkPaid: string[] = [];
+
       const fetchedRecords: FinanceRecord[] = await Promise.all(
         (orders || []).map(async (o) => {
           const isCOD = o.payment_method === "cod";
@@ -200,6 +204,11 @@ export function CourierFinanceTab() {
           const manual = storedStatuses[String(o.id)];
           const finalStatus = manual?.invoiceStatus ?? financeInfo.invoiceStatus;
 
+          // Auto-sync: if courier finance status is Deposited but order payment_status in DB is not yet paid
+          if (finalStatus === "Deposited" && o.payment_status !== "paid") {
+            ordersToMarkPaid.push(String(o.id));
+          }
+
           return {
             id: String(o.id),
             orderNumber: String(o.order_number),
@@ -207,13 +216,24 @@ export function CourierFinanceTab() {
             customerName: String(o.customer_name || ""),
             paymentMethod: o.payment_method ? String(o.payment_method) : null,
             total: Number(o.total || 0),
-
+            paymentStatus: finalStatus === "Deposited" ? "paid" : o.payment_status,
             collected: isCOD && o.status === "delivered" ? true : isCOD ? null : null,
             invoiceNumber: financeInfo.invoiceNumber,
             invoiceStatus: finalStatus,
           };
         }),
       );
+
+      // Auto-update orders in database where courier finance is Deposited
+      if (ordersToMarkPaid.length > 0) {
+        void supabase
+          .from("orders")
+          .update({
+            payment_status: "paid",
+            updated_at: new Date().toISOString(),
+          })
+          .in("id", ordersToMarkPaid);
+      }
 
       setRecords(fetchedRecords);
     } catch (err) {
@@ -255,18 +275,46 @@ export function CourierFinanceTab() {
     return { toBeInvoiced, paid, toBeInvoicedAmount, paidAmount };
   }, [records]);
 
-  // ─── Update invoice status inline ─────────────────────────────
-  const handleStatusChange = useCallback((id: string, newStatus: "N/A" | "Deposited") => {
+  // ─── Update invoice status inline & sync to orders table ───────
+  const handleStatusChange = useCallback(async (id: string, newStatus: "N/A" | "Deposited") => {
     // Persist to localStorage
     const stored = loadStoredStatuses();
     stored[id] = { invoiceStatus: newStatus, updatedAt: new Date().toISOString() };
     saveStoredStatuses(stored);
 
+    const newPaymentStatus = newStatus === "Deposited" ? "paid" : "pending";
+
     setRecords((prev) =>
       prev.map((r) =>
-        r.id === id ? { ...r, invoiceStatus: newStatus } : r,
+        r.id === id ? { ...r, invoiceStatus: newStatus, paymentStatus: newPaymentStatus } : r,
       ),
     );
+
+    try {
+      const supabase = createClient();
+      const { error: updateErr } = await supabase
+        .from("orders")
+        .update({
+          payment_status: newPaymentStatus,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", id);
+
+      if (updateErr) {
+        console.error("Failed to update order payment status in DB:", updateErr);
+        toast.error("Failed to update order payment status", {
+          description: updateErr.message,
+        });
+      } else {
+        if (newStatus === "Deposited") {
+          toast.success("Order payment status updated to Paid");
+        } else {
+          toast.info("Order payment status reset to Pending");
+        }
+      }
+    } catch (err) {
+      console.error("Error updating order payment status:", err);
+    }
   }, []);
 
   // ══════════════════════════════════════════════════════════════

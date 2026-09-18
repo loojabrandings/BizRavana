@@ -26,18 +26,30 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Dropdown } from "@/components/ui/dropdown";
 import { FilterBar } from "@/components/shared/filter-bar";
-import { DateRangePickerModal } from "@/components/shared/lazy-date-range-picker-modal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
-import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { DataTable, type ColumnDef } from "@/components/shared/data-table";
 import { EditableStatusBadge } from "@/components/shared/editable-status-badge";
-import { CategoryManager, type Category } from "@/components/products/category-manager";
+import type { Category } from "@/components/products/category-manager";
 import { toast } from "sonner";
+import dynamic from "next/dynamic";
 import { dateFilterOptions, getDateRange } from "@/lib/date-utils";
+
+const CategoryManager = dynamic(
+  () => import("@/components/products/category-manager").then((m) => m.CategoryManager),
+  { ssr: false },
+);
+const ConfirmDialog = dynamic(
+  () => import("@/components/shared/confirm-dialog").then((m) => m.ConfirmDialog),
+  { ssr: false },
+);
+const DateRangePickerModal = dynamic(
+  () => import("@/components/shared/lazy-date-range-picker-modal").then((m) => m.DateRangePickerModal),
+  { ssr: false },
+);
 
 // ─── Animations ────────────────────────────────────────────────────
 const containerVariants = {
@@ -233,8 +245,10 @@ function ExpensesPageInner() {
           .select("id, expense_number, expense_date, category, supplier, item_name, quantity, unit_cost, total_cost, payment_method, payment_status, add_to_inventory, remarks, created_at")
           .eq("business_id", bizId)
           .order("expense_date", { ascending: false })
-          .limit(500);
+          .limit(300);
         if (dateRange) q = q.gte("expense_date", dateRange.start.toISOString().slice(0, 10)).lte("expense_date", dateRange.end.toISOString().slice(0, 10));
+        if (activeCategoryTab !== "all") q = q.eq("category", activeCategoryTab);
+        if (paymentStatusTab !== "all") q = q.eq("payment_status", paymentStatusTab);
 
         const { data, error: fetchError } = await q;
         if (fetchError) throw new Error(fetchError.message);
@@ -262,7 +276,7 @@ function ExpensesPageInner() {
       } finally { setLoading(false); }
     };
     fetchExpenses();
-  }, [dateFilter, dateFrom, dateTo]);
+  }, [dateFilter, dateFrom, dateTo, activeCategoryTab, paymentStatusTab]);
 
   // ─── Mutations ─────────────────────────────────────────────────
   const handlePaymentChange = useCallback(async (expenseId: string, newPayment: string) => {

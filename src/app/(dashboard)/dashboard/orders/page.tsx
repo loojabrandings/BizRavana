@@ -38,16 +38,12 @@ import { DateRangePickerModal } from "@/components/shared/lazy-date-range-picker
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { DataTable, type ColumnDef } from "@/components/shared/data-table";
-import { OrderForm, type OrderFormData } from "@/components/orders/order-form";
-import { OrderPreview } from "@/components/orders/order-preview";
+import dynamic from "next/dynamic";
+import type { OrderFormData } from "@/components/orders/order-form";
+import type { DispatchMode } from "@/components/orders/dispatch-dialog";
 import { toast } from "sonner";
 import { dateFilterOptions, getDateRange } from "@/lib/date-utils";
 import { EditableStatusBadge } from "@/components/shared/editable-status-badge";
-import { BulkOrderImportForm } from "@/components/orders/bulk-order-import-form";
-import { DispatchDialog, type DispatchMode } from "@/components/orders/dispatch-dialog";
-import { BulkDispatchDialog } from "@/components/orders/bulk-dispatch-dialog";
-import { TrackShipmentDialog } from "@/components/orders/track-shipment-dialog";
-import { EnterWaybillDialog } from "@/components/orders/enter-waybill-dialog";
 import { loadCourierConfig, shipWithCourier, type CourierConfig } from "@/lib/delivery/courier-utils";
 import { ContextMenu, type ContextMenuSection, type ContextMenuItem } from "@/components/shared/context-menu";
 import { HoverPopover } from "@/components/shared/hover-popover";
@@ -56,17 +52,50 @@ import { useReadOnlyMode } from "@/providers/readonly-mode-provider";
 import { useDashboardSession } from "@/providers/dashboard-session-provider";
 import { useWhatsAppAction } from "@/components/whatsapp/use-whatsapp-action";
 import { orderRowToTemplateData } from "@/components/whatsapp/whatsapp-actions";
+import { useQuery } from "@tanstack/react-query";
 import {
   Dialog,
   DialogContent,
 } from "@/components/ui/dialog";
 import {
-  InvoiceTemplate,
   fetchBusinessProfile,
   type BusinessProfile,
 } from "@/components/orders/invoice-template";
 import { fetchManualWaybills, getWaybillMethod, assignWaybillToOrder, markWaybillAsUsed, type ManualWaybill } from "@/lib/delivery/waybill-utils";
 import type { Database } from "@/types/database";
+
+const OrderForm = dynamic(
+  () => import("@/components/orders/order-form").then((m) => m.OrderForm),
+  { ssr: false }
+);
+const OrderPreview = dynamic(
+  () => import("@/components/orders/order-preview").then((m) => m.OrderPreview),
+  { ssr: false }
+);
+const BulkOrderImportForm = dynamic(
+  () => import("@/components/orders/bulk-order-import-form").then((m) => m.BulkOrderImportForm),
+  { ssr: false }
+);
+const DispatchDialog = dynamic(
+  () => import("@/components/orders/dispatch-dialog").then((m) => m.DispatchDialog),
+  { ssr: false }
+);
+const BulkDispatchDialog = dynamic(
+  () => import("@/components/orders/bulk-dispatch-dialog").then((m) => m.BulkDispatchDialog),
+  { ssr: false }
+);
+const TrackShipmentDialog = dynamic(
+  () => import("@/components/orders/track-shipment-dialog").then((m) => m.TrackShipmentDialog),
+  { ssr: false }
+);
+const EnterWaybillDialog = dynamic(
+  () => import("@/components/orders/enter-waybill-dialog").then((m) => m.EnterWaybillDialog),
+  { ssr: false }
+);
+const InvoiceTemplate = dynamic(
+  () => import("@/components/orders/invoice-template").then((m) => m.InvoiceTemplate),
+  { ssr: false }
+);
 
 // ─── Storage helpers ──────────────────────────────────────────────
 
@@ -333,17 +362,12 @@ function RepeatBadge({
 
 function OrdersPageInner() {
   const { guard } = useReadOnlyMode();
-
-  // ─── Read query params for pre-applied filters ───────────────
+  const session = useDashboardSession();
+  const businessId = session.businessId || null;
   const searchParams = useSearchParams();
 
-  // Data
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [businessId, setBusinessId] = useState<string | null>(null);
-
-  // UI
+  // ─── Query State & React Query Fetch ────────────────────────────
+  const [fetchTrigger, setFetchTrigger] = useState(0);
   const [dateFilter, setDateFilter] = useState<string>("all_time");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
@@ -354,6 +378,102 @@ function OrdersPageInner() {
   const [multiPaymentFilter, setMultiPaymentFilter] = useState<string[] | null>(null);
   const [activeDeliveryTab, setActiveDeliveryTab] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
+
+  const [ordersState, setRawOrders] = useState<Order[] | null>(null);
+
+  const {
+    data: fetchedOrders,
+    isLoading: isQueryLoading,
+    error: queryError,
+  } = useQuery({
+    queryKey: ["orders", businessId, dateFilter, dateFrom, dateTo, activeStatusTab, paymentStatusTab, multiPaymentFilter, fetchTrigger],
+    queryFn: async () => {
+      if (!businessId) return [];
+      const supabase = createClient();
+      const dateRange = getDateRange(dateFilter, dateFrom, dateTo);
+      let q = supabase
+        .from("orders")
+        .select(
+          "id, order_number, customer_name, customer_phone, customer_address, customer_district, customer_city, customer_whatsapp, customer_email, advance_paid, total, delivery_charge, subtotal, discount, waybill_id, status, payment_status, payment_method, expected_delivery_date, dispatched_date, created_at, images, order_items(product_name, category, quantity, unit_price)"
+        )
+        .eq("business_id", businessId)
+        .order("order_number", { ascending: false })
+        .limit(200);
+      if (dateRange) q = q.gte("created_at", dateRange.start.toISOString()).lte("created_at", dateRange.end.toISOString());
+      if (activeStatusTab !== "all") q = q.eq("status", activeStatusTab);
+      if (multiPaymentFilter && multiPaymentFilter.length > 0) {
+        q = q.in("payment_status", multiPaymentFilter);
+      } else if (paymentStatusTab !== "all") {
+        q = q.eq("payment_status", paymentStatusTab);
+      }
+
+      const ordersRes = await q;
+      if (ordersRes.error) throw new Error(ordersRes.error.message);
+
+      return (ordersRes.data || []).map((rawOrder: unknown) => {
+        const o = rawOrder as OrderListRow & {
+          order_items?: {
+            product_name: string;
+            category: string | null;
+            quantity: number;
+            unit_price: number;
+          }[];
+        };
+        const parsedImages = parseImagesField(o.images);
+        const rawItems = Array.isArray(o.order_items) ? o.order_items : [];
+        const items: OrderItem[] = rawItems.map((item) => ({
+          product_name: String(item.product_name),
+          category: item.category ? String(item.category) : null,
+          quantity: Number(item.quantity || 0),
+          unit_price: Number(item.unit_price || 0),
+        }));
+
+        return {
+          id: String(o.id),
+          order_number: String(o.order_number),
+          customer_name: String(o.customer_name || "Walk-in customer"),
+          customer_phone: o.customer_phone ? String(o.customer_phone) : null,
+          customer_address: o.customer_address ? String(o.customer_address) : null,
+          customer_district: o.customer_district ? String(o.customer_district) : null,
+          customer_city: o.customer_city ? String(o.customer_city) : null,
+          customer_whatsapp: o.customer_whatsapp ? String(o.customer_whatsapp) : null,
+          customer_email: o.customer_email ? String(o.customer_email) : null,
+          advance_paid: Number(o.advance_paid || 0),
+          total: Number(o.total || 0),
+          delivery_charge: Number(o.delivery_charge || 0),
+          subtotal: Number(o.subtotal || 0),
+          discount: Number(o.discount || 0),
+          waybill_id: o.waybill_id ? String(o.waybill_id) : null,
+          status: String(o.status || "new_order"),
+          payment_status: String(o.payment_status || "pending"),
+          payment_method: o.payment_method ? String(o.payment_method) : null,
+          expected_delivery_date: o.expected_delivery_date ? String(o.expected_delivery_date) : null,
+          dispatched_date: o.dispatched_date ? String(o.dispatched_date) : null,
+          created_at: String(o.created_at),
+          items,
+          images: parsedImages,
+        };
+      });
+    },
+    enabled: Boolean(businessId),
+    staleTime: 30 * 1000,
+  });
+
+  const orders = useMemo(
+    () => ordersState ?? fetchedOrders ?? [],
+    [ordersState, fetchedOrders],
+  );
+  const setOrders = useCallback(
+    (updater: Order[] | ((prev: Order[]) => Order[])) => {
+      setRawOrders((current) => {
+        const base = current ?? fetchedOrders ?? [];
+        return typeof updater === "function" ? updater(base) : updater;
+      });
+    },
+    [fetchedOrders],
+  );
+  const loading = isQueryLoading && !fetchedOrders && (!ordersState || ordersState.length === 0);
+  const error = queryError instanceof Error ? queryError.message : null;
 
   // In-page form state
   const [showForm, setShowForm] = useState(false);
@@ -410,70 +530,6 @@ function OrdersPageInner() {
     }, 0);
     return () => window.clearTimeout(taskId);
   }, [searchParams, guard]);
-
-  const [fetchTrigger, setFetchTrigger] = useState(0);
-  const session = useDashboardSession();
-
-  // ─── Data Fetching ─────────────────────────────────────────────
-  useEffect(() => {
-    const fetchOrders = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        const supabase = createClient();
-        const businessId = session.businessId;
-        setBusinessId(businessId ?? null);
-        if (!businessId) {
-          setLoading(false);
-          return;
-        }
-
-        const dateRange = getDateRange(dateFilter, dateFrom, dateTo);
-        let q = supabase.from("orders").select("id, order_number, customer_name, customer_phone, customer_address, customer_district, customer_city, customer_whatsapp, customer_email, advance_paid, total, delivery_charge, subtotal, discount, waybill_id, status, payment_status, payment_method, expected_delivery_date, dispatched_date, created_at, images").eq("business_id", businessId).order("order_number", { ascending: false }).limit(500);
-        if (dateRange) q = q.gte("created_at", dateRange.start.toISOString()).lte("created_at", dateRange.end.toISOString());
-
-        const [ordersRes, itemsRes] = await Promise.all([
-          q,
-          supabase.from("order_items").select("order_id, product_name, category, quantity, unit_price").eq("business_id", businessId).limit(500),
-        ]);
-        if (ordersRes.error) throw new Error(ordersRes.error.message);
-
-        const itemsByOrder: Record<string, OrderItem[]> = {};
-        for (const item of itemsRes.data || []) {
-          const oid = String(item.order_id);
-          if (!itemsByOrder[oid]) itemsByOrder[oid] = [];
-          itemsByOrder[oid].push({ product_name: String(item.product_name), category: item.category ? String(item.category) : null, quantity: Number(item.quantity || 0), unit_price: Number(item.unit_price || 0) });
-        }
-
-        setOrders((ordersRes.data || []).map((rawOrder: unknown) => {
-          const o = rawOrder as OrderListRow;
-          const parsedImages = parseImagesField(o.images);
-
-          return {
-            id: String(o.id), order_number: String(o.order_number), customer_name: String(o.customer_name || "Walk-in customer"),
-            customer_phone: o.customer_phone ? String(o.customer_phone) : null,
-            customer_address: o.customer_address ? String(o.customer_address) : null,
-            customer_district: o.customer_district ? String(o.customer_district) : null,
-            customer_city: o.customer_city ? String(o.customer_city) : null,
-            customer_whatsapp: o.customer_whatsapp ? String(o.customer_whatsapp) : null,
-            customer_email: o.customer_email ? String(o.customer_email) : null,
-            advance_paid: Number(o.advance_paid || 0),
-            total: Number(o.total || 0), delivery_charge: Number(o.delivery_charge || 0), subtotal: Number(o.subtotal || 0), discount: Number(o.discount || 0),
-            waybill_id: o.waybill_id ? String(o.waybill_id) : null, status: String(o.status || "new_order"), payment_status: String(o.payment_status || "pending"),
-            payment_method: o.payment_method ? String(o.payment_method) : null, expected_delivery_date: o.expected_delivery_date ? String(o.expected_delivery_date) : null,
-            dispatched_date: o.dispatched_date ? String(o.dispatched_date) : null,
-            created_at: String(o.created_at), items: itemsByOrder[String(o.id)] || [],
-            images: parsedImages,
-          };
-        }));
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : "An unexpected error occurred.";
-        console.error("Orders fetch error", err);
-        setError(msg);
-      } finally { setLoading(false); }
-    };
-    fetchOrders();
-  }, [dateFilter, dateFrom, dateTo, fetchTrigger]);
 
   // ─── Dispatch Dialog State ───────────────────────────────
   const [dispatchDialogOpen, setDispatchDialogOpen] = useState(false);
@@ -1526,7 +1582,7 @@ const handleStatusChange = useCallback(async (orderId: string, newStatus: string
 
           {/* ── Section 4: Quick Actions ──────────────────────── */}
           <div className="mt-4 h-px bg-border/50" />
-          <div className="mt-3 flex items-center justify-center gap-3">
+          <div className="mt-3 flex items-center justify-around gap-2">
             <button
               type="button"
               className="flex size-9 items-center justify-center rounded-xl text-accent-foreground/70 hover:bg-accent hover:text-accent-foreground transition-colors"
@@ -1564,6 +1620,17 @@ const handleStatusChange = useCallback(async (orderId: string, newStatus: string
             </button>
             <button
               type="button"
+              className="flex size-9 items-center justify-center rounded-xl text-accent-foreground/70 hover:bg-accent hover:text-accent-foreground transition-colors"
+              title="Invoice"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleInvoiceFromTable(order);
+              }}
+            >
+              <FileText className="size-4 text-blue-500" />
+            </button>
+            <button
+              type="button"
               className="flex size-9 items-center justify-center rounded-xl text-accent-foreground/70 hover:bg-accent hover:text-accent-foreground transition-colors disabled:opacity-25 disabled:pointer-events-none"
               title="WhatsApp"
               disabled={!order.customer_whatsapp && !order.customer_phone}
@@ -1572,7 +1639,7 @@ const handleStatusChange = useCallback(async (orderId: string, newStatus: string
                 handleWhatsAppClick(order);
               }}
             >
-              <MessageCircle className="size-4" />
+              <MessageCircle className="size-4 text-green-500" />
             </button>
             <button
               type="button"
@@ -1601,6 +1668,7 @@ const handleStatusChange = useCallback(async (orderId: string, newStatus: string
       handleStatusChange,
       handlePaymentChange,
       handleWhatsAppClick,
+      handleInvoiceFromTable,
       setTrackingWaybill,
       setTrackingDialogOpen,
       setDeleteTargetId,
@@ -1908,6 +1976,7 @@ const handleStatusChange = useCallback(async (orderId: string, newStatus: string
         label: "Order No",
         sortable: true,
         sortKey: "order_number",
+        className: "min-w-[110px]",
         renderCell: (order) => (
           <div>
             <div className="flex items-center gap-2">
@@ -1919,17 +1988,35 @@ const handleStatusChange = useCallback(async (orderId: string, newStatus: string
                 </span>
               )}
             </div>
-            <p className="mt-0.5 text-sm text-muted-foreground/70">{formatDate(order.created_at)}</p>
+            <p className="mt-0.5 text-xs text-muted-foreground/70">{formatDate(order.created_at)}</p>
+            {/* Tracking shortcut displayed when separate Tracking column is hidden (< xl) */}
+            {order.waybill_id && (
+              <div className="xl:hidden mt-1">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setTrackingWaybill(order.waybill_id!);
+                    setTrackingDialogOpen(true);
+                  }}
+                  className="inline-flex cursor-pointer items-center gap-1 rounded-md bg-muted/60 px-1.5 py-0.5 text-xs text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
+                  title="Track delivery"
+                >
+                  <Truck className="size-2.5 shrink-0 text-muted-foreground/60" />
+                  <span className="truncate max-w-[85px] font-medium">{order.waybill_id}</span>
+                  <span className="text-primary/70 text-[10px]" aria-hidden="true">→</span>
+                </button>
+              </div>
+            )}
           </div>
         ),
       },
       {
         id: "customer_name",
         label: "Customer",
-        hideOnMobile: true,
-        className: "min-w-[140px]",
+        className: "min-w-[120px] max-w-[160px]",
         renderCell: (order) => (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 min-w-0">
             <Link
               href={`/dashboard/customers?search=${encodeURIComponent(order.customer_whatsapp || order.customer_phone || order.customer_name)}`}
               className="truncate text-sm text-foreground hover:underline"
@@ -1944,7 +2031,8 @@ const handleStatusChange = useCallback(async (orderId: string, newStatus: string
       {
         id: "category",
         label: "Category",
-        hideOnMobile: true,
+        hideBelow: "xl",
+        className: "min-w-[100px]",
         renderCell: (order) => {
           const allCategories = [
             ...new Set(
@@ -1988,11 +2076,12 @@ const handleStatusChange = useCallback(async (orderId: string, newStatus: string
       {
         id: "items",
         label: "Item",
-        className: "min-w-[160px]",
+        className: "min-w-[130px] max-w-[190px]",
         renderCell: (order) => {
           const totalItems = order.items.length;
           const firstItem = order.items[0];
           const extra = totalItems - 1;
+          const totalQty = order.items.reduce((sum, i) => sum + i.quantity, 0);
 
           if (totalItems === 0) {
             return (
@@ -2002,9 +2091,15 @@ const handleStatusChange = useCallback(async (orderId: string, newStatus: string
 
           if (extra === 0) {
             return (
-              <p className="truncate text-sm text-foreground">
-                {firstItem!.product_name}
-              </p>
+              <div>
+                <p className="truncate text-sm text-foreground">
+                  {firstItem!.product_name}
+                </p>
+                {/* Quantity displayed inline when Qty column is hidden (< lg) */}
+                <p className="lg:hidden mt-0.5 text-xs text-muted-foreground">
+                  Qty: <span className="font-medium text-foreground/80 tabular-nums">{totalQty}</span>
+                </p>
+              </div>
             );
           }
 
@@ -2020,9 +2115,15 @@ const handleStatusChange = useCallback(async (orderId: string, newStatus: string
               <p className="truncate text-sm text-foreground">
                 {firstItem!.product_name}
               </p>
-              <span className="text-xs text-muted-foreground">
-                +{extra} More Item{extra > 1 ? "s" : ""}
-              </span>
+              <div className="flex items-center gap-1.5 mt-0.5">
+                <span className="text-xs text-muted-foreground">
+                  +{extra} More Item{extra > 1 ? "s" : ""}
+                </span>
+                {/* Quantity displayed inline when Qty column is hidden (< lg) */}
+                <span className="lg:hidden text-xs text-muted-foreground font-medium tabular-nums">
+                  · Qty: {totalQty}
+                </span>
+              </div>
             </HoverPopover>
           );
         },
@@ -2030,7 +2131,8 @@ const handleStatusChange = useCallback(async (orderId: string, newStatus: string
       {
         id: "quantity",
         label: "Qty",
-        hideOnMobile: true,
+        hideBelow: "lg",
+        className: "w-14 text-center",
         renderCell: (order) => {
           const totalQty = order.items.reduce((sum, i) => sum + i.quantity, 0);
           return (
@@ -2041,6 +2143,7 @@ const handleStatusChange = useCallback(async (orderId: string, newStatus: string
       {
         id: "total",
         label: "Total",
+        className: "min-w-[85px]",
         renderCell: (order) => (
           <span className="text-sm font-semibold tabular-nums text-foreground">
             {formatCurrency(order.total)}
@@ -2050,7 +2153,8 @@ const handleStatusChange = useCallback(async (orderId: string, newStatus: string
       {
         id: "tracking",
         label: "Tracking",
-        className: "max-w-[160px]",
+        hideBelow: "xl",
+        className: "min-w-[130px] max-w-[160px]",
         renderCell: (order) =>
           order.waybill_id ? (
             <div className="flex flex-col gap-1">
@@ -2076,7 +2180,7 @@ const handleStatusChange = useCallback(async (orderId: string, newStatus: string
         label: "Status",
         sortable: true,
         sortKey: "status",
-        className: "w-28",
+        className: "w-28 min-w-[110px]",
         renderCell: (order) => (
           <div className="flex flex-col items-start gap-0.5">
             <EditableStatusBadge
@@ -2101,7 +2205,7 @@ const handleStatusChange = useCallback(async (orderId: string, newStatus: string
         label: "Payment",
         sortable: true,
         sortKey: "payment_status",
-        className: "w-28",
+        className: "w-28 min-w-[100px]",
         renderCell: (order) => (
           <EditableStatusBadge
             value={order.payment_status}
@@ -2114,16 +2218,17 @@ const handleStatusChange = useCallback(async (orderId: string, newStatus: string
       {
         id: "actions",
         label: "",
-        className: "w-28",
+        sticky: "right",
+        className: "w-[136px] min-w-[136px] text-right pr-2",
         renderCell: (order) => (
-          <div className="flex items-center gap-0.5">
+          <div className="flex items-center justify-end gap-0.5">
             {/* Visible: View, Edit, Delete */}
             {([Eye, Pencil, Trash2] as const).map((Icon, i) => (
               <Button
                 key={i}
                 variant="ghost"
                 size="icon-xs"
-                className="text-muted-foreground/50"
+                className="text-muted-foreground/50 hover:text-foreground"
                 title={i === 0 ? "View" : i === 1 ? "Edit" : "Delete"}
                 onMouseEnter={() => setHoveredAction(`${order.id}-${i}`)}
                 onMouseLeave={() => setHoveredAction(null)}
@@ -2138,7 +2243,7 @@ const handleStatusChange = useCallback(async (orderId: string, newStatus: string
                           }
                         });
                       }
-                    :                i === 1
+                    : i === 1
                       ? (e) => {
                           e.stopPropagation();
                           fetchOrderForPreview(order.id).then((fd) => {
@@ -2153,7 +2258,7 @@ const handleStatusChange = useCallback(async (orderId: string, newStatus: string
                       : (e) => {
                           e.stopPropagation();
                           if (guard("deleting orders")) return;
-                setDeleteTargetId(order.id);
+                          setDeleteTargetId(order.id);
                         }
                 }
               >
@@ -2209,7 +2314,7 @@ const handleStatusChange = useCallback(async (orderId: string, newStatus: string
                     className="rounded-lg text-sm gap-2 py-1.5"
                     onClick={(e) => {
                       e.stopPropagation();
-                                    }}
+                    }}
                   >
                     <Truck className="size-3.5 text-purple-500" />
                     Print Shipping Label

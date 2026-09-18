@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import dynamic from "next/dynamic";
 import { usePathname, useRouter } from "next/navigation";
 import {
   Bell,
@@ -16,8 +17,6 @@ import { NotificationBell } from "@/components/notifications/notification-popove
 import { createClient } from "@/lib/supabase/client";
 import { Sidebar } from "@/components/layout/sidebar";
 import { MobileBottomNav } from "@/components/layout/mobile-bottom-nav";
-import { MobileRightDrawer } from "@/components/layout/mobile-right-drawer";
-import { QuickActionSheet } from "@/components/layout/quick-action-sheet";
 import { NetworkStatusIndicator } from "@/components/shared/network-status-indicator";
 import { ThemeToggle } from "@/components/shared/theme-toggle";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -30,8 +29,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
-import { KeyboardShortcutsDialog } from "@/components/shared/keyboard-shortcuts-dialog";
-import { GlobalSearchDialog } from "@/components/shared/global-search-dialog";
 import { GlobalSearchPopover } from "@/components/shared/global-search-popover";
 import { useGlobalSearchStore } from "@/stores/global-search-store";
 import { usePreferences } from "@/stores/preferences-store";
@@ -43,7 +40,27 @@ import {
   setupAutoSync,
 } from "@/lib/settings-sync";
 import { UserRoleProvider } from "@/hooks/use-user-role";
-import { BugReportDialog } from "@/components/shared/bug-report-dialog";
+
+const KeyboardShortcutsDialog = dynamic(
+  () => import("@/components/shared/keyboard-shortcuts-dialog").then((m) => m.KeyboardShortcutsDialog),
+  { ssr: false },
+);
+const GlobalSearchDialog = dynamic(
+  () => import("@/components/shared/global-search-dialog").then((m) => m.GlobalSearchDialog),
+  { ssr: false },
+);
+const BugReportDialog = dynamic(
+  () => import("@/components/shared/bug-report-dialog").then((m) => m.BugReportDialog),
+  { ssr: false },
+);
+const QuickActionSheet = dynamic(
+  () => import("@/components/layout/quick-action-sheet").then((m) => m.QuickActionSheet),
+  { ssr: false },
+);
+const MobileRightDrawer = dynamic(
+  () => import("@/components/layout/mobile-right-drawer").then((m) => m.MobileRightDrawer),
+  { ssr: false },
+);
 
 // ─── Shared Avatar Dropdown (used on both mobile and desktop) ─────
 

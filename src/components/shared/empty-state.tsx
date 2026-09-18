@@ -7,6 +7,20 @@ interface EmptyStateColumn {
   label: string;
   className?: string;
   hideOnMobile?: boolean;
+  hideBelow?: "sm" | "md" | "lg" | "xl" | "2xl";
+}
+
+function getEmptyColumnVisibilityClass(col: EmptyStateColumn): string | undefined {
+  if (col.hideBelow) {
+    switch (col.hideBelow) {
+      case "sm": return "hidden sm:block";
+      case "md": return "hidden md:block";
+      case "lg": return "hidden lg:block";
+      case "xl": return "hidden xl:block";
+      case "2xl": return "hidden 2xl:block";
+    }
+  }
+  return col.hideOnMobile ? "hidden md:block" : undefined;
 }
 
 // ─── Props ────────────────────────────────────────────────────────
@@ -66,7 +80,7 @@ export function EmptyState({
             {columns.map((col) => (
               <span
                 key={col.id}
-                className={cn(col.hideOnMobile && "hidden md:block", col.className)}
+                className={cn(getEmptyColumnVisibilityClass(col), col.className)}
               >
                 {col.label}
               </span>

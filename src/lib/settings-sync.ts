@@ -214,10 +214,6 @@ export function setupAutoSync(
   });
   unsubs.push(unsubPreferences);
 
-  // Also do an initial push so the server gets the current localStorage values
-  // (important for brand‑new users who have never synced)
-  pushCurrentState(supabase, businessId);
-
   return () => {
     for (const unsub of unsubs) unsub();
     for (const [key, timer] of debounceTimers) {
@@ -225,20 +221,4 @@ export function setupAutoSync(
       debounceTimers.delete(key);
     }
   };
-}
-
-/**
- * Push the current in‑memory state of all four stores to Supabase.
- * Useful on initial mount so a new user's settings are available cross‑device.
- */
-async function pushCurrentState(
-  supabase: SupabaseClient,
-  businessId: string,
-): Promise<void> {
-  await Promise.all([
-    saveSettings(supabase, businessId, KEYS.ORDERS, stripFunctions(useOrdersSettings.getState() as unknown as Record<string, unknown>)),
-    saveSettings(supabase, businessId, KEYS.QUOTATIONS, stripFunctions(useQuotationSettings.getState() as unknown as Record<string, unknown>)),
-    saveSettings(supabase, businessId, KEYS.EXPENSES, stripFunctions(useExpenseSettings.getState() as unknown as Record<string, unknown>)),
-    saveSettings(supabase, businessId, KEYS.PREFERENCES, stripFunctions(usePreferences.getState() as unknown as Record<string, unknown>)),
-  ]);
 }

@@ -66,7 +66,7 @@ function validateStep(
   if (step === 1) {
     if (!form.customer_name.trim()) errs["customer_name"] = "Required";
     if (!form.address.trim()) errs["address"] = "Required";
-    if (!form.phone.trim()) errs["phone"] = "Required";
+    if (!form.whatsapp.trim()) errs["whatsapp"] = "Required";
   } else if (step === 2) {
     if (form.items.length === 0) {
       errs["items"] = "Add at least one item";

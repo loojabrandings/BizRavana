@@ -27,14 +27,32 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { FilterBar } from "@/components/shared/filter-bar";
-import { DateRangePickerModal } from "@/components/shared/lazy-date-range-picker-modal";
 import { Button } from "@/components/ui/button";
-import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { DataTable, type ColumnDef } from "@/components/shared/data-table";
-import { StockForm } from "@/components/inventory/stock-form";
-import { StockPreview } from "@/components/inventory/stock-preview";
-import { CategoryManager, type Category } from "@/components/products/category-manager";
+import type { Category } from "@/components/products/category-manager";
 import type { InventoryItem, StockFormData } from "@/components/inventory/types";
+import dynamic from "next/dynamic";
+
+const StockForm = dynamic(
+  () => import("@/components/inventory/stock-form").then((m) => m.StockForm),
+  { ssr: false },
+);
+const StockPreview = dynamic(
+  () => import("@/components/inventory/stock-preview").then((m) => m.StockPreview),
+  { ssr: false },
+);
+const CategoryManager = dynamic(
+  () => import("@/components/products/category-manager").then((m) => m.CategoryManager),
+  { ssr: false },
+);
+const ConfirmDialog = dynamic(
+  () => import("@/components/shared/confirm-dialog").then((m) => m.ConfirmDialog),
+  { ssr: false },
+);
+const DateRangePickerModal = dynamic(
+  () => import("@/components/shared/lazy-date-range-picker-modal").then((m) => m.DateRangePickerModal),
+  { ssr: false },
+);
 import {
   stockStatusTabs,
   stockStatusOptions,
@@ -132,8 +150,9 @@ function InventoryPageInner() {
           .eq("business_id", bizId)
           .is("deleted_at", null)
           .order("created_at", { ascending: false })
-          .limit(500);
+          .limit(300);
         if (dateRange) q = q.gte("created_at", dateRange.start.toISOString()).lte("created_at", dateRange.end.toISOString());
+        if (activeCategoryTab !== "all") q = q.eq("category", activeCategoryTab);
 
         const { data, error: fetchError } = await q;
         if (fetchError) throw new Error(fetchError.message);
@@ -159,7 +178,7 @@ function InventoryPageInner() {
       } finally { setLoading(false); }
     };
     fetchItems();
-  }, [dateFilter, dateFrom, dateTo]);
+  }, [dateFilter, dateFrom, dateTo, activeCategoryTab]);
 
   // ─── Fetch Categories ──────────────────────────────────────────
   useEffect(() => {

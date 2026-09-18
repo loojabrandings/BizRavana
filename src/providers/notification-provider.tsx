@@ -74,23 +74,24 @@ export function NotificationProvider({
     if (!supabase) return;
 
     try {
-      // Fetch unread count
-      const { count } = await supabase
-        .from("notifications")
-        .select("*", { count: "exact", head: true })
-        .eq("business_id", bizId)
-        .eq("is_read", false);
+      const [unreadResult, notificationsResult] = await Promise.all([
+        supabase
+          .from("notifications")
+          .select("*", { count: "exact", head: true })
+          .eq("business_id", bizId)
+          .eq("is_read", false),
+        supabase
+          .from("notifications")
+          .select("id, title, message, category, priority, source, is_read, action_label, action_url, created_at")
+          .eq("business_id", bizId)
+          .order("created_at", { ascending: false })
+          .limit(50),
+      ]);
 
-      // Fetch recent notifications
-      const { data } = await supabase
-        .from("notifications")
-        .select("id, title, message, category, priority, source, is_read, action_label, action_url, created_at")
-        .eq("business_id", bizId)
-        .order("created_at", { ascending: false })
-        .limit(50);
-
-      if (count !== null) setUnreadCount(count);
-      if (data) setNotifications(data as NotificationItem[]);
+      if (unreadResult.count !== null) setUnreadCount(unreadResult.count);
+      if (notificationsResult.data) {
+        setNotifications(notificationsResult.data as NotificationItem[]);
+      }
     } catch {
       // Silently fail
     } finally {

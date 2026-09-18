@@ -30,6 +30,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { createClient } from "@/lib/supabase/client";
 import { cn, formatEnumLabel } from "@/lib/utils";
 import { useGlobalSearchStore } from "@/stores/global-search-store";
+import { useDashboardSession } from "@/providers/dashboard-session-provider";
 
 // ─── Reuse the same types from the dialog ─────────────────────
 
@@ -176,6 +177,7 @@ export interface GlobalSearchPopoverHandle {
 
 export const GlobalSearchPopover = forwardRef<{ focus: () => void }>(function GlobalSearchPopover(_props, ref) {
   const router = useRouter();
+  const { businessId } = useDashboardSession();
   const { addRecentSearch, recentSearches, removeRecentSearch, clearRecentSearches } =
     useGlobalSearchStore();
 
@@ -189,20 +191,16 @@ export const GlobalSearchPopover = forwardRef<{ focus: () => void }>(function Gl
     dataFetched.current = true;
     setLoading(true);
     try {
+      if (!businessId) return;
       const supabase = createClient();
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.user) return;
-      const { data: profile } = await supabase.from("profiles").select("business_id").eq("user_id", session.user.id).single();
-      const bizId = (profile as { business_id: string | null } | null)?.business_id;
-      if (!bizId) return;
       const limit = 500;
       const [ordersRes, customersRes, productsRes, inventoryRes, expensesRes, quotationsRes] = await Promise.all([
-        supabase.from("orders").select("id, order_number, customer_name, total, status, waybill_id").eq("business_id", bizId).limit(limit).order("created_at", { ascending: false }),
-        supabase.from("customers").select("id, name, phone, whatsapp, total_orders").eq("business_id", bizId).limit(limit).order("name"),
-        supabase.from("products").select("id, name, category, selling_price").eq("business_id", bizId).limit(limit).order("name"),
-        supabase.from("inventory_items").select("id, name, category, current_stock, supplier").eq("business_id", bizId).limit(limit).order("name"),
-        supabase.from("expenses").select("id, item_name, category, supplier, total_cost").eq("business_id", bizId).limit(limit).order("expense_date", { ascending: false }),
-        supabase.from("quotations").select("id, quotation_number, customer_name, status, grand_total").eq("business_id", bizId).limit(limit).order("created_at", { ascending: false }),
+        supabase.from("orders").select("id, order_number, customer_name, total, status, waybill_id").eq("business_id", businessId).limit(limit).order("created_at", { ascending: false }),
+        supabase.from("customers").select("id, name, phone, whatsapp, total_orders").eq("business_id", businessId).limit(limit).order("name"),
+        supabase.from("products").select("id, name, category, selling_price").eq("business_id", businessId).limit(limit).order("name"),
+        supabase.from("inventory_items").select("id, name, category, current_stock, supplier").eq("business_id", businessId).limit(limit).order("name"),
+        supabase.from("expenses").select("id, item_name, category, supplier, total_cost").eq("business_id", businessId).limit(limit).order("expense_date", { ascending: false }),
+        supabase.from("quotations").select("id, quotation_number, customer_name, status, grand_total").eq("business_id", businessId).limit(limit).order("created_at", { ascending: false }),
       ]);
       const mapData = <T,>(res: { data: T[] | null }): T[] => (res.data || []) as T[];
       setIndex({
@@ -218,7 +216,7 @@ export const GlobalSearchPopover = forwardRef<{ focus: () => void }>(function Gl
     } finally {
       setLoading(false);
     }
-  }, [index]);
+  }, [businessId, index]);
 
   // ─── Fuzzy Indexes ──────────────────────────────────────────
   const fuseInstances = useMemo(() => {

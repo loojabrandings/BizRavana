@@ -34,9 +34,14 @@ import {
 } from "@/lib/delivery/loading-steps";
 import type { CourierDashboardData, CourierStatusBreakdown, CourierRecentActivity } from "@/lib/delivery/types";
 import { useCourierStore } from "@/stores/courier-store";
-import { CourierFinanceTab } from "@/components/delivery/courier-finance-tab";
+import dynamic from "next/dynamic";
 import { LoadingStepList } from "@/components/delivery/loading-step-list";
 import { useDashboardSession } from "@/providers/dashboard-session-provider";
+
+const CourierFinanceTab = dynamic(
+  () => import("@/components/delivery/courier-finance-tab").then((m) => m.CourierFinanceTab),
+  { ssr: false },
+);
 
 // ─── Status Display Helpers ─────────────────────────────────────────
 // Category-based mapping replaces the fragile keyword guessing.

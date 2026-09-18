@@ -64,7 +64,10 @@ export function CustomerDetailsSection({
 
     // Apply parsed fields to the form
     if (parsed.name) updateForm("customer_name", parsed.name);
-    if (parsed.phone) updateForm("phone", parsed.phone);
+    if (parsed.phone) {
+      updateForm("phone", parsed.phone);
+      if (!form.whatsapp) updateForm("whatsapp", parsed.phone);
+    }
     if (parsed.address) updateForm("address", parsed.address);
     if (parsed.district) updateForm("district", parsed.district);
     if (parsed.city) updateForm("nearest_city", parsed.city);
@@ -74,7 +77,7 @@ export function CustomerDetailsSection({
 
     const fieldsFilled = [
       parsed.name && "Name",
-      parsed.phone && "Phone",
+      parsed.phone && "Phone/WhatsApp",
       parsed.district && "District",
       parsed.city && "City",
     ].filter(Boolean);
@@ -188,19 +191,22 @@ export function CustomerDetailsSection({
         <div className="grid grid-cols-2 gap-5">
           <div className="space-y-1.5">
             <span className="text-sm text-muted-foreground">
-              WhatsApp Number
+              WhatsApp Number <span className="text-destructive">*</span>
             </span>
             <Input
               type="tel"
               placeholder="e.g. 077 123 4567"
               value={form.whatsapp}
               onChange={(e) => updateForm("whatsapp", e.target.value)}
-              className="h-9"
+              className={cn("h-9", errors.whatsapp && "border-destructive")}
             />
+            {errors.whatsapp && (
+              <p className="text-sm text-destructive">{errors.whatsapp}</p>
+            )}
           </div>
           <div className="space-y-1.5">
             <span className="text-sm text-muted-foreground">
-              Phone Number <span className="text-destructive">*</span>
+              Phone Number
             </span>
             <Input
               type="tel"

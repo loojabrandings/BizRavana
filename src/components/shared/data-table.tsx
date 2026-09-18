@@ -25,7 +25,47 @@ export interface ColumnDef<T> {
   sortKey?: string;
   className?: string;
   hideOnMobile?: boolean;
+  hideBelow?: "sm" | "md" | "lg" | "xl" | "2xl";
+  sticky?: "left" | "right";
   renderCell?: (row: T) => React.ReactNode;
+}
+
+export function getColumnVisibilityClass(col: {
+  hideBelow?: "sm" | "md" | "lg" | "xl" | "2xl";
+  hideOnMobile?: boolean;
+}): string | undefined {
+  if (col.hideBelow) {
+    switch (col.hideBelow) {
+      case "sm":
+        return "hidden sm:table-cell";
+      case "md":
+        return "hidden md:table-cell";
+      case "lg":
+        return "hidden lg:table-cell";
+      case "xl":
+        return "hidden xl:table-cell";
+      case "2xl":
+        return "hidden 2xl:table-cell";
+    }
+  }
+  return col.hideOnMobile ? "hidden md:table-cell" : undefined;
+}
+
+export function getColumnStickyClass(
+  col: { sticky?: "left" | "right" },
+  isHeader = false,
+): string | undefined {
+  if (col.sticky === "right") {
+    return isHeader
+      ? "sticky right-0 z-20 bg-muted/95 backdrop-blur-md border-l border-border/40 shadow-[-4px_0_8px_rgba(0,0,0,0.06)]"
+      : "sticky right-0 z-10 bg-card/95 backdrop-blur-md group-hover:bg-muted/40 border-l border-border/40 shadow-[-4px_0_8px_rgba(0,0,0,0.06)]";
+  }
+  if (col.sticky === "left") {
+    return isHeader
+      ? "sticky left-0 z-20 bg-muted/95 backdrop-blur-md border-r border-border/40 shadow-[4px_0_8px_rgba(0,0,0,0.06)]"
+      : "sticky left-0 z-10 bg-card/95 backdrop-blur-md group-hover:bg-muted/40 border-r border-border/40 shadow-[4px_0_8px_rgba(0,0,0,0.06)]";
+  }
+  return undefined;
 }
 
 export interface DataTableSelectionProps {
@@ -104,8 +144,9 @@ function SortableHead<T>({
       className={cn(
         "select-none text-xs font-semibold uppercase tracking-wider text-muted-foreground",
         column.sortable && "cursor-pointer transition-colors hover:text-foreground",
+        getColumnVisibilityClass(column),
+        getColumnStickyClass(column, true),
         column.className,
-        column.hideOnMobile && "hidden md:table-cell",
       )}
       onClick={() => column.sortable && column.sortKey && onToggle(column.sortKey)}
       role={column.sortable ? "button" : undefined}
@@ -151,8 +192,9 @@ function DesktopSkeleton({
                 key={col.id}
                 className={cn(
                   "text-xs font-semibold uppercase tracking-wider text-muted-foreground",
+                  getColumnVisibilityClass(col),
+                  getColumnStickyClass(col, true),
                   col.className,
-                  col.hideOnMobile && "hidden md:table-cell",
                 )}
               >
                 {col.label}
@@ -173,7 +215,8 @@ function DesktopSkeleton({
                   key={col.id}
                   className={cn(
                     "py-4",
-                    col.hideOnMobile && "hidden md:table-cell",
+                    getColumnVisibilityClass(col),
+                    getColumnStickyClass(col, false),
                     col.className,
                   )}
                 >
@@ -255,6 +298,7 @@ function EmptyTableShell({
         label: col.label,
         className: col.className,
         hideOnMobile: col.hideOnMobile,
+        hideBelow: col.hideBelow,
       }))}
       showCheckbox={showCheckbox}
       {...empty}
@@ -677,8 +721,9 @@ export function DataTable<T extends object>({
                     key={col.id}
                     className={cn(
                       "text-xs font-semibold uppercase tracking-wider text-muted-foreground",
+                      getColumnVisibilityClass(col),
+                      getColumnStickyClass(col, true),
                       col.className,
-                      col.hideOnMobile && "hidden md:table-cell",
                     )}
                   >
                     {col.label}
@@ -743,7 +788,9 @@ export function DataTable<T extends object>({
                       key={col.id}
                       className={cn(
                         "py-4 align-middle text-sm",
-                        col.hideOnMobile && "hidden md:table-cell",
+                        getColumnVisibilityClass(col),
+                        getColumnStickyClass(col, false),
+                        selected && col.sticky && "bg-primary/10",
                         col.className,
                       )}
                       onClick={

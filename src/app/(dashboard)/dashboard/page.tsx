@@ -150,6 +150,8 @@ export default function DashboardPage() {
 
         const supabase = createClient();
         const dateRange = getDateRange(dateFilter, dateFrom, dateTo);
+        const now = new Date();
+        const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
 
         const [ordersRes, allOrdersRes, expensesRes, allExpensesRes, inventoryRes, deliveriesRes, orderItemsRes] =
           await Promise.all([
@@ -165,14 +167,13 @@ export default function DashboardPage() {
               if (dateRange) q = q.gte("created_at", dateRange.start.toISOString()).lte("created_at", dateRange.end.toISOString());
               return q;
             })(),
-            // All-time orders (ignores the date filter) — powers the hero cards
-            // "New Orders" and "Pending Payments", plus the Delivery Status cards
-            // and Scheduled Deliveries, which must always reflect totals.
+            // Orders from last month onwards OR currently active (prevents scanning unbounded history while keeping all metrics 100% exact)
             (() => {
               const q = supabase
                 .from("orders")
                 .select("id, order_number, customer_name, total, balance_remaining, status, payment_status, expected_delivery_date, created_at")
                 .eq("business_id", businessId)
+                .or(`created_at.gte.${lastMonthStart.toISOString()},status.in.(new_order,ready,packed),payment_status.neq.paid`)
                 .order("created_at", { ascending: false });
               return q;
             })(),
@@ -186,28 +187,39 @@ export default function DashboardPage() {
               if (dateRange) q = q.gte("expense_date", dateRange.start.toISOString().slice(0, 10)).lte("expense_date", dateRange.end.toISOString().slice(0, 10));
               return q;
             })(),
-            // All-time expenses (no date filter) — keeps the Net Profit
-            // "vs last month" trend badge consistent with the all-time orders trends.
+            // Expenses from start of last month onwards (keeps Net Profit vs last month trend accurate without unbounded scan)
             supabase
               .from("expenses")
               .select("total_cost, expense_date, category")
               .eq("business_id", businessId)
+              .gte("expense_date", lastMonthStart.toISOString().slice(0, 10))
               .order("expense_date", { ascending: false }),
             supabase
               .from("inventory_items")
               .select("name, current_stock, reorder_level")
               .eq("business_id", businessId)
-              .limit(500),
+              .is("deleted_at", null)
+              .limit(300),
             supabase
               .from("deliveries")
               .select("id, status")
               .eq("business_id", businessId)
-              .limit(500),
-            supabase
-              .from("order_items")
-              .select("product_name, category, total_price")
-              .eq("business_id", businessId)
-              .limit(500),
+              .not("status", "in", '("delivered","cancelled","returned")')
+              .limit(300),
+            (() => {
+              let q = supabase
+                .from("order_items")
+                .select("product_name, category, total_price, created_at")
+                .eq("business_id", businessId)
+                .order("created_at", { ascending: false })
+                .limit(500);
+              if (dateRange) {
+                q = q.gte("created_at", dateRange.start.toISOString()).lte("created_at", dateRange.end.toISOString());
+              } else {
+                q = q.gte("created_at", lastMonthStart.toISOString());
+              }
+              return q;
+            })(),
           ]);
 
         const orders = (ordersRes.data || []).map((order) => ({
@@ -299,9 +311,7 @@ export default function DashboardPage() {
         // ─── Compute month-over-month trends (from ALL orders, so the
         //     "vs last month" badges on the hero cards are correct regardless
         //     of the page's date filter) ────────────────────────────
-        const now = new Date();
         const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-        const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
         const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
 
         const inRange = (dateStr: string, start: Date, end: Date) => {
@@ -430,7 +440,10 @@ export default function DashboardPage() {
     };
 
     fetchDashboard();
-  }, [dateFilter, dateFrom, dateTo, revenueWindow]);
+    return () => {
+      cancelled = true;
+    };
+  }, [dateFilter, dateFrom, dateTo, revenueWindow, session.businessId]);
 
   const heroMetrics = useMemo(() => {
     if (!data) return [];
