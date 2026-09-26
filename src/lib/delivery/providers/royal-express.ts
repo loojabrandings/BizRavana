@@ -57,16 +57,23 @@ function nullableStringField(record: ApiRecord, key: string): string | null {
   return value === null || value === undefined || value === "" ? null : String(value);
 }
 
+function cleanPhone(num: string | null | undefined): string {
+  if (!num) return "";
+  return num.replace(/[\s()]/g, "").trim();
+}
+
 function errorMessage(payload: unknown, fallback: string): string {
   const record = apiRecord(payload);
-  const message = nullableStringField(record, "message");
-  if (message) return message;
-
   const errors = apiRecord(record.errors);
   const fieldErrors = Object.values(errors).flatMap((value) =>
     Array.isArray(value) ? value.map(String) : [],
   );
-  return fieldErrors.length > 0 ? fieldErrors.join("; ") : fallback;
+  if (fieldErrors.length > 0) return fieldErrors.join("; ");
+
+  const message = nullableStringField(record, "message");
+  if (message) return message;
+
+  return fallback;
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────
@@ -279,6 +286,26 @@ export const royalExpressProvider: CourierProvider = {
       throw new Error("Royal Express business response did not include an ID");
     }
 
+    // Primary phone: WhatsApp number if available, else phone number.
+    // If WhatsApp is used as primary and phone number is also present, send phone as secondary.
+    const whatsapp = cleanPhone(order.customer_whatsapp);
+    const phone = cleanPhone(order.customer_phone);
+
+    let primaryPhone = "";
+    let secondaryPhone = "";
+
+    if (whatsapp) {
+      primaryPhone = whatsapp;
+      if (phone && phone !== whatsapp) {
+        secondaryPhone = phone;
+      }
+    } else {
+      primaryPhone = phone;
+      if (order.customer_secondary_phone) {
+        secondaryPhone = cleanPhone(order.customer_secondary_phone);
+      }
+    }
+
     const requestBody = {
       general_data: {
         merchant_business_id: merchantBusinessId,
@@ -291,7 +318,8 @@ export const royalExpressProvider: CourierProvider = {
           order_no: order.order_number,
           customer_name: order.customer_name,
           customer_address: order.customer_address || "",
-          customer_phone: order.customer_phone || "",
+          customer_phone: primaryPhone,
+          ...(secondaryPhone ? { customer_secondary_phone: secondaryPhone } : {}),
           destination_city_name: order.customer_city || "Colombo 01",
           destination_state_name: order.customer_district || "Colombo",
           cod,

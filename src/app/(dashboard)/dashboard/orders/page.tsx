@@ -693,6 +693,14 @@ const handleStatusChange = useCallback(async (orderId: string, newStatus: string
         return false;
       }
 
+      // Validate at least one contact number is set
+      if (!order.customer_whatsapp?.trim() && !order.customer_phone?.trim()) {
+        toast.error("Contact number required", {
+          description: "Please set at least a WhatsApp or Phone number before dispatching via courier.",
+        });
+        return false;
+      }
+
       // Send to courier
       const { waybill } = await shipWithCourier(
         {
@@ -700,6 +708,7 @@ const handleStatusChange = useCallback(async (orderId: string, newStatus: string
           order_number: order.order_number,
           customer_name: order.customer_name,
           customer_phone: order.customer_phone,
+          customer_whatsapp: order.customer_whatsapp,
           customer_address: order.customer_address,
           customer_city: order.customer_city,
           customer_district: order.customer_district,
@@ -1070,6 +1079,8 @@ const handleStatusChange = useCallback(async (orderId: string, newStatus: string
       const businessId = session.businessId;
       if (!businessId) throw new Error("No business found");
 
+      const trimmedWaybillId = data.waybill_id ? data.waybill_id.trim() || null : null;
+
       const commonFields = {
         order_number: data.order_number,
         customer_name: data.customer_name,
@@ -1090,6 +1101,7 @@ const handleStatusChange = useCallback(async (orderId: string, newStatus: string
         status: data.status || "new_order",
         order_source: data.order_source || "ad",
         remarks: data.remarks || null,
+        waybill_id: trimmedWaybillId,
         // Store per-item image mapping as JSON object, fall back to flat array for backward compat
         images: data.itemImagesMap && Object.keys(data.itemImagesMap).length > 0
           ? JSON.stringify(data.itemImagesMap)
@@ -1110,6 +1122,39 @@ const handleStatusChange = useCallback(async (orderId: string, newStatus: string
           );
           if (removedImages.length > 0) {
             deleteStorageImages(removedImages).catch(console.error);
+          }
+        }
+
+        const oldWaybill = oldOrder?.waybill_id ? String(oldOrder.waybill_id).trim() : null;
+        if (oldWaybill && oldWaybill !== trimmedWaybillId) {
+          // Release previous manual waybill if it was assigned/used for this order
+          try {
+            await supabase
+              .from("manual_waybills")
+              .update({
+                status: "available",
+                assigned_order_id: null,
+                used_at: null,
+                updated_at: new Date().toISOString(),
+              })
+              .eq("waybill_id", oldWaybill)
+              .eq("business_id", businessId)
+              .neq("status", "invalid");
+          } catch (err) {
+            console.warn("Failed to release old waybill:", err);
+          }
+        }
+
+        if (trimmedWaybillId && trimmedWaybillId !== oldWaybill) {
+          if (data.status === "dispatched" || data.status === "delivered") {
+            markWaybillAsUsed(trimmedWaybillId).catch((err) =>
+              console.warn("Failed to mark new waybill as used:", err),
+            );
+          } else {
+            const providerId = courierConfig?.provider ?? null;
+            assignWaybillToOrder(trimmedWaybillId, editOrderId, providerId).catch((err) =>
+              console.warn("Failed to assign new waybill:", err),
+            );
           }
         }
 
@@ -1142,6 +1187,19 @@ const handleStatusChange = useCallback(async (orderId: string, newStatus: string
           throw new Error(`Database error: ${msg}`);
         }
         orderId = String(order!.id);
+
+        if (trimmedWaybillId) {
+          if (data.status === "dispatched" || data.status === "delivered") {
+            markWaybillAsUsed(trimmedWaybillId).catch((err) =>
+              console.warn("Failed to mark new waybill as used:", err),
+            );
+          } else {
+            const providerId = courierConfig?.provider ?? null;
+            assignWaybillToOrder(trimmedWaybillId, orderId, providerId).catch((err) =>
+              console.warn("Failed to assign new waybill:", err),
+            );
+          }
+        }
       }
 
       // Insert / re-insert order items
@@ -1195,6 +1253,7 @@ const handleStatusChange = useCallback(async (orderId: string, newStatus: string
                     delivery_charge: data.delivery_charge,
                     subtotal: data.subtotal,
                     discount: data.discount,
+                    waybill_id: trimmedWaybillId,
                     status: data.status,
                     payment_status: data.payment_status,
                     payment_method: data.payment_method,
@@ -1223,7 +1282,7 @@ const handleStatusChange = useCallback(async (orderId: string, newStatus: string
               delivery_charge: data.delivery_charge,
               subtotal: data.subtotal,
               discount: data.discount,
-              waybill_id: null,
+              waybill_id: trimmedWaybillId,
               status: data.status,
               payment_status: data.payment_status,
               payment_method: data.payment_method,
@@ -1259,7 +1318,7 @@ const handleStatusChange = useCallback(async (orderId: string, newStatus: string
         setFetchTrigger((n) => n + 1);
       }
     },
-    [editOrderId, guard, orders],
+    [editOrderId, guard, orders, courierConfig, session.businessId, session.userId],
   );
 
   // ─── Bulk Dispatch Handler ─────────────────────────────────
@@ -1275,6 +1334,11 @@ const handleStatusChange = useCallback(async (orderId: string, newStatus: string
       throw new Error(`Order #${order.order_number} is missing district/city`);
     }
 
+    // Validate contact number
+    if (!order.customer_whatsapp?.trim() && !order.customer_phone?.trim()) {
+      throw new Error(`Order #${order.order_number} is missing contact number (phone or WhatsApp)`);
+    }
+
     // Send to courier
     const { waybill } = await shipWithCourier(
       {
@@ -1282,6 +1346,7 @@ const handleStatusChange = useCallback(async (orderId: string, newStatus: string
         order_number: order.order_number,
         customer_name: order.customer_name,
         customer_phone: order.customer_phone,
+        customer_whatsapp: order.customer_whatsapp,
         customer_address: order.customer_address,
         customer_city: order.customer_city,
         customer_district: order.customer_district,

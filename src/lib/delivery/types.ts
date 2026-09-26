@@ -41,6 +41,8 @@ export interface ShipOrderParams {
   order_number: string;
   customer_name: string;
   customer_phone: string | null;
+  customer_whatsapp?: string | null;
+  customer_secondary_phone?: string | null;
   customer_address: string | null;
   customer_city: string | null;
   customer_district: string | null;

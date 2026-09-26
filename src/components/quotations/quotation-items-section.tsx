@@ -69,7 +69,8 @@ function QuotationItemCard({
   const [loadedProductRequest, setLoadedProductRequest] = useState<string | null>(null);
 
   const lineTotal = item.quantity * item.unit_price;
-  const productRequest = businessId && item.category.trim()
+  const isCustomCategory = item.category?.trim().toLowerCase() === "custom";
+  const productRequest = businessId && item.category.trim() && !isCustomCategory
     ? `${businessId}:${item.category}`
     : null;
   const visibleProducts = loadedProductRequest === productRequest ? products : [];
@@ -77,7 +78,7 @@ function QuotationItemCard({
 
   // ─── Fetch products when category changes ─────────────────────
   useEffect(() => {
-    if (!businessId || !item.category.trim()) {
+    if (!businessId || !item.category.trim() || isCustomCategory) {
       return;
     }
 
@@ -183,68 +184,92 @@ function QuotationItemCard({
           </Popover>
         </div>
 
-        {/* ─── Product Searchable Dropdown ───────────────────── */}
-        <div className="space-y-1.5">
-          <span className="text-sm text-muted-foreground">
-            Product <span className="text-destructive">*</span>
-          </span>
-          <Popover open={prodOpen} onOpenChange={setProdOpen}>
-            <PopoverTrigger
+        {/* ─── Product Searchable Dropdown / Custom Input ────── */}
+        {isCustomCategory ? (
+          <div className="space-y-1.5">
+            <span className="text-sm text-muted-foreground">
+              Item Name <span className="text-destructive">*</span>
+            </span>
+            <Input
+              value={item.product_name}
+              onChange={(e) =>
+                onUpdate(index, {
+                  product_name: e.target.value,
+                })
+              }
+              placeholder="Enter custom item name..."
               className={cn(
-                "flex h-9 w-full items-center justify-between rounded-lg border border-input bg-background px-3 text-sm text-foreground shadow-xs outline-none transition-colors hover:bg-accent focus:border-ring focus:ring-[3px] focus:ring-ring/50",
+                "h-9",
                 errors[`items.${index}.product_name`] && "border-destructive",
-                !item.product_name && "text-muted-foreground",
               )}
-            >
-              <span className="truncate">
-                {item.product_name || (item.category ? "Search products..." : "Select a category first")}
-              </span>
-              <ChevronsUpDown className="ml-2 size-3.5 shrink-0 opacity-50" />
-            </PopoverTrigger>
-            <PopoverContent className="w-[260px] p-0" align="start">
-              <Command>
-                <CommandInput placeholder="Search products..." />
-                <CommandList>
-                  <CommandEmpty>
-                    {loadingProducts
-                      ? "Loading..."
-                      : item.category
-                        ? "No products found in this category."
-                        : "Select a category first."}
-                  </CommandEmpty>
-                  <CommandGroup>
-                    {visibleProducts.map((product) => (
-                      <CommandItem
-                        key={product.id}
-                        value={product.name}
-                        onSelect={() => {
-                          onUpdate(index, {
-                            product_name: product.name,
-                            category: item.category,
-                            unit_price: product.selling_price,
-                            quantity: 1,
-                          });
-                          setProdOpen(false);
-                        }}
-                      >
-                        <Package className="mr-2 size-3.5 shrink-0 text-muted-foreground/60" />
-                        <div className="flex flex-1 items-center justify-between">
-                          <span className="truncate">{product.name}</span>
-                          <span className="ml-2 shrink-0 text-sm font-semibold tabular-nums text-foreground">
-                            {formatCurrency(product.selling_price)}
-                          </span>
-                        </div>
-                      </CommandItem>
-                    ))}
-                  </CommandGroup>
-                </CommandList>
-              </Command>
-            </PopoverContent>
-          </Popover>
-          {errors[`items.${index}.product_name`] && (
-            <p className="text-sm text-destructive">{errors[`items.${index}.product_name`]}</p>
-          )}
-        </div>
+            />
+            {errors[`items.${index}.product_name`] && (
+              <p className="text-sm text-destructive">{errors[`items.${index}.product_name`]}</p>
+            )}
+          </div>
+        ) : (
+          <div className="space-y-1.5">
+            <span className="text-sm text-muted-foreground">
+              Product <span className="text-destructive">*</span>
+            </span>
+            <Popover open={prodOpen} onOpenChange={setProdOpen}>
+              <PopoverTrigger
+                className={cn(
+                  "flex h-9 w-full items-center justify-between rounded-lg border border-input bg-background px-3 text-sm text-foreground shadow-xs outline-none transition-colors hover:bg-accent focus:border-ring focus:ring-[3px] focus:ring-ring/50",
+                  errors[`items.${index}.product_name`] && "border-destructive",
+                  !item.product_name && "text-muted-foreground",
+                )}
+              >
+                <span className="truncate">
+                  {item.product_name || (item.category ? "Search products..." : "Select a category first")}
+                </span>
+                <ChevronsUpDown className="ml-2 size-3.5 shrink-0 opacity-50" />
+              </PopoverTrigger>
+              <PopoverContent className="w-[260px] p-0" align="start">
+                <Command>
+                  <CommandInput placeholder="Search products..." />
+                  <CommandList>
+                    <CommandEmpty>
+                      {loadingProducts
+                        ? "Loading..."
+                        : item.category
+                          ? "No products found in this category."
+                          : "Select a category first."}
+                    </CommandEmpty>
+                    <CommandGroup>
+                      {visibleProducts.map((product) => (
+                        <CommandItem
+                          key={product.id}
+                          value={product.name}
+                          onSelect={() => {
+                            onUpdate(index, {
+                              product_name: product.name,
+                              category: item.category,
+                              unit_price: product.selling_price,
+                              quantity: 1,
+                            });
+                            setProdOpen(false);
+                          }}
+                        >
+                          <Package className="mr-2 size-3.5 shrink-0 text-muted-foreground/60" />
+                          <div className="flex flex-1 items-center justify-between">
+                            <span className="truncate">{product.name}</span>
+                            <span className="ml-2 shrink-0 text-sm font-semibold tabular-nums text-foreground">
+                              {formatCurrency(product.selling_price)}
+                            </span>
+                          </div>
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
+            {errors[`items.${index}.product_name`] && (
+              <p className="text-sm text-destructive">{errors[`items.${index}.product_name`]}</p>
+            )}
+          </div>
+        )}
       </div>
 
       {/* ─── Row 2: Qty + Unit Price + Line Total ───────────── */}

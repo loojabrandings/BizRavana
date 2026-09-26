@@ -398,6 +398,10 @@ export const koombiyoProvider: CourierProvider = {
       .join(", ")
       .slice(0, 255);
 
+    const receiverPhone =
+      (order.customer_whatsapp || "").replace(/[\s()]/g, "").trim() ||
+      (order.customer_phone || "").replace(/[\s()]/g, "").trim();
+
     const params: Record<string, string> = {
       apikey: apiKey,
       orderWaybillid: waybill,
@@ -406,7 +410,7 @@ export const koombiyoProvider: CourierProvider = {
       receiverStreet: order.customer_address || "",
       receiverDistrict: districtId,
       receiverCity: cityId,
-      receiverPhone: order.customer_phone || "",
+      receiverPhone,
       description,
       spclNote: "",
       getCod: String(cod),

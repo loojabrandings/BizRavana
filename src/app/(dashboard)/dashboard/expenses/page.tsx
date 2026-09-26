@@ -201,7 +201,18 @@ function ExpensesPageInner() {
       { value: "all", label: "All" },
       ...categories.map((c) => ({ value: c.name, label: c.name })),
     ];
+    if (!tabs.some((t) => t.value.toLowerCase() === "other")) {
+      tabs.push({ value: "other", label: "Other" });
+    }
     return tabs;
+  }, [categories]);
+
+  const categoryDropdownOptions = useMemo(() => {
+    const list = categories.map((c) => ({ value: c.name, label: c.name }));
+    if (!list.some((o) => o.value.toLowerCase() === "other")) {
+      list.push({ value: "other", label: "Other" });
+    }
+    return list;
   }, [categories]);
 
   const handleCategoriesChange = useCallback(() => {
@@ -409,123 +420,140 @@ function ExpensesPageInner() {
 
     const supabase = createClient();
     const businessId = session.businessId;
-    if (!businessId) throw new Error("No business found");
+    if (!businessId) {
+      toast.error("No business found for your account");
+      return;
+    }
     const bizId = businessId;
 
     const totalCost = f.quantity * f.unit_cost;
 
-    if (editExpenseId) {
-      const { error: updateError } = await supabase
-        .from("expenses")
-        .update({
-          expense_date: f.expense_date,
-          category: f.category,
-          item_name: f.item_name,
-          supplier: f.supplier || null,
-          quantity: f.quantity,
-          unit_cost: f.unit_cost,
-          payment_method: f.payment_method,
-          payment_status: f.payment_status,
-          add_to_inventory: f.add_to_inventory,
-          remarks: f.remarks || null,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", editExpenseId);
+    try {
+      if (editExpenseId) {
+        const { error: updateError } = await supabase
+          .from("expenses")
+          .update({
+            expense_date: f.expense_date,
+            category: f.category || "other",
+            item_name: f.item_name,
+            supplier: f.supplier || null,
+            quantity: f.quantity,
+            unit_cost: f.unit_cost,
+            payment_method: f.payment_method || null,
+            payment_status: f.payment_status,
+            add_to_inventory: f.add_to_inventory,
+            remarks: f.remarks || null,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", editExpenseId);
 
-      if (updateError) {
-        toast.error("Failed to update expense");
-        return;
+        if (updateError) {
+          console.error("Update expense error:", updateError);
+          toast.error("Failed to update expense", {
+            description: updateError.message,
+          });
+          return;
+        }
+
+        setExpenses((prev) =>
+          prev.map((e) =>
+            e.id === editExpenseId
+              ? {
+                  ...e,
+                  expense_date: f.expense_date,
+                  category: f.category || "other",
+                  item_name: f.item_name,
+                  supplier: f.supplier || null,
+                  quantity: f.quantity,
+                  unit_cost: f.unit_cost,
+                  total_cost: totalCost,
+                  payment_method: f.payment_method,
+                  payment_status: f.payment_status,
+                  add_to_inventory: f.add_to_inventory,
+                  remarks: f.remarks || null,
+                }
+              : e,
+          ),
+        );
+
+        toast.success("Expense updated", {
+          description: `${f.item_name} has been updated.`,
+        });
+      } else {
+        const { data: newExpense, error: insertError } = await supabase
+          .from("expenses")
+          .insert({
+            business_id: bizId,
+            expense_date: f.expense_date,
+            category: f.category || "other",
+            item_name: f.item_name,
+            supplier: f.supplier || null,
+            quantity: f.quantity,
+            unit_cost: f.unit_cost,
+            payment_method: f.payment_method || null,
+            payment_status: f.payment_status,
+            add_to_inventory: f.add_to_inventory,
+            remarks: f.remarks || null,
+            created_by: session.userId || null,
+          })
+          .select("id, total_cost, expense_number, created_at")
+          .single();
+
+        if (insertError) {
+          console.error("Insert expense error:", insertError);
+          toast.error("Failed to create expense", {
+            description: insertError.message,
+          });
+          return;
+        }
+
+        setExpenses((prev) => [
+          {
+            id: String(newExpense!.id),
+            expense_number: newExpense!.expense_number ? String(newExpense!.expense_number) : null,
+            expense_date: f.expense_date,
+            category: f.category || "other",
+            supplier: f.supplier || null,
+            item_name: f.item_name,
+            quantity: f.quantity,
+            unit_cost: f.unit_cost,
+            total_cost: Number(newExpense!.total_cost || totalCost),
+            payment_method: f.payment_method,
+            payment_status: f.payment_status,
+            add_to_inventory: f.add_to_inventory,
+            remarks: f.remarks || null,
+            created_at: String(newExpense!.created_at),
+          },
+          ...prev,
+        ]);
+
+        toast.success("Expense created", {
+          description: `${f.item_name} has been added.`,
+        });
       }
 
-      setExpenses((prev) =>
-        prev.map((e) =>
-          e.id === editExpenseId
-            ? {
-                ...e,
-                expense_date: f.expense_date,
-                category: f.category,
-                item_name: f.item_name,
-                supplier: f.supplier || null,
-                quantity: f.quantity,
-                unit_cost: f.unit_cost,
-                total_cost: totalCost,
-                payment_method: f.payment_method,
-                payment_status: f.payment_status,
-                add_to_inventory: f.add_to_inventory,
-                remarks: f.remarks || null,
-              }
-            : e,
-        ),
-      );
-
-      toast.success("Expense updated", {
-        description: `${f.item_name} has been updated.`,
+      setFetchTrigger((n) => n + 1);
+      setShowForm(false);
+      setEditExpenseId(null);
+      setFormData({
+        expense_date: todayStr(),
+        category: categories[0]?.name || "other",
+        item_name: "",
+        supplier: "",
+        quantity: 1,
+        unit_cost: 0,
+        payment_method: useExpenseSettings.getState().defaultExpensePaymentMethod || "cash",
+        payment_status: "pending",
+        add_to_inventory: false,
+        remarks: "",
       });
-    } else {
-      const { data: newExpense, error: insertError } = await supabase
-        .from("expenses")
-        .insert({
-          business_id: bizId,
-          expense_date: f.expense_date,
-          category: f.category,
-          item_name: f.item_name,
-          supplier: f.supplier || null,
-          quantity: f.quantity,
-          unit_cost: f.unit_cost,
-          payment_method: f.payment_method,
-          payment_status: f.payment_status,
-          add_to_inventory: f.add_to_inventory,
-          remarks: f.remarks || null,
-          created_by: session.userId,
-        })
-        .select("id, total_cost, expense_number, created_at")
-        .single();
-
-      if (insertError) {
-        toast.error("Failed to create expense");
-        return;
-      }
-
-      setExpenses((prev) => [
-        {
-          id: String(newExpense!.id),
-          expense_number: newExpense!.expense_number ? String(newExpense!.expense_number) : null,
-          expense_date: f.expense_date,
-          category: f.category,
-          supplier: f.supplier || null,
-          item_name: f.item_name,
-          quantity: f.quantity,
-          unit_cost: f.unit_cost,
-          total_cost: Number(newExpense!.total_cost || totalCost),
-          payment_method: f.payment_method,
-          payment_status: f.payment_status,
-          add_to_inventory: f.add_to_inventory,
-          remarks: f.remarks || null,
-          created_at: String(newExpense!.created_at),
-        },
-        ...prev,
-      ]);
-
-      toast.success("Expense created", {
-        description: `${f.item_name} has been added.`,
+    } catch (err) {
+      console.error("Save expense error:", err);
+      toast.error("Failed to save expense", {
+        description: err instanceof Error ? err.message : "An unexpected error occurred",
       });
     }
-
-    setShowForm(false);
-    setEditExpenseId(null);
-    setFormData({
-      expense_date: todayStr(),
-      category: "other",
-      item_name: "",
-      supplier: "",
-      quantity: 1,
-      unit_cost: 0,
-    payment_method: useExpenseSettings.getState().defaultExpensePaymentMethod || "cash",
-    payment_status: "pending",
-    add_to_inventory: false,
-    remarks: "",
-  });
-}, [formData, editExpenseId]);
+  }, [formData, editExpenseId, session, categories]);
 
   // ─── Edit expense ──────────────────────────────────────────────
   const handleEditExpense = useCallback((expense: Expense) => {
@@ -1031,7 +1059,7 @@ function ExpensesPageInner() {
                       <Dropdown
                         value={formData.category}
                         onChange={(v) => v && setFormData((prev) => ({ ...prev, category: v }))}
-                        options={categories.map((c) => ({ value: c.name, label: c.name }))}
+                        options={categoryDropdownOptions}
                         size="default"
                         className="w-full h-9"
                       />

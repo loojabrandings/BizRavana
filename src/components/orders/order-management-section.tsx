@@ -116,25 +116,23 @@ export function OrderManagementSection({
         <Input
           ref={inputRef}
           type="text"
-          placeholder={!isAuto && hasSuggestions ? "Search or type waybill ID..." : "Enter waybill ID"}
+          placeholder={hasSuggestions ? "Search or type waybill ID..." : "Enter waybill ID"}
           value={form.waybill_id}
-          disabled={isAuto}
           onChange={(e) => {
-            if (isAuto) return;
             updateForm("waybill_id", e.target.value);
             if (e.target.value) setShowSuggestions(true);
           }}
           onFocus={() => {
-            if (!isAuto && fetchedWaybills.length > 0) setShowSuggestions(true);
+            if (fetchedWaybills.length > 0) setShowSuggestions(true);
           }}
           className="h-9"
         />
 
         {/* Auto mode note */}
-        {isAuto && (
+        {isAuto && !form.waybill_id && (
           <div className="rounded-lg bg-info/5 border border-info/20 px-3 py-2.5">
             <p className="text-xxs text-info/70 leading-relaxed">
-              Waybill IDs are assigned automatically by the connected courier integration.
+              Waybill IDs can be entered manually here or assigned automatically when dispatching to courier.
             </p>
           </div>
         )}
