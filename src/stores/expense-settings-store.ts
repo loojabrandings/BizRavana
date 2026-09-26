@@ -6,6 +6,7 @@ const DEFAULT_PAYMENT_METHODS = ["cash", "bank_transfer", "card", "online"];
 export interface ExpenseSettings {
   expensePaymentMethods: string[];
   defaultExpensePaymentMethod: string;
+  defaultAddToInventory: boolean;
 }
 
 interface ExpenseSettingsStore extends ExpenseSettings {
@@ -13,6 +14,7 @@ interface ExpenseSettingsStore extends ExpenseSettings {
   removePaymentMethod: (method: string) => void;
   setDefaultExpensePaymentMethod: (v: string) => void;
   setExpensePaymentMethods: (v: string[]) => void;
+  setDefaultAddToInventory: (v: boolean) => void;
 }
 
 export const useExpenseSettings = create<ExpenseSettingsStore>()(
@@ -20,6 +22,7 @@ export const useExpenseSettings = create<ExpenseSettingsStore>()(
     (set) => ({
       expensePaymentMethods: DEFAULT_PAYMENT_METHODS,
       defaultExpensePaymentMethod: "cash",
+      defaultAddToInventory: false,
 
       addPaymentMethod: (method) =>
         set((state) => {
@@ -37,6 +40,7 @@ export const useExpenseSettings = create<ExpenseSettingsStore>()(
         }),
       setDefaultExpensePaymentMethod: (v) => set({ defaultExpensePaymentMethod: v }),
       setExpensePaymentMethods: (v) => set({ expensePaymentMethods: v }),
+      setDefaultAddToInventory: (v) => set({ defaultAddToInventory: v }),
     }),
     { name: "freebuff-expense-settings" },
   ),

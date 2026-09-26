@@ -37,7 +37,7 @@ import type { Category } from "@/components/products/category-manager";
 import { toast } from "sonner";
 import dynamic from "next/dynamic";
 import { dateFilterOptions, getDateRange } from "@/lib/date-utils";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 const CategoryManager = dynamic(
   () => import("@/components/products/category-manager").then((m) => m.CategoryManager),
@@ -81,6 +81,7 @@ interface Expense {
   payment_method: string | null;
   payment_status: string;
   add_to_inventory: boolean;
+  inventory_item_id: string | null;
   remarks: string | null;
   created_at: string;
 }
@@ -126,6 +127,7 @@ function todayStr() {
 
 function ExpensesPageInner() {
   const { guard } = useReadOnlyMode();
+  const queryClient = useQueryClient();
 
   // ─── Dynamic payment methods from expense settings ────────────
   const expenseSettings = useExpenseSettings();
@@ -179,6 +181,32 @@ function ExpensesPageInner() {
   // ─── Category Manager ──────────────────────────────────────────
   const [showCategoryManager, setShowCategoryManager] = useState(false);
 
+  // ─── Fetch Inventory Items for auto-complete/link ─────────────
+  const { data: inventoryItems = [] } = useQuery({
+    queryKey: ["inventory_items_for_expenses", businessId],
+    queryFn: async () => {
+      if (!businessId) return [];
+      const supabase = createClient();
+      const { data } = await supabase
+        .from("inventory_items")
+        .select("id, name, category, current_stock, unit_cost, supplier")
+        .eq("business_id", businessId)
+        .is("deleted_at", null)
+        .order("name", { ascending: true });
+
+      return (data || []).map((item) => ({
+        id: String(item.id),
+        name: String(item.name),
+        category: item.category ? String(item.category) : null,
+        current_stock: Number(item.current_stock || 0),
+        unit_cost: item.unit_cost ? Number(item.unit_cost) : null,
+        supplier: item.supplier ? String(item.supplier) : null,
+      }));
+    },
+    enabled: Boolean(businessId && ordersSettings.enableInventory),
+    staleTime: 30 * 1000,
+  });
+
   // In-Page Form State
   const [showForm, setShowForm] = useState(false);
   const [editExpenseId, setEditExpenseId] = useState<string | null>(null);
@@ -191,9 +219,28 @@ function ExpensesPageInner() {
     unit_cost: 0,
     payment_method: useExpenseSettings.getState().defaultExpensePaymentMethod || "cash",
     payment_status: "pending" as "pending" | "advanced" | "paid",
-    add_to_inventory: false,
+    add_to_inventory: useExpenseSettings.getState().defaultAddToInventory ?? false,
+    inventory_item_id: null as string | null,
     remarks: "",
   });
+
+  const resetForm = useCallback(() => {
+    setShowForm(false);
+    setEditExpenseId(null);
+    setFormData({
+      expense_date: todayStr(),
+      category: categories[0]?.name || "other",
+      item_name: "",
+      supplier: "",
+      quantity: 1,
+      unit_cost: 0,
+      payment_method: useExpenseSettings.getState().defaultExpensePaymentMethod || "cash",
+      payment_status: "pending",
+      add_to_inventory: useExpenseSettings.getState().defaultAddToInventory ?? false,
+      inventory_item_id: null,
+      remarks: "",
+    });
+  }, [categories]);
 
   // ─── Category tabs from DB ─────────────────────────────────────
   const expenseCategoryTabs = useMemo(() => {
@@ -253,7 +300,7 @@ function ExpensesPageInner() {
       const dateRange = getDateRange(dateFilter, dateFrom, dateTo);
       let q = supabase
         .from("expenses")
-        .select("id, expense_number, expense_date, category, supplier, item_name, quantity, unit_cost, total_cost, payment_method, payment_status, add_to_inventory, remarks, created_at")
+        .select("id, expense_number, expense_date, category, supplier, item_name, quantity, unit_cost, total_cost, payment_method, payment_status, add_to_inventory, inventory_item_id, remarks, created_at")
         .eq("business_id", businessId)
         .order("expense_date", { ascending: false })
         .limit(300);
@@ -277,6 +324,7 @@ function ExpensesPageInner() {
         payment_method: e.payment_method ? String(e.payment_method) : null,
         payment_status: String(e.payment_status || "pending"),
         add_to_inventory: Boolean(e.add_to_inventory),
+        inventory_item_id: e.inventory_item_id ? String(e.inventory_item_id) : null,
         remarks: e.remarks ? String(e.remarks) : null,
         created_at: String(e.created_at),
       }));
@@ -341,9 +389,49 @@ function ExpensesPageInner() {
   const deleteExpensesFromDb = useCallback(async (ids: string[]) => {
     if (ids.length === 0) return;
     const supabase = createClient();
+
+    // Check if any expenses being deleted had add_to_inventory
+    const { data: toDelete } = await supabase
+      .from("expenses")
+      .select("id, add_to_inventory, inventory_item_id, quantity")
+      .in("id", ids);
+
+    if (toDelete && toDelete.length > 0) {
+      for (const exp of toDelete) {
+        if (exp.add_to_inventory && exp.inventory_item_id && Number(exp.quantity) > 0) {
+          try {
+            const { data: invItem } = await supabase
+              .from("inventory_items")
+              .select("id, current_stock")
+              .eq("id", exp.inventory_item_id)
+              .maybeSingle();
+
+            if (invItem) {
+              const revertedStock = Math.max(0, Number(invItem.current_stock || 0) - Number(exp.quantity));
+              await supabase
+                .from("inventory_items")
+                .update({ current_stock: revertedStock, updated_at: new Date().toISOString() })
+                .eq("id", invItem.id);
+            }
+
+            await supabase
+              .from("inventory_transactions")
+              .delete()
+              .eq("reference_type", "expense")
+              .eq("reference_id", exp.id);
+          } catch (err) {
+            console.error("Error reverting inventory on delete:", err);
+          }
+        }
+      }
+      queryClient.invalidateQueries({ queryKey: ["inventory"] });
+      queryClient.invalidateQueries({ queryKey: ["inventory_items"] });
+      queryClient.invalidateQueries({ queryKey: ["inventory_items_for_expenses"] });
+    }
+
     const { error } = await supabase.from("expenses").delete().in("id", ids);
     if (error) throw error;
-  }, []);
+  }, [queryClient]);
 
   // ─── Confirm Dialog State ────────────────────────────────────
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
@@ -425,35 +513,184 @@ function ExpensesPageInner() {
       return;
     }
     const bizId = businessId;
-
     const totalCost = f.quantity * f.unit_cost;
 
     try {
+      let resolvedInventoryItemId = f.inventory_item_id || null;
+
       if (editExpenseId) {
+        // ─── EDIT EXPENSE ──────────────────────────────────────────
+        const { data: previousExpense } = await supabase
+          .from("expenses")
+          .select("id, add_to_inventory, inventory_item_id, quantity, expense_number")
+          .eq("id", editExpenseId)
+          .single();
+
+        const wasInInventory = Boolean(previousExpense?.add_to_inventory && previousExpense?.inventory_item_id);
+        const prevInvId = previousExpense?.inventory_item_id;
+        const prevQty = Number(previousExpense?.quantity || 0);
+
+        if (f.add_to_inventory) {
+          if (wasInInventory && prevInvId) {
+            // Find current inventory item
+            const { data: currentInvItem } = await supabase
+              .from("inventory_items")
+              .select("id, name, current_stock, unit_cost")
+              .eq("id", prevInvId)
+              .maybeSingle();
+
+            if (currentInvItem) {
+              const qtyDiff = f.quantity - prevQty;
+              const newStock = Math.max(0, Number(currentInvItem.current_stock || 0) + qtyDiff);
+              await supabase
+                .from("inventory_items")
+                .update({
+                  name: f.item_name.trim(),
+                  current_stock: newStock,
+                  unit_cost: f.unit_cost > 0 ? f.unit_cost : currentInvItem.unit_cost,
+                  supplier: f.supplier.trim() || null,
+                  last_restocked_at: new Date().toISOString(),
+                  updated_at: new Date().toISOString(),
+                })
+                .eq("id", currentInvItem.id);
+
+              const { data: existingTxn } = await supabase
+                .from("inventory_transactions")
+                .select("id")
+                .eq("reference_type", "expense")
+                .eq("reference_id", editExpenseId)
+                .maybeSingle();
+
+              if (existingTxn) {
+                await supabase
+                  .from("inventory_transactions")
+                  .update({
+                    quantity: f.quantity,
+                    unit_cost: f.unit_cost > 0 ? f.unit_cost : null,
+                    notes: f.remarks ? f.remarks : `Expense: ${f.item_name.trim()}`,
+                  })
+                  .eq("id", existingTxn.id);
+              } else {
+                await supabase.from("inventory_transactions").insert({
+                  business_id: bizId,
+                  inventory_item_id: currentInvItem.id,
+                  type: "stock_in",
+                  quantity: f.quantity,
+                  unit_cost: f.unit_cost > 0 ? f.unit_cost : null,
+                  reference_type: "expense",
+                  reference_id: editExpenseId,
+                  notes: f.remarks ? f.remarks : `Expense: ${f.item_name.trim()}`,
+                  created_by: session.userId || null,
+                });
+              }
+              resolvedInventoryItemId = currentInvItem.id;
+            }
+          } else {
+            // Was not in inventory, now adding
+            const { data: matchedItem } = await supabase
+              .from("inventory_items")
+              .select("id, current_stock, unit_cost")
+              .eq("business_id", bizId)
+              .ilike("name", f.item_name.trim())
+              .is("deleted_at", null)
+              .maybeSingle();
+
+            if (matchedItem) {
+              resolvedInventoryItemId = matchedItem.id;
+              const newStock = Number(matchedItem.current_stock || 0) + Number(f.quantity);
+              await supabase
+                .from("inventory_items")
+                .update({
+                  current_stock: newStock,
+                  unit_cost: f.unit_cost > 0 ? f.unit_cost : matchedItem.unit_cost,
+                  supplier: f.supplier.trim() || null,
+                  last_restocked_at: new Date().toISOString(),
+                  updated_at: new Date().toISOString(),
+                })
+                .eq("id", matchedItem.id);
+            } else {
+              const { data: newInv, error: newInvErr } = await supabase
+                .from("inventory_items")
+                .insert({
+                  business_id: bizId,
+                  name: f.item_name.trim(),
+                  category: f.category && f.category !== "other" ? f.category : null,
+                  current_stock: Number(f.quantity),
+                  unit_cost: f.unit_cost > 0 ? f.unit_cost : null,
+                  supplier: f.supplier.trim() || null,
+                  reorder_level: 0,
+                  last_restocked_at: new Date().toISOString(),
+                  created_by: session.userId || null,
+                })
+                .select("id")
+                .single();
+
+              if (!newInvErr && newInv) {
+                resolvedInventoryItemId = newInv.id;
+              }
+            }
+
+            if (resolvedInventoryItemId) {
+              await supabase.from("inventory_transactions").insert({
+                business_id: bizId,
+                inventory_item_id: resolvedInventoryItemId,
+                type: "stock_in",
+                quantity: f.quantity,
+                unit_cost: f.unit_cost > 0 ? f.unit_cost : null,
+                reference_type: "expense",
+                reference_id: editExpenseId,
+                notes: f.remarks ? f.remarks : `Expense: ${f.item_name.trim()}`,
+                created_by: session.userId || null,
+              });
+            }
+          }
+        } else if (wasInInventory && prevInvId) {
+          // Unchecked add_to_inventory: revert stock and delete transaction
+          const { data: prevInv } = await supabase
+            .from("inventory_items")
+            .select("id, current_stock")
+            .eq("id", prevInvId)
+            .maybeSingle();
+
+          if (prevInv) {
+            const revertedStock = Math.max(0, Number(prevInv.current_stock || 0) - prevQty);
+            await supabase
+              .from("inventory_items")
+              .update({
+                current_stock: revertedStock,
+                updated_at: new Date().toISOString(),
+              })
+              .eq("id", prevInv.id);
+          }
+
+          await supabase
+            .from("inventory_transactions")
+            .delete()
+            .eq("reference_type", "expense")
+            .eq("reference_id", editExpenseId);
+
+          resolvedInventoryItemId = null;
+        }
+
         const { error: updateError } = await supabase
           .from("expenses")
           .update({
             expense_date: f.expense_date,
             category: f.category || "other",
-            item_name: f.item_name,
-            supplier: f.supplier || null,
+            item_name: f.item_name.trim(),
+            supplier: f.supplier.trim() || null,
             quantity: f.quantity,
             unit_cost: f.unit_cost,
             payment_method: f.payment_method || null,
             payment_status: f.payment_status,
             add_to_inventory: f.add_to_inventory,
+            inventory_item_id: f.add_to_inventory ? resolvedInventoryItemId : null,
             remarks: f.remarks || null,
             updated_at: new Date().toISOString(),
           })
           .eq("id", editExpenseId);
 
-        if (updateError) {
-          console.error("Update expense error:", updateError);
-          toast.error("Failed to update expense", {
-            description: updateError.message,
-          });
-          return;
-        }
+        if (updateError) throw updateError;
 
         setExpenses((prev) =>
           prev.map((e) =>
@@ -462,14 +699,15 @@ function ExpensesPageInner() {
                   ...e,
                   expense_date: f.expense_date,
                   category: f.category || "other",
-                  item_name: f.item_name,
-                  supplier: f.supplier || null,
+                  item_name: f.item_name.trim(),
+                  supplier: f.supplier.trim() || null,
                   quantity: f.quantity,
                   unit_cost: f.unit_cost,
                   total_cost: totalCost,
                   payment_method: f.payment_method,
                   payment_status: f.payment_status,
                   add_to_inventory: f.add_to_inventory,
+                  inventory_item_id: f.add_to_inventory ? resolvedInventoryItemId : null,
                   remarks: f.remarks || null,
                 }
               : e,
@@ -477,34 +715,101 @@ function ExpensesPageInner() {
         );
 
         toast.success("Expense updated", {
-          description: `${f.item_name} has been updated.`,
+          description: f.add_to_inventory
+            ? `${f.item_name} updated and synced with Inventory.`
+            : `${f.item_name} has been updated.`,
         });
       } else {
+        // ─── INSERT NEW EXPENSE ────────────────────────────────────
+        if (f.add_to_inventory) {
+          // Check if an inventory item already exists with matching name
+          const { data: matchedItem } = await supabase
+            .from("inventory_items")
+            .select("id, name, current_stock, unit_cost")
+            .eq("business_id", bizId)
+            .ilike("name", f.item_name.trim())
+            .is("deleted_at", null)
+            .maybeSingle();
+
+          if (matchedItem) {
+            resolvedInventoryItemId = matchedItem.id;
+            const newStock = Number(matchedItem.current_stock || 0) + Number(f.quantity);
+            await supabase
+              .from("inventory_items")
+              .update({
+                current_stock: newStock,
+                unit_cost: f.unit_cost > 0 ? f.unit_cost : matchedItem.unit_cost,
+                supplier: f.supplier.trim() || null,
+                last_restocked_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+              })
+              .eq("id", matchedItem.id);
+          } else {
+            // Create brand new inventory item
+            const { data: newInv, error: newInvErr } = await supabase
+              .from("inventory_items")
+              .insert({
+                business_id: bizId,
+                name: f.item_name.trim(),
+                category: f.category && f.category !== "other" ? f.category : null,
+                current_stock: Number(f.quantity),
+                unit_cost: f.unit_cost > 0 ? f.unit_cost : null,
+                supplier: f.supplier.trim() || null,
+                reorder_level: 0,
+                last_restocked_at: new Date().toISOString(),
+                created_by: session.userId || null,
+              })
+              .select("id")
+              .single();
+
+            if (newInvErr) {
+              console.error("Error creating inventory item:", newInvErr);
+            } else if (newInv) {
+              resolvedInventoryItemId = newInv.id;
+            }
+          }
+        }
+
         const { data: newExpense, error: insertError } = await supabase
           .from("expenses")
           .insert({
             business_id: bizId,
             expense_date: f.expense_date,
             category: f.category || "other",
-            item_name: f.item_name,
-            supplier: f.supplier || null,
+            item_name: f.item_name.trim(),
+            supplier: f.supplier.trim() || null,
             quantity: f.quantity,
             unit_cost: f.unit_cost,
             payment_method: f.payment_method || null,
             payment_status: f.payment_status,
             add_to_inventory: f.add_to_inventory,
+            inventory_item_id: f.add_to_inventory ? resolvedInventoryItemId : null,
             remarks: f.remarks || null,
             created_by: session.userId || null,
           })
           .select("id, total_cost, expense_number, created_at")
           .single();
 
-        if (insertError) {
-          console.error("Insert expense error:", insertError);
-          toast.error("Failed to create expense", {
-            description: insertError.message,
-          });
-          return;
+        if (insertError) throw insertError;
+
+        // Log transaction if added to inventory
+        if (f.add_to_inventory && resolvedInventoryItemId && newExpense) {
+          const { error: txnError } = await supabase
+            .from("inventory_transactions")
+            .insert({
+              business_id: bizId,
+              inventory_item_id: resolvedInventoryItemId,
+              type: "stock_in",
+              quantity: f.quantity,
+              unit_cost: f.unit_cost > 0 ? f.unit_cost : null,
+              reference_type: "expense",
+              reference_id: newExpense.id,
+              notes: f.remarks ? f.remarks : `Expense: ${f.item_name.trim()}`,
+              created_by: session.userId || null,
+            });
+          if (txnError) {
+            console.error("Failed to insert inventory transaction:", txnError);
+          }
         }
 
         setExpenses((prev) => [
@@ -513,14 +818,15 @@ function ExpensesPageInner() {
             expense_number: newExpense!.expense_number ? String(newExpense!.expense_number) : null,
             expense_date: f.expense_date,
             category: f.category || "other",
-            supplier: f.supplier || null,
-            item_name: f.item_name,
+            supplier: f.supplier.trim() || null,
+            item_name: f.item_name.trim(),
             quantity: f.quantity,
             unit_cost: f.unit_cost,
             total_cost: Number(newExpense!.total_cost || totalCost),
             payment_method: f.payment_method,
             payment_status: f.payment_status,
             add_to_inventory: f.add_to_inventory,
+            inventory_item_id: f.add_to_inventory ? resolvedInventoryItemId : null,
             remarks: f.remarks || null,
             created_at: String(newExpense!.created_at),
           },
@@ -528,32 +834,26 @@ function ExpensesPageInner() {
         ]);
 
         toast.success("Expense created", {
-          description: `${f.item_name} has been added.`,
+          description: f.add_to_inventory
+            ? `${f.item_name} has been added and recorded in Inventory.`
+            : `${f.item_name} has been added.`,
         });
       }
 
+      // Invalidate relevant queries
+      queryClient.invalidateQueries({ queryKey: ["inventory"] });
+      queryClient.invalidateQueries({ queryKey: ["inventory_items"] });
+      queryClient.invalidateQueries({ queryKey: ["inventory_items_for_expenses"] });
+
       setFetchTrigger((n) => n + 1);
-      setShowForm(false);
-      setEditExpenseId(null);
-      setFormData({
-        expense_date: todayStr(),
-        category: categories[0]?.name || "other",
-        item_name: "",
-        supplier: "",
-        quantity: 1,
-        unit_cost: 0,
-        payment_method: useExpenseSettings.getState().defaultExpensePaymentMethod || "cash",
-        payment_status: "pending",
-        add_to_inventory: false,
-        remarks: "",
-      });
+      resetForm();
     } catch (err) {
       console.error("Save expense error:", err);
       toast.error("Failed to save expense", {
         description: err instanceof Error ? err.message : "An unexpected error occurred",
       });
     }
-  }, [formData, editExpenseId, session, categories]);
+  }, [formData, editExpenseId, session, queryClient, resetForm]);
 
   // ─── Edit expense ──────────────────────────────────────────────
   const handleEditExpense = useCallback((expense: Expense) => {
@@ -567,6 +867,7 @@ function ExpensesPageInner() {
       payment_method: expense.payment_method || useExpenseSettings.getState().defaultExpensePaymentMethod || "cash",
       payment_status: expense.payment_status as "pending" | "advanced" | "paid",
       add_to_inventory: expense.add_to_inventory,
+      inventory_item_id: expense.inventory_item_id || null,
       remarks: expense.remarks || "",
     });
     setEditExpenseId(expense.id);
@@ -769,7 +1070,19 @@ function ExpensesPageInner() {
         sortKey: "item_name",
         className: "min-w-[160px]",
         renderCell: (expense) => (
-          <p className="truncate text-sm text-foreground">{expense.item_name}</p>
+          <div>
+            <div className="flex items-center gap-1.5">
+              <p className="truncate text-sm text-foreground">{expense.item_name}</p>
+              {expense.add_to_inventory && (
+                <span
+                  title="Recorded in Inventory"
+                  className="inline-flex items-center rounded-full bg-info/10 px-1.5 py-0.5 text-[10px] font-medium text-info shrink-0"
+                >
+                  Inventory
+                </span>
+              )}
+            </div>
+          </div>
         ),
       },
       {
@@ -842,9 +1155,19 @@ function ExpensesPageInner() {
       >
         <div className="mb-3 flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold text-foreground">
-              {expense.item_name}
-            </p>
+            <div className="flex items-center gap-1.5">
+              <p className="truncate text-sm font-semibold text-foreground">
+                {expense.item_name}
+              </p>
+              {expense.add_to_inventory && (
+                <span
+                  title="Recorded in Inventory"
+                  className="inline-flex items-center rounded-full bg-info/10 px-1.5 py-0.5 text-[10px] font-medium text-info shrink-0"
+                >
+                  Inventory
+                </span>
+              )}
+            </div>
             <p className="mt-0.5 text-sm text-muted-foreground">{formatDate(expense.expense_date)}</p>
           </div>
           <div className="flex shrink-0 items-center gap-1.5">
@@ -995,22 +1318,7 @@ function ExpensesPageInner() {
               </div>
               <button
                 type="button"
-                onClick={() => {
-                  setShowForm(false);
-                  setEditExpenseId(null);
-                  setFormData({
-                    expense_date: todayStr(),
-                    category: "other",
-                    item_name: "",
-                    supplier: "",
-                    quantity: 1,
-                    unit_cost: 0,
-              payment_method: useExpenseSettings.getState().defaultExpensePaymentMethod || "cash",
-              payment_status: "pending",
-              add_to_inventory: false,
-              remarks: "",
-                  });
-                }}
+                onClick={resetForm}
                 className="flex size-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
               >
                 <svg className="size-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
@@ -1069,15 +1377,70 @@ function ExpensesPageInner() {
                   {/* ─── Row 2 ────────────────────────────────────── */}
                   <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
                     <div className="space-y-1.5">
-                      <Label className="text-sm font-medium text-foreground/85">
-                        Item <span className="text-destructive">*</span>
-                      </Label>
+                      <div className="flex items-center justify-between">
+                        <Label className="text-sm font-medium text-foreground/85">
+                          Item <span className="text-destructive">*</span>
+                        </Label>
+                        {formData.add_to_inventory && inventoryItems.length > 0 && (
+                          <span className="text-[11px] text-muted-foreground">
+                            Suggestions from Inventory
+                          </span>
+                        )}
+                      </div>
                       <Input
+                        list="inventory-item-suggestions"
                         value={formData.item_name}
-                        onChange={(e) => setFormData((prev) => ({ ...prev, item_name: e.target.value }))}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          const matched = inventoryItems.find(
+                            (item) => item.name.toLowerCase() === val.trim().toLowerCase()
+                          );
+                          setFormData((prev) => ({
+                            ...prev,
+                            item_name: val,
+                            inventory_item_id: matched ? matched.id : null,
+                            supplier: matched?.supplier && !prev.supplier ? matched.supplier : prev.supplier,
+                            unit_cost: matched?.unit_cost && prev.unit_cost === 0 ? matched.unit_cost : prev.unit_cost,
+                            category:
+                              matched?.category && prev.category === "other"
+                                ? matched.category
+                                : prev.category,
+                          }));
+                        }}
                         placeholder="Enter item name"
                         className="h-9 rounded-xl"
                       />
+                      {ordersSettings.enableInventory && (
+                        <datalist id="inventory-item-suggestions">
+                          {inventoryItems.map((item) => (
+                            <option key={item.id} value={item.name}>
+                              {item.current_stock > 0 ? `Stock: ${item.current_stock}` : "Out of stock"}
+                              {item.unit_cost ? ` • Rs. ${item.unit_cost}` : ""}
+                            </option>
+                          ))}
+                        </datalist>
+                      )}
+                      {formData.add_to_inventory && formData.item_name.trim() && (
+                        <div className="pt-1">
+                          {(() => {
+                            const matched = inventoryItems.find(
+                              (i) => i.name.toLowerCase() === formData.item_name.trim().toLowerCase()
+                            );
+                            if (matched) {
+                              return (
+                                <p className="text-xs text-success font-medium flex items-center gap-1">
+                                  <span>✓</span> Matches inventory item (Current stock: {matched.current_stock}) &mdash; will add {formData.quantity} to stock
+                                </p>
+                              );
+                            }
+                            return (
+                              <p className="text-xs text-muted-foreground flex items-center gap-1">
+                                <span>📦</span> Will create new inventory item with {formData.quantity} stock
+                              </p>
+                            );
+                          })()}
+                        </div>
+                      )}
                     </div>
 
                     <div className="space-y-1.5">
@@ -1172,22 +1535,7 @@ function ExpensesPageInner() {
 
             {/* Action Bar */}
             <div className="flex items-center justify-between px-8 py-4">
-              <Button variant="ghost" onClick={() => {
-                setShowForm(false);
-                setEditExpenseId(null);
-                setFormData({
-                  expense_date: todayStr(),
-                  category: "other",
-                  item_name: "",
-                  supplier: "",
-                  quantity: 1,
-                  unit_cost: 0,
-              payment_method: useExpenseSettings.getState().defaultExpensePaymentMethod || "cash",
-              payment_status: "pending",
-              add_to_inventory: false,
-                  remarks: "",
-                });
-              }} className="text-sm">
+              <Button variant="ghost" onClick={resetForm} className="text-sm">
                 Cancel
               </Button>
               <Button variant="gradient" onClick={handleSaveExpense} className="min-w-[130px] text-sm">

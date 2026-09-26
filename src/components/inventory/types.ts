@@ -45,6 +45,7 @@ export interface StockFormData {
   reorder_level: number;
   type: "stock_in" | "stock_out";
   notes: string;
+  add_to_expenses?: boolean;
 }
 
 export interface StockFormCalculations {

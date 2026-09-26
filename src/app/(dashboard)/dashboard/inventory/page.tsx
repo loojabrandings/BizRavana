@@ -49,10 +49,7 @@ const ConfirmDialog = dynamic(
   () => import("@/components/shared/confirm-dialog").then((m) => m.ConfirmDialog),
   { ssr: false },
 );
-const DateRangePickerModal = dynamic(
-  () => import("@/components/shared/lazy-date-range-picker-modal").then((m) => m.DateRangePickerModal),
-  { ssr: false },
-);
+
 import {
   stockStatusTabs,
   stockStatusOptions,
@@ -67,8 +64,7 @@ import {
   computeStockValues,
 } from "@/components/inventory/utils";
 import { toast } from "sonner";
-import { dateFilterOptions, getDateRange } from "@/lib/date-utils";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 // ─── Animations ────────────────────────────────────────────────────
 const containerVariants = {
@@ -88,15 +84,12 @@ const itemVariants = {
 
 function InventoryPageInner() {
   const { guard } = useReadOnlyMode();
+  const queryClient = useQueryClient();
 
   // ─── Read query params for pre-applied filters ───────────────
   const searchParams = useSearchParams();
 
   // UI
-  const [dateFilter, setDateFilter] = useState<string>("this_month");
-  const [dateFrom, setDateFrom] = useState("");
-  const [dateTo, setDateTo] = useState("");
-  const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [activeSort, setActiveSort] = useState<{ key: string; direction: "asc" | "desc" } | null>({
     key: "name",
     direction: "asc",
@@ -129,26 +122,24 @@ function InventoryPageInner() {
 
   useEffect(() => {
     setRawItems(null);
-  }, [fetchTrigger, dateFilter, dateFrom, dateTo, activeCategoryTab]);
+  }, [fetchTrigger, activeCategoryTab]);
 
   const {
     data: fetchedItems,
     isLoading: isQueryLoading,
     error: queryError,
   } = useQuery({
-    queryKey: ["inventory", businessId, dateFilter, dateFrom, dateTo, activeCategoryTab, fetchTrigger],
+    queryKey: ["inventory", businessId, activeCategoryTab, fetchTrigger],
     queryFn: async () => {
       if (!businessId) return [];
       const supabase = createClient();
-      const dateRange = getDateRange(dateFilter, dateFrom, dateTo);
       let q = supabase
         .from("inventory_items")
         .select("id, name, category, size_variant, current_stock, unit_cost, supplier, reorder_level, last_restocked_at, created_at")
         .eq("business_id", businessId)
         .is("deleted_at", null)
         .order("created_at", { ascending: false })
-        .limit(300);
-      if (dateRange) q = q.gte("created_at", dateRange.start.toISOString()).lte("created_at", dateRange.end.toISOString());
+        .limit(500);
       if (activeCategoryTab !== "all") q = q.eq("category", activeCategoryTab);
 
       const { data, error: fetchError } = await q;
@@ -331,7 +322,7 @@ function InventoryPageInner() {
 
   // ─── Stock Form Submit ────────────────────────────────────────
   const handleStockSubmit = useCallback(
-    async (data: StockFormData) => {
+    async (data: StockFormData, selectedItemId?: string | null) => {
       if (!businessId) throw new Error("No business found");
 
       const supabase = createClient();
@@ -340,34 +331,52 @@ function InventoryPageInner() {
 
       const sign = data.type === "stock_in" ? 1 : -1;
 
-      if (editingItem) {
+      // Find if updating an existing item (editingItem, selectedItemId, or matching name+category)
+      let targetItem = editingItem;
+      if (!targetItem && selectedItemId) {
+        targetItem = items.find((i) => i.id === selectedItemId) || null;
+      }
+      if (!targetItem) {
+        targetItem = items.find(
+          (i) => i.name.toLowerCase() === data.item_name.trim().toLowerCase() &&
+                 (i.category?.toLowerCase() === data.category.trim().toLowerCase()),
+        ) || null;
+      }
+
+      let finalItemId: string;
+
+      if (targetItem) {
         // ── UPDATE existing item ─────────────────────────────────
-        const newStock = editingItem.current_stock + sign * data.quantity;
-        if (newStock < 0) throw new Error("Insufficient stock");
+        const newStock = Math.max(0, targetItem.current_stock + sign * data.quantity);
+        if (data.type === "stock_out" && data.quantity > targetItem.current_stock) {
+          throw new Error("Insufficient stock");
+        }
 
         const { error: updateError } = await supabase
           .from("inventory_items")
           .update({
-            name: data.item_name,
+            name: data.item_name.trim(),
             category: data.category || null,
             size_variant: data.size_variant || null,
             current_stock: newStock,
-            unit_cost: data.unit_cost > 0 ? data.unit_cost : null,
-            supplier: data.supplier || null,
+            unit_cost: data.unit_cost > 0 ? data.unit_cost : targetItem.unit_cost,
+            supplier: data.supplier.trim() || targetItem.supplier || null,
             reorder_level: data.reorder_level,
-            last_restocked_at: data.type === "stock_in" ? new Date().toISOString() : undefined,
+            last_restocked_at: data.type === "stock_in" ? new Date().toISOString() : targetItem.last_restocked_at,
             updated_at: new Date().toISOString(),
           })
-          .eq("id", editingItem.id);
+          .eq("id", targetItem.id);
 
         if (updateError) throw new Error(updateError.message);
+
+        finalItemId = targetItem.id;
 
         // Log transaction
         const { error: txnError } = await supabase
           .from("inventory_transactions")
           .insert({
             business_id: businessId,
-            inventory_item_id: editingItem.id,
+            inventory_item_id: targetItem.id,
             type: data.type,
             quantity: data.quantity,
             unit_cost: data.unit_cost > 0 ? data.unit_cost : null,
@@ -380,15 +389,15 @@ function InventoryPageInner() {
         // Update local state
         setItems((prev) =>
           prev.map((i) =>
-            i.id === editingItem.id
+            i.id === targetItem!.id
               ? {
                   ...i,
-                  name: data.item_name,
+                  name: data.item_name.trim(),
                   category: data.category || null,
                   size_variant: data.size_variant || null,
                   current_stock: newStock,
-                  unit_cost: data.unit_cost > 0 ? data.unit_cost : null,
-                  supplier: data.supplier || null,
+                  unit_cost: data.unit_cost > 0 ? data.unit_cost : targetItem!.unit_cost,
+                  supplier: data.supplier.trim() || targetItem!.supplier || null,
                   reorder_level: data.reorder_level,
                   last_restocked_at: data.type === "stock_in" ? new Date().toISOString() : i.last_restocked_at,
                 }
@@ -397,20 +406,24 @@ function InventoryPageInner() {
         );
 
         setItems((prev) => computeStockValues(prev));
-        toast.success("Stock updated", { description: `${data.item_name} — ${data.type === "stock_in" ? "added" : "removed"} ${data.quantity} units.` });
+        toast.success("Stock updated", {
+          description: `${data.item_name} — ${data.type === "stock_in" ? "added" : "removed"} ${data.quantity} units.`,
+        });
       } else {
         // ── INSERT new inventory item ────────────────────────────
+        const initialStock = data.type === "stock_in" ? data.quantity : 0;
         const { data: item, error: insertError } = await supabase
           .from("inventory_items")
           .insert({
             business_id: businessId,
-            name: data.item_name,
+            name: data.item_name.trim(),
             category: data.category || null,
             size_variant: data.size_variant || null,
-            current_stock: data.type === "stock_in" ? data.quantity : 0,
+            current_stock: initialStock,
             unit_cost: data.unit_cost > 0 ? data.unit_cost : null,
-            supplier: data.supplier || null,
+            supplier: data.supplier.trim() || null,
             reorder_level: data.reorder_level,
+            last_restocked_at: data.type === "stock_in" ? new Date().toISOString() : null,
             created_by: session.user.id,
           })
           .select("id, created_at")
@@ -418,32 +431,31 @@ function InventoryPageInner() {
 
         if (insertError) throw new Error(insertError.message);
 
-        const newId = String(item!.id);
-        const initialStock = data.type === "stock_in" ? data.quantity : 0;
+        finalItemId = String(item!.id);
 
         // Log initial transaction
         if (initialStock > 0) {
           await supabase.from("inventory_transactions").insert({
             business_id: businessId,
-            inventory_item_id: newId,
+            inventory_item_id: finalItemId,
             type: "stock_in",
             quantity: initialStock,
             unit_cost: data.unit_cost > 0 ? data.unit_cost : null,
-            notes: "Initial stock entry",
+            notes: data.notes || "Initial stock entry",
             created_by: session.user.id,
           });
         }
 
         // Update local state
         const newItem: InventoryItem = {
-          id: newId,
-          name: data.item_name,
+          id: finalItemId,
+          name: data.item_name.trim(),
           category: data.category || null,
           size_variant: data.size_variant || null,
           current_stock: initialStock,
           unit_cost: data.unit_cost > 0 ? data.unit_cost : null,
           stock_value: data.unit_cost > 0 ? initialStock * data.unit_cost : null,
-          supplier: data.supplier || null,
+          supplier: data.supplier.trim() || null,
           reorder_level: data.reorder_level,
           last_restocked_at: data.type === "stock_in" ? new Date().toISOString() : null,
           created_at: String(item!.created_at),
@@ -453,11 +465,46 @@ function InventoryPageInner() {
         toast.success("Item created", { description: `${data.item_name} has been added to inventory.` });
       }
 
+      // If add_to_expenses is checked on stock in, insert into expenses!
+      if (data.type === "stock_in" && data.add_to_expenses && data.quantity > 0) {
+        try {
+          const unitCost = data.unit_cost > 0 ? data.unit_cost : 0;
+          const { error: expError } = await supabase.from("expenses").insert({
+            business_id: businessId,
+            expense_date: new Date().toISOString().slice(0, 10),
+            category: data.category || "inventory",
+            item_name: data.item_name.trim(),
+            supplier: data.supplier.trim() || null,
+            quantity: data.quantity,
+            unit_cost: unitCost,
+            payment_method: "cash",
+            payment_status: "paid",
+            add_to_inventory: true,
+            inventory_item_id: finalItemId,
+            remarks: data.notes || `Stock In purchase for ${data.item_name.trim()}`,
+            created_by: session.user.id,
+          });
+          if (expError) {
+            console.error("Expense insert error:", expError);
+            toast.error("Stock updated, but failed to record expense", { description: expError.message });
+          } else {
+            toast.success("Expense recorded", { description: `Expense entry created for ${data.item_name}.` });
+            queryClient.invalidateQueries({ queryKey: ["expenses"] });
+          }
+        } catch (expErr) {
+          console.error("Expense error:", expErr);
+        }
+      }
+
+      queryClient.invalidateQueries({ queryKey: ["inventory"] });
+      queryClient.invalidateQueries({ queryKey: ["inventory_items"] });
+      queryClient.invalidateQueries({ queryKey: ["inventory_items_for_expenses"] });
+
       setShowForm(false);
       setEditingItem(null);
       setPreviewItem(null);
     },
-    [businessId, editingItem],
+    [businessId, editingItem, items, session.userId, queryClient],
   );
 
   // ─── Start editing ─────────────────────────────────────────
@@ -598,16 +645,12 @@ function InventoryPageInner() {
   const activeFilterCount =
     (activeCategoryTab !== "all" ? 1 : 0) +
     (activeStatusTab !== "all" ? 1 : 0) +
-    (searchQuery.trim() !== "" ? 1 : 0) +
-    (dateFilter !== "this_month" ? 1 : 0);
+    (searchQuery.trim() !== "" ? 1 : 0);
 
   const handleClearFilters = useCallback(() => {
     setActiveCategoryTab("all");
     setActiveStatusTab("all");
     setSearchQuery("");
-    setDateFilter("this_month");
-    setDateFrom("");
-    setDateTo("");
   }, []);
 
   // ─── Pagination ───────────────────────────────────────────────
@@ -1019,31 +1062,8 @@ function InventoryPageInner() {
               options: stockStatusTabs,
               label: "Status",
             }}
-            date={{
-              value: dateFilter,
-              onChange: (v) => {
-                if (v === "custom") setDatePickerOpen(true);
-                else if (v) setDateFilter(v);
-              },
-              options: dateFilterOptions,
-              onCalendarClick: () => setDatePickerOpen(true),
-            }}
             activeFilterCount={activeFilterCount}
             onClearFilters={handleClearFilters}
-          />
-
-          {/* Custom date range picker modal */}
-          <DateRangePickerModal
-            open={datePickerOpen}
-            onOpenChange={setDatePickerOpen}
-            from={dateFrom}
-            to={dateTo}
-            onApply={(f, t) => {
-              setDateFrom(f);
-              setDateTo(t);
-              setDateFilter("custom");
-              setDatePickerOpen(false);
-            }}
           />
         </motion.div>
       )}
@@ -1080,6 +1100,7 @@ function InventoryPageInner() {
             categories={categories}
             onCategoriesChange={handleCategoriesChange}
             businessId={businessId}
+            inventoryItems={items}
           />
         ) : (
           <DataTable<InventoryItem>

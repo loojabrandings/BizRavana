@@ -2,23 +2,38 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { ArrowLeft, Settings2, X } from "lucide-react";
+import { ArrowLeft, Check, ChevronsUpDown, Package, Plus, Settings2, X } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Dropdown } from "@/components/ui/dropdown";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 import { useIsMobile } from "@/hooks/use-media-query";
 import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { CategoryManager, type Category } from "@/components/products/category-manager";
 import { formatCurrency } from "./utils";
-import type { StockFormData, StockFormCalculations } from "./types";
+import type { InventoryItem, StockFormData, StockFormCalculations } from "./types";
+import { cn } from "@/lib/utils";
 
 // ─── Props ─────────────────────────────────────────────────────────
 
 interface StockFormProps {
-  onSubmit?: (data: StockFormData) => Promise<void>;
+  onSubmit?: (data: StockFormData, selectedItemId?: string | null) => Promise<void>;
   onCancel?: () => void;
   initialData?: StockFormData;
   isEditing?: boolean;
@@ -26,6 +41,7 @@ interface StockFormProps {
   categories?: Category[];
   onCategoriesChange?: () => void;
   businessId?: string | null;
+  inventoryItems?: InventoryItem[];
 }
 
 // ─── Default State ─────────────────────────────────────────────────
@@ -41,6 +57,7 @@ function createDefaultForm(): StockFormData {
     reorder_level: 0,
     type: "stock_in",
     notes: "",
+    add_to_expenses: false,
   };
 }
 
@@ -55,6 +72,7 @@ export function StockForm({
   categories = [],
   onCategoriesChange,
   businessId,
+  inventoryItems = [],
 }: StockFormProps) {
   const isMobile = useIsMobile();
   const [form, setForm] = useState<StockFormData>(() => initialData || createDefaultForm());
@@ -63,6 +81,40 @@ export function StockForm({
   const [isDirty, setIsDirty] = useState(false);
   const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
   const [showCategoryManager, setShowCategoryManager] = useState(false);
+
+  // Searchable item picker
+  const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
+  const [selectedItemStock, setSelectedItemStock] = useState<number | null>(null);
+  const [itemPickerOpen, setItemPickerOpen] = useState(false);
+
+  // Items filtered by currently selected category
+  const matchingCategoryItems = useMemo(() => {
+    if (!form.category.trim()) return [];
+    return inventoryItems.filter(
+      (item) => item.category?.toLowerCase() === form.category.trim().toLowerCase(),
+    );
+  }, [inventoryItems, form.category]);
+
+  // If initialData matches an existing item, set it
+  useEffect(() => {
+    if (initialData?.item_name && form.category) {
+      const match = inventoryItems.find(
+        (i) =>
+          i.name.toLowerCase() === initialData.item_name.toLowerCase() &&
+          i.category?.toLowerCase() === form.category.toLowerCase(),
+      );
+      if (match) {
+        setSelectedItemId(match.id);
+        setSelectedItemStock(match.current_stock);
+      }
+    }
+  }, [initialData, form.category, inventoryItems]);
+
+  const effectiveCurrentStock = isEditing
+    ? currentStock
+    : selectedItemStock !== null
+    ? selectedItemStock
+    : 0;
 
   // ─── Form helpers ─────────────────────────────────────────────
   const updateForm = useCallback(<K extends keyof StockFormData>(
@@ -73,16 +125,31 @@ export function StockForm({
     setIsDirty(true);
   }, []);
 
+  const handleSelectItem = useCallback((item: InventoryItem) => {
+    setSelectedItemId(item.id);
+    setSelectedItemStock(item.current_stock);
+    setForm((prev) => ({
+      ...prev,
+      item_name: item.name,
+      size_variant: item.size_variant || prev.size_variant,
+      unit_cost: item.unit_cost !== null && item.unit_cost > 0 ? item.unit_cost : prev.unit_cost,
+      supplier: item.supplier || prev.supplier,
+      reorder_level: item.reorder_level || prev.reorder_level,
+    }));
+    setIsDirty(true);
+    setItemPickerOpen(false);
+  }, []);
+
   // ─── Auto-calculations ────────────────────────────────────────
   const calculations: StockFormCalculations = useMemo(() => {
     const sign = form.type === "stock_in" ? 1 : -1;
-    const stockAfter = currentStock + sign * form.quantity;
+    const stockAfter = effectiveCurrentStock + sign * form.quantity;
     const stockValueChange = form.quantity * form.unit_cost;
     return {
       stock_after: Math.max(0, stockAfter),
       stock_value_change: stockValueChange,
     };
-  }, [form.type, form.quantity, form.unit_cost, currentStock]);
+  }, [form.type, form.quantity, form.unit_cost, effectiveCurrentStock]);
 
   // ─── Validation ───────────────────────────────────────────────
   const validate = useCallback((): boolean => {
@@ -92,13 +159,13 @@ export function StockForm({
     if (!form.category.trim()) errs["category"] = "Required";
     if (!form.size_variant.trim()) errs["size_variant"] = "Required";
     if (form.quantity <= 0) errs["quantity"] = "Must be greater than 0";
-    if (form.type === "stock_out" && form.quantity > currentStock) {
-      errs["quantity"] = `Cannot exceed current stock (${currentStock})`;
+    if (form.type === "stock_out" && form.quantity > effectiveCurrentStock) {
+      errs["quantity"] = `Cannot exceed current stock (${effectiveCurrentStock})`;
     }
 
     setErrors(errs);
     return Object.keys(errs).length === 0;
-  }, [form, currentStock]);
+  }, [form, effectiveCurrentStock]);
 
   // ─── Cancel with unsaved changes check ───────────────────────
   const handleCancel = useCallback(() => {
@@ -117,7 +184,7 @@ export function StockForm({
     }
     setSaving(true);
     try {
-      await onSubmit?.(form);
+      await onSubmit?.(form, selectedItemId);
       setIsDirty(false);
     } catch (err) {
       console.error("Submit error:", err);
@@ -127,7 +194,7 @@ export function StockForm({
     } finally {
       setSaving(false);
     }
-  }, [form, onSubmit, validate]);
+  }, [form, onSubmit, validate, selectedItemId]);
 
   // ─── Keyboard shortcuts ─────────────────────────────────────
   useEffect(() => {
@@ -225,20 +292,7 @@ export function StockForm({
                 Item Identity
               </h2>
 
-              <div className="space-y-1.5">
-                <Label>
-                  Item Name <span className="text-destructive">*</span>
-                </Label>
-                <Input
-                  type="text"
-                  placeholder="e.g. Premium Photo Frame 8x10"
-                  value={form.item_name}
-                  onChange={(e) => updateForm("item_name", e.target.value)}
-                  className={errors.item_name ? "border-destructive h-9" : "h-9"}
-                />
-                {errors.item_name && <p className="text-sm text-destructive">{errors.item_name}</p>}
-              </div>
-
+              {/* 1. Category */}
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
                   <Label>
@@ -255,15 +309,139 @@ export function StockForm({
                 </div>
                 <Dropdown
                   value={form.category}
-                  onChange={(v) => v && updateForm("category", v)}
+                  onChange={(v) => {
+                    if (v) {
+                      updateForm("category", v);
+                      setSelectedItemId(null);
+                      setSelectedItemStock(null);
+                    }
+                  }}
                   options={categories.map((c) => ({ value: c.name, label: c.name }))}
-                  placeholder="Select or type a category..."
+                  placeholder="Select a category..."
                   size="default"
                   className={errors.category ? "border-destructive w-full h-9" : "w-full h-9"}
                 />
                 {errors.category && <p className="text-sm text-destructive">{errors.category}</p>}
               </div>
 
+              {/* 2. Searchable Item Dropdown (by Category) */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <Label>
+                    Select Item <span className="text-xs text-muted-foreground font-normal">(from category)</span>
+                  </Label>
+                  {form.category && matchingCategoryItems.length > 0 && (
+                    <span className="text-xs text-muted-foreground tabular-nums">
+                      {matchingCategoryItems.length} {matchingCategoryItems.length === 1 ? "item" : "items"}
+                    </span>
+                  )}
+                </div>
+
+                <Popover open={itemPickerOpen} onOpenChange={setItemPickerOpen}>
+                  <PopoverTrigger
+                    type="button"
+                    disabled={!form.category}
+                    className={cn(
+                      "flex h-9 w-full items-center justify-between rounded-lg border border-input bg-background px-3 text-sm text-foreground shadow-xs outline-none transition-colors",
+                      "hover:bg-accent/50 focus:border-ring focus:ring-[3px] focus:ring-ring/50",
+                      !form.category && "opacity-50 cursor-not-allowed",
+                      !selectedItemId && "text-muted-foreground",
+                    )}
+                  >
+                    <span className="truncate">
+                      {!form.category
+                        ? "Select category first..."
+                        : selectedItemId
+                        ? form.item_name
+                        : matchingCategoryItems.length > 0
+                        ? `Search items (${matchingCategoryItems.length} available)...`
+                        : "No existing items in this category"}
+                    </span>
+                    <ChevronsUpDown className="ml-2 size-3.5 shrink-0 opacity-50" />
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[--anchor-width] min-w-[280px] p-0 shadow-xl" align="start">
+                    <Command>
+                      <CommandInput placeholder="Search items in this category..." />
+                      <CommandList className="max-h-[220px]">
+                        <CommandEmpty>No items found in this category.</CommandEmpty>
+                        <CommandGroup>
+                          {matchingCategoryItems.map((item) => (
+                            <CommandItem
+                              key={item.id}
+                              value={item.name}
+                              onSelect={() => handleSelectItem(item)}
+                              className="flex items-center justify-between py-2 cursor-pointer"
+                            >
+                              <div className="flex items-center gap-2 min-w-0">
+                                <Package className="size-3.5 shrink-0 text-muted-foreground/70" />
+                                <div className="truncate">
+                                  <p className="truncate text-sm font-medium text-foreground">{item.name}</p>
+                                  {item.size_variant && (
+                                    <p className="text-xs text-muted-foreground">{item.size_variant}</p>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="shrink-0 text-right ml-2">
+                                <span
+                                  className={cn(
+                                    "inline-flex items-center rounded-full px-1.5 py-0.5 text-[11px] font-semibold tabular-nums",
+                                    item.current_stock > 0 ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive",
+                                  )}
+                                >
+                                  {item.current_stock} pcs
+                                </span>
+                              </div>
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              {/* 3. Item Name text input */}
+              <div className="space-y-1.5">
+                <Label>
+                  Item Name <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  type="text"
+                  placeholder="e.g. Premium Photo Frame 8x10"
+                  value={form.item_name}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    updateForm("item_name", val);
+                    const match = matchingCategoryItems.find(
+                      (i) => i.name.toLowerCase() === val.trim().toLowerCase(),
+                    );
+                    if (match) {
+                      setSelectedItemId(match.id);
+                      setSelectedItemStock(match.current_stock);
+                    } else {
+                      setSelectedItemId(null);
+                      setSelectedItemStock(null);
+                    }
+                  }}
+                  className={errors.item_name ? "border-destructive h-9" : "h-9"}
+                />
+                {errors.item_name && <p className="text-sm text-destructive">{errors.item_name}</p>}
+                {form.item_name.trim() && (
+                  <div className="pt-0.5">
+                    {selectedItemId || matchingCategoryItems.some((i) => i.name.toLowerCase() === form.item_name.trim().toLowerCase()) ? (
+                      <p className="text-xs text-success font-medium flex items-center gap-1">
+                        <Check className="size-3" /> Existing item &mdash; Current stock: {effectiveCurrentStock} pcs
+                      </p>
+                    ) : (
+                      <p className="text-xs text-muted-foreground flex items-center gap-1">
+                        <Plus className="size-3" /> Will create as a new inventory item
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* 4. Size / Variant */}
               <div className="space-y-1.5">
                 <Label>
                   Size / Variant <span className="text-destructive">*</span>
@@ -309,11 +487,11 @@ export function StockForm({
                 </div>
               </div>
 
-              {isEditing && (
+              {(isEditing || selectedItemId !== null || effectiveCurrentStock > 0) && (
                 <div className="space-y-1.5">
                   <Label>Current Stock</Label>
                   <div className="flex h-9 items-center rounded-lg border border-border/50 bg-muted/20 px-3 text-sm font-semibold tabular-nums text-foreground">
-                    {currentStock}
+                    {effectiveCurrentStock} pcs
                   </div>
                 </div>
               )}
@@ -331,11 +509,11 @@ export function StockForm({
                   className={errors.quantity ? "border-destructive h-9" : "h-9"}
                 />
                 {errors.quantity && <p className="text-sm text-destructive">{errors.quantity}</p>}
-                {isEditing && form.quantity > 0 && (
+                {form.quantity > 0 && (
                   <p className="text-sm text-muted-foreground">
                     {isStockIn ? "New stock level:" : "Remaining stock:"}{" "}
                     <span className={`font-semibold tabular-nums ${calculations.stock_after < 0 ? "text-destructive" : "text-foreground"}`}>
-                      {calculations.stock_after}
+                      {calculations.stock_after} pcs
                     </span>
                   </p>
                 )}
@@ -358,6 +536,26 @@ export function StockForm({
                   <Label>Stock Value Change</Label>
                   <div className="flex h-9 items-center rounded-lg border border-border/50 bg-muted/20 px-3 text-sm font-semibold tabular-nums text-foreground">
                     {isStockIn ? "+" : "-"} {formatCurrency(calculations.stock_value_change)}
+                  </div>
+                </div>
+              )}
+
+              {/* Add to Expenses Checkbox (only on Stock In) */}
+              {isStockIn && (
+                <div className="flex items-start gap-3 rounded-xl border border-border/50 bg-muted/20 p-3.5 transition-colors hover:bg-muted/30">
+                  <Checkbox
+                    id="add_to_expenses_mobile"
+                    checked={form.add_to_expenses ?? false}
+                    onCheckedChange={(checked) => updateForm("add_to_expenses", checked === true)}
+                    className="mt-0.5"
+                  />
+                  <div className="space-y-0.5">
+                    <Label htmlFor="add_to_expenses_mobile" className="text-sm font-medium text-foreground cursor-pointer">
+                      Add to Expenses
+                    </Label>
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                      Automatically record this stock purchase in Expenses {form.quantity > 0 && form.unit_cost > 0 ? `(Rs. ${formatCurrency(form.quantity * form.unit_cost)})` : ""}.
+                    </p>
                   </div>
                 </div>
               )}
@@ -416,14 +614,7 @@ export function StockForm({
             <div className="space-y-6">
               <h2 className="text-sm font-semibold uppercase tracking-wider text-foreground/70">Item Identity</h2>
 
-              <div className="space-y-1.5">
-                <Label>Item Name <span className="text-destructive">*</span></Label>
-                <Input type="text" placeholder="e.g. Premium Photo Frame 8x10"
-                  value={form.item_name} onChange={(e) => updateForm("item_name", e.target.value)}
-                  className={errors.item_name ? "border-destructive h-9" : "h-9"} />
-                {errors.item_name && <p className="text-sm text-destructive">{errors.item_name}</p>}
-              </div>
-
+              {/* 1. Category */}
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
                   <Label>Category <span className="text-destructive">*</span></Label>
@@ -431,18 +622,148 @@ export function StockForm({
                     <Settings2 className="size-3.5" />
                   </Button>
                 </div>
-                <Dropdown value={form.category} onChange={(v) => v && updateForm("category", v)}
+                <Dropdown
+                  value={form.category}
+                  onChange={(v) => {
+                    if (v) {
+                      updateForm("category", v);
+                      setSelectedItemId(null);
+                      setSelectedItemStock(null);
+                    }
+                  }}
                   options={categories.map((c) => ({ value: c.name, label: c.name }))}
-                  placeholder="Select or type a category..." size="default"
-                  className={errors.category ? "border-destructive w-full h-9" : "w-full h-9"} />
+                  placeholder="Select a category..."
+                  size="default"
+                  className={errors.category ? "border-destructive w-full h-9" : "w-full h-9"}
+                />
                 {errors.category && <p className="text-sm text-destructive">{errors.category}</p>}
               </div>
 
+              {/* 2. Searchable Item Dropdown (by Category) */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <Label>
+                    Select Item <span className="text-xs text-muted-foreground font-normal">(from category)</span>
+                  </Label>
+                  {form.category && matchingCategoryItems.length > 0 && (
+                    <span className="text-xs text-muted-foreground tabular-nums">
+                      {matchingCategoryItems.length} {matchingCategoryItems.length === 1 ? "item" : "items"}
+                    </span>
+                  )}
+                </div>
+
+                <Popover open={itemPickerOpen} onOpenChange={setItemPickerOpen}>
+                  <PopoverTrigger
+                    type="button"
+                    disabled={!form.category}
+                    className={cn(
+                      "flex h-9 w-full items-center justify-between rounded-lg border border-input bg-background px-3 text-sm text-foreground shadow-xs outline-none transition-colors",
+                      "hover:bg-accent/50 focus:border-ring focus:ring-[3px] focus:ring-ring/50",
+                      !form.category && "opacity-50 cursor-not-allowed",
+                      !selectedItemId && "text-muted-foreground",
+                    )}
+                  >
+                    <span className="truncate">
+                      {!form.category
+                        ? "Select category first..."
+                        : selectedItemId
+                        ? form.item_name
+                        : matchingCategoryItems.length > 0
+                        ? `Search items (${matchingCategoryItems.length} available)...`
+                        : "No existing items in this category"}
+                    </span>
+                    <ChevronsUpDown className="ml-2 size-3.5 shrink-0 opacity-50" />
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[--anchor-width] min-w-[280px] p-0 shadow-xl" align="start">
+                    <Command>
+                      <CommandInput placeholder="Search items in this category..." />
+                      <CommandList className="max-h-[220px]">
+                        <CommandEmpty>No items found in this category.</CommandEmpty>
+                        <CommandGroup>
+                          {matchingCategoryItems.map((item) => (
+                            <CommandItem
+                              key={item.id}
+                              value={item.name}
+                              onSelect={() => handleSelectItem(item)}
+                              className="flex items-center justify-between py-2 cursor-pointer"
+                            >
+                              <div className="flex items-center gap-2 min-w-0">
+                                <Package className="size-3.5 shrink-0 text-muted-foreground/70" />
+                                <div className="truncate">
+                                  <p className="truncate text-sm font-medium text-foreground">{item.name}</p>
+                                  {item.size_variant && (
+                                    <p className="text-xs text-muted-foreground">{item.size_variant}</p>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="shrink-0 text-right ml-2">
+                                <span
+                                  className={cn(
+                                    "inline-flex items-center rounded-full px-1.5 py-0.5 text-[11px] font-semibold tabular-nums",
+                                    item.current_stock > 0 ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive",
+                                  )}
+                                >
+                                  {item.current_stock} pcs
+                                </span>
+                              </div>
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              {/* 3. Item Name text input */}
+              <div className="space-y-1.5">
+                <Label>Item Name <span className="text-destructive">*</span></Label>
+                <Input
+                  type="text"
+                  placeholder="e.g. Premium Photo Frame 8x10"
+                  value={form.item_name}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    updateForm("item_name", val);
+                    const match = matchingCategoryItems.find(
+                      (i) => i.name.toLowerCase() === val.trim().toLowerCase(),
+                    );
+                    if (match) {
+                      setSelectedItemId(match.id);
+                      setSelectedItemStock(match.current_stock);
+                    } else {
+                      setSelectedItemId(null);
+                      setSelectedItemStock(null);
+                    }
+                  }}
+                  className={errors.item_name ? "border-destructive h-9" : "h-9"}
+                />
+                {errors.item_name && <p className="text-sm text-destructive">{errors.item_name}</p>}
+                {form.item_name.trim() && (
+                  <div className="pt-0.5">
+                    {selectedItemId || matchingCategoryItems.some((i) => i.name.toLowerCase() === form.item_name.trim().toLowerCase()) ? (
+                      <p className="text-xs text-success font-medium flex items-center gap-1">
+                        <Check className="size-3" /> Existing item &mdash; Current stock: {effectiveCurrentStock} pcs
+                      </p>
+                    ) : (
+                      <p className="text-xs text-muted-foreground flex items-center gap-1">
+                        <Plus className="size-3" /> Will create as a new inventory item
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* 4. Size / Variant */}
               <div className="space-y-1.5">
                 <Label>Size / Variant <span className="text-destructive">*</span></Label>
-                <Input type="text" placeholder="e.g. 8x10, A4, 16x20"
-                  value={form.size_variant} onChange={(e) => updateForm("size_variant", e.target.value)}
-                  className={errors.size_variant ? "border-destructive h-9" : "h-9"} />
+                <Input
+                  type="text"
+                  placeholder="e.g. 8x10, A4, 16x20"
+                  value={form.size_variant}
+                  onChange={(e) => updateForm("size_variant", e.target.value)}
+                  className={errors.size_variant ? "border-destructive h-9" : "h-9"}
+                />
                 {errors.size_variant && <p className="text-sm text-destructive">{errors.size_variant}</p>}
               </div>
             </div>
@@ -457,46 +778,64 @@ export function StockForm({
                 <Label>Transaction Type</Label>
                 <div className="grid grid-cols-2 gap-2">
                   {(["stock_in", "stock_out"] as const).map((type) => (
-                    <button key={type} type="button" onClick={() => updateForm("type", type)}
+                    <button
+                      key={type}
+                      type="button"
+                      onClick={() => updateForm("type", type)}
                       className={`rounded-lg border px-3 py-2 text-sm font-medium transition-all ${
                         form.type === type
                           ? type === "stock_in"
                             ? "border-success/40 bg-success/5 text-success shadow-sm"
                             : "border-destructive/40 bg-destructive/5 text-destructive shadow-sm"
                           : "border-border bg-muted/20 text-muted-foreground hover:border-border/80 hover:text-foreground"
-                      }`}>
+                      }`}
+                    >
                       {type === "stock_in" ? "Stock In" : "Stock Out"}
                     </button>
                   ))}
                 </div>
               </div>
 
-              {isEditing && (
+              {(isEditing || selectedItemId !== null || effectiveCurrentStock > 0) && (
                 <div className="space-y-1.5">
                   <Label>Current Stock</Label>
-                  <div className="flex h-9 items-center rounded-lg border border-border/50 bg-muted/20 px-3 text-sm font-semibold tabular-nums text-foreground">{currentStock}</div>
+                  <div className="flex h-9 items-center rounded-lg border border-border/50 bg-muted/20 px-3 text-sm font-semibold tabular-nums text-foreground">
+                    {effectiveCurrentStock} pcs
+                  </div>
                 </div>
               )}
 
               <div className="space-y-1.5">
                 <Label>Quantity <span className="text-destructive">*</span></Label>
-                <Input type="number" min={0} placeholder="0" value={form.quantity || ""}
+                <Input
+                  type="number"
+                  min={0}
+                  placeholder="0"
+                  value={form.quantity || ""}
                   onChange={(e) => updateForm("quantity", Math.max(0, Number(e.target.value) || 0))}
-                  className={errors.quantity ? "border-destructive h-9" : "h-9"} />
+                  className={errors.quantity ? "border-destructive h-9" : "h-9"}
+                />
                 {errors.quantity && <p className="text-sm text-destructive">{errors.quantity}</p>}
-                {isEditing && form.quantity > 0 && (
+                {form.quantity > 0 && (
                   <p className="text-sm text-muted-foreground">
                     {isStockIn ? "New stock level:" : "Remaining stock:"}{" "}
-                    <span className={`font-semibold tabular-nums ${calculations.stock_after < 0 ? "text-destructive" : "text-foreground"}`}>{calculations.stock_after}</span>
+                    <span className={`font-semibold tabular-nums ${calculations.stock_after < 0 ? "text-destructive" : "text-foreground"}`}>
+                      {calculations.stock_after} pcs
+                    </span>
                   </p>
                 )}
               </div>
 
               <div className="space-y-1.5">
                 <Label>Unit Cost (Rs.)</Label>
-                <Input type="number" min={0} placeholder="0.00" value={form.unit_cost || ""}
+                <Input
+                  type="number"
+                  min={0}
+                  placeholder="0.00"
+                  value={form.unit_cost || ""}
                   onChange={(e) => updateForm("unit_cost", Math.max(0, Number(e.target.value) || 0))}
-                  className="h-9" />
+                  className="h-9"
+                />
               </div>
 
               {form.quantity > 0 && form.unit_cost > 0 && (
@@ -504,6 +843,26 @@ export function StockForm({
                   <Label>Stock Value Change</Label>
                   <div className="flex h-9 items-center rounded-lg border border-border/50 bg-muted/20 px-3 text-sm font-semibold tabular-nums text-foreground">
                     {isStockIn ? "+" : "-"} {formatCurrency(calculations.stock_value_change)}
+                  </div>
+                </div>
+              )}
+
+              {/* Add to Expenses Checkbox (only on Stock In) */}
+              {isStockIn && (
+                <div className="flex items-start gap-3 rounded-xl border border-border/50 bg-muted/20 p-3.5 transition-colors hover:bg-muted/30">
+                  <Checkbox
+                    id="add_to_expenses_desktop"
+                    checked={form.add_to_expenses ?? false}
+                    onCheckedChange={(checked) => updateForm("add_to_expenses", checked === true)}
+                    className="mt-0.5"
+                  />
+                  <div className="space-y-0.5">
+                    <Label htmlFor="add_to_expenses_desktop" className="text-sm font-medium text-foreground cursor-pointer">
+                      Add to Expenses
+                    </Label>
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                      Automatically record this stock purchase in Expenses {form.quantity > 0 && form.unit_cost > 0 ? `(Rs. ${formatCurrency(form.quantity * form.unit_cost)})` : ""}.
+                    </p>
                   </div>
                 </div>
               )}
@@ -517,24 +876,38 @@ export function StockForm({
 
               <div className="space-y-1.5">
                 <Label>Supplier</Label>
-                <Input type="text" placeholder="e.g. Frames Wholesale Co."
-                  value={form.supplier} onChange={(e) => updateForm("supplier", e.target.value)}
-                  className="h-9" />
+                <Input
+                  type="text"
+                  placeholder="e.g. Frames Wholesale Co."
+                  value={form.supplier}
+                  onChange={(e) => updateForm("supplier", e.target.value)}
+                  className="h-9"
+                />
               </div>
 
               <div className="space-y-1.5">
                 <Label>Reorder Level</Label>
-                <Input type="number" min={0} placeholder="0" value={form.reorder_level || ""}
+                <Input
+                  type="number"
+                  min={0}
+                  placeholder="0"
+                  value={form.reorder_level || ""}
                   onChange={(e) => updateForm("reorder_level", Math.max(0, Number(e.target.value) || 0))}
-                  className="h-9" />
-                <p className="text-xs text-muted-foreground">When stock drops to this level, the item will show a low stock warning.</p>
+                  className="h-9"
+                />
+                <p className="text-xs text-muted-foreground">
+                  When stock drops to this level, the item will show a low stock warning.
+                </p>
               </div>
 
               <div className="space-y-1.5">
                 <Label>Notes</Label>
-                <textarea placeholder="Optional notes about this transaction..."
-                  value={form.notes} onChange={(e) => updateForm("notes", e.target.value)}
-                  className="flex min-h-[80px] w-full rounded-xl border border-input bg-background px-3 py-2 text-sm font-medium text-foreground shadow-xs outline-none transition-colors placeholder:text-muted-foreground/40 focus:border-ring focus:ring-[3px] focus:ring-ring/50 resize-y" />
+                <textarea
+                  placeholder="Optional notes about this transaction..."
+                  value={form.notes}
+                  onChange={(e) => updateForm("notes", e.target.value)}
+                  className="flex min-h-[80px] w-full rounded-xl border border-input bg-background px-3 py-2 text-sm font-medium text-foreground shadow-xs outline-none transition-colors placeholder:text-muted-foreground/40 focus:border-ring focus:ring-[3px] focus:ring-ring/50 resize-y"
+                />
               </div>
             </div>
           </div>

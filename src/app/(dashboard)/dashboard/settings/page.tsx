@@ -1156,7 +1156,6 @@ function OperationalSettings({ activeSection }: { activeSection: string | null }
   };
   const expenseSettings = useExpenseSettings();
   const [newMethodName, setNewMethodName] = useState("");
-  const [expenseAddToInventory, setExpenseAddToInventory] = useState(true);
 
   return (
     <div className="space-y-4">
@@ -1504,7 +1503,11 @@ function OperationalSettings({ activeSection }: { activeSection: string | null }
 
         <SettingsRow label="Add to Inventory" hint="Auto-add expenses to inventory tracking">
           <div className="py-1">
-            <Switch id="add-to-inventory" checked={expenseAddToInventory} onCheckedChange={setExpenseAddToInventory} />
+            <Switch
+              id="add-to-inventory"
+              checked={expenseSettings.defaultAddToInventory}
+              onCheckedChange={expenseSettings.setDefaultAddToInventory}
+            />
           </div>
         </SettingsRow>      </CollapsibleCard>
       )}
